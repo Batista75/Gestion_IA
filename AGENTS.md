@@ -13,5 +13,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 Application locale de gestion pour TPE. La spécification est dans `docs/specifications-gestion-ia.pdf`.
 
 - Les montants viennent de `src/domain/pricing.ts`. Ne les faites pas calculer par un modèle de langage.
+- L’assistant appelle Ollama sur le réseau local (`OLLAMA_BASE_URL`, par défaut `http://192.168.1.5:11434`). Aucun texte n’est envoyé vers un service d’IA public.
 - PostgreSQL 16 tourne sur la machine. `bash scripts/cloud-agent-start.sh --prepare` prépare la base, puis l’interface se lance sur le port 3847.
 - Rien n’est classé dans un projet sans une action explicite de l’utilisateur.

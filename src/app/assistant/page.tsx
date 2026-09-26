@@ -1,16 +1,17 @@
-import { LaterSection } from "@/components/later-section";
+import { AssistantChat } from "@/components/assistant-chat";
 
 export default function AssistantPage() {
   return (
-    <LaterSection
-      title="Assistant"
-      summary="Le copilote local lira, rapprochera et préparera. Il ne calcule pas les prix, n’émet pas de facture et ne classe rien sans confirmation."
-      items={[
-        "Boîte de réception : identifier le type de pièce et proposer un dossier.",
-        "Questions sourcées sur les projets autorisés, avec le passage d’origine.",
-        "Refus des instructions cachées dans un document.",
-        "Modèle exécuté sur site : aucun contenu de facture n’est envoyé à un service d’IA tiers.",
-      ]}
-    />
+    <div className="mx-auto grid w-full max-w-3xl gap-6">
+      <div className="grid gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Assistant</h1>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Le copilote prépare et explique. Il ne calcule pas les prix, n’émet
+          pas de facture et ne classe rien sans confirmation. L’inférence se
+          fait sur le PC hôte, avec Ollama et la carte graphique.
+        </p>
+      </div>
+      <AssistantChat />
+    </div>
   );
 }
