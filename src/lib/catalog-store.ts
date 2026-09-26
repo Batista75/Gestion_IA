@@ -307,15 +307,9 @@ async function createProject(
   if (primaryClient.length < 2) {
     return { ok: false, summary: "Indiquez le client du projet." };
   }
-  const client = await createParty("client", {
-    name: primaryClient,
-    siren: "",
-    email: "",
-    phone: "",
-    address: "",
-    notes: "",
+  const existing = await prisma.client.findUnique({
+    where: { nameKey: nameKey(primaryClient) },
   });
-  if (!client.ok) return client;
   await prisma.project.create({
     data: {
       name,
@@ -323,9 +317,9 @@ async function createProject(
       nextAction: command.nextAction.trim() || "Qualifier le besoin",
     },
   });
-  const clientNote = client.summary.startsWith("Le client")
-    ? `Le client « ${primaryClient} » existait déjà.`
-    : `Compte client « ${primaryClient} » créé.`;
+  const clientNote = existing
+    ? `Le client « ${existing.name} » est déjà au répertoire.`
+    : `La fiche « ${primaryClient} » n’est pas enregistrée : décrivez-la à l’assistant, puis confirmez.`;
   return {
     ok: true,
     summary: `Projet « ${name} » créé, statut À qualifier. ${clientNote}`,

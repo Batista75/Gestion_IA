@@ -17,10 +17,11 @@ export default async function ClientsPage({
   return (
     <PartyManager
       title="Clients"
-      intro="Chaque compte client se crée ici ou par l’assistant. Un projet crée aussi le compte s’il n’existe pas encore."
+      intro="Un client est un particulier ou une entreprise, en France ou à l’international. Le formulaire enregistre la fiche. L’assistant identifie d’abord les informations, puis demande confirmation."
       actionPath="/clients"
       query={q}
       noun="client"
+      profile="client"
       createAction={createClientAction}
       updateAction={updateClientAction}
       records={clients.map(toRecord)}
@@ -38,5 +39,16 @@ function toRecord(client: Awaited<ReturnType<typeof listClients>>[number]) {
     address: client.address,
     notes: client.notes,
     updatedLabel: client.updatedAt.toLocaleString("fr-FR"),
+    kind: client.kind,
+    civility: client.civility,
+    tradeName: client.tradeName,
+    legalForm: client.legalForm,
+    country: client.country,
+    postalCode: client.postalCode,
+    city: client.city,
+    siret: client.siret,
+    vatNumber: client.vatNumber,
+    contactName: client.contactName,
+    contactRole: client.contactRole,
   };
 }

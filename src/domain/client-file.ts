@@ -1,0 +1,556 @@
+export type ClientKind = "particulier" | "entreprise" | "";
+export type ClientScope = "france" | "international" | "";
+
+export type ClientDraft = {
+  mode: "create" | "update";
+  kind: ClientKind;
+  scope: ClientScope;
+  civility: string;
+  firstName: string;
+  lastName: string;
+  legalName: string;
+  tradeName: string;
+  legalForm: string;
+  country: string;
+  address: string;
+  postalCode: string;
+  city: string;
+  siren: string;
+  siret: string;
+  vatNumber: string;
+  vatDeduced: boolean;
+  email: string;
+  phone: string;
+  contactName: string;
+  contactRole: string;
+  notes: string;
+  missing: string[];
+};
+
+export type ProposalField = { label: string; value: string };
+
+export const CLIENT_EXAMPLES = [
+  {
+    id: "particulier-france",
+    label: "Particulier en France",
+    text: "Nouveau client particulier : Mme Marie Dupont, 14 rue des Lilas, 75011 Paris, France, marie.dupont@mail.fr, 06 12 34 56 78. Travaux dans son appartement.",
+  },
+  {
+    id: "particulier-international",
+    label: "Particulier à l’international",
+    text: "Nouveau client particulier : M. John Miller, 18 Oak Street, London SW1A 1AA, Royaume-Uni, john.miller@mail.co.uk, +44 20 7946 0958.",
+  },
+  {
+    id: "entreprise-france",
+    label: "Entreprise française",
+    text: "Nouveau client entreprise : Menuiserie Lambert SAS, enseigne Atelier Lambert, SIREN 732829320, SIRET 73282932000009, siège 8 avenue de la République, 69100 Villeurbanne, France, contact Paul Lambert, gérant, paul.lambert@atelier-lambert.fr, 04 72 10 20 30.",
+  },
+  {
+    id: "entreprise-internationale",
+    label: "Entreprise internationale",
+    text: "Nouveau client entreprise : Holzwerk Müller GmbH, Allemagne, TVA DE136695976, Musterstraße 10, 80331 München, contact Anna Müller, achats, anna.mueller@holzwerk-mueller.de, +49 89 123456.",
+  },
+] as const;
+
+const LEGAL_FORMS = [
+  "SASU",
+  "SAS",
+  "SARL",
+  "EURL",
+  "SCI",
+  "GmbH",
+  "LLC",
+  "Ltd",
+  "Inc",
+  "BV",
+  "SRL",
+  "SpA",
+  "SA",
+  "AG",
+  "EI",
+];
+
+const ROLES = new Set([
+  "gerant",
+  "gérant",
+  "president",
+  "président",
+  "directeur",
+  "directrice",
+  "achats",
+  "achat",
+  "comptable",
+  "commercial",
+  "commerciale",
+  "assistant",
+  "assistante",
+]);
+
+export function qualifyDraft(draft: ClientDraft): ClientDraft {
+  return finalize({ ...emptyDraft(), ...draft, missing: [] });
+}
+
+export function draftFromKnownFields(
+  fields: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    notes?: string;
+    siren?: string;
+  },
+  mode: "create" | "update",
+): ClientDraft {
+  const siren = (fields.siren ?? "").replace(/\s/g, "");
+  return qualifyDraft({
+    ...emptyDraft(),
+    mode,
+    legalName: (fields.name ?? "").trim(),
+    email: (fields.email ?? "").trim(),
+    phone: (fields.phone ?? "").trim(),
+    address: (fields.address ?? "").trim(),
+    notes: (fields.notes ?? "").trim(),
+    siret: siren.length === 14 ? siren : "",
+    siren: siren.length === 14 ? siren.slice(0, 9) : siren,
+  });
+}
+
+export function emptyDraft(): ClientDraft {
+  return {
+    mode: "create",
+    kind: "",
+    scope: "",
+    civility: "",
+    firstName: "",
+    lastName: "",
+    legalName: "",
+    tradeName: "",
+    legalForm: "",
+    country: "",
+    address: "",
+    postalCode: "",
+    city: "",
+    siren: "",
+    siret: "",
+    vatNumber: "",
+    vatDeduced: false,
+    email: "",
+    phone: "",
+    contactName: "",
+    contactRole: "",
+    notes: "",
+    missing: [],
+  };
+}
+
+export function displayName(draft: ClientDraft): string {
+  if (draft.kind === "particulier") {
+    const person = [draft.firstName, draft.lastName].filter(Boolean).join(" ");
+    return person || draft.legalName;
+  }
+  return draft.legalName || [draft.firstName, draft.lastName].filter(Boolean).join(" ");
+}
+
+export function identifyClient(text: string): ClientDraft | null {
+  const raw = text.trim().replace(/\s+/g, " ");
+  if (!raw || isOtherCatalogCommand(raw) || isProjectCommand(raw)) return null;
+  if (!looksLikeClientBrief(raw)) return null;
+  const draft = finalize(extractDraft(raw));
+  if (displayName(draft).length < 2) return null;
+  return draft;
+}
+
+export function reviseDraft(
+  current: ClientDraft,
+  comment: string,
+): { draft: ClientDraft; changed: boolean } {
+  const next = { ...current, missing: [], vatDeduced: false };
+  const found = extractDraft(comment);
+  const keys = [
+    "kind",
+    "civility",
+    "firstName",
+    "lastName",
+    "legalName",
+    "tradeName",
+    "legalForm",
+    "country",
+    "address",
+    "postalCode",
+    "city",
+    "siren",
+    "siret",
+    "vatNumber",
+    "email",
+    "phone",
+    "contactName",
+    "contactRole",
+    "notes",
+  ] as const;
+  let changed = false;
+  for (const key of keys) {
+    if (key === "kind") continue;
+    const value = found[key];
+    if (typeof value === "string" && value && value !== current[key]) {
+      next[key] = value;
+      changed = true;
+    }
+  }
+  if (found.kind && found.kind !== current.kind) {
+    next.kind = found.kind;
+    changed = true;
+  }
+  return { draft: finalize(next), changed };
+}
+
+export function readConfirmation(
+  text: string,
+): "confirm" | "reject" | "comment" {
+  const folded = fold(text.trim().replace(/[.!]+$/g, ""));
+  if (
+    /^(oui|ok|okay|d accord|dac|c est bon|c est ok|confirme|je confirme|enregistrer|enregistre|valide|je valide|parfait|yes)$/.test(
+      folded,
+    )
+  ) {
+    return "confirm";
+  }
+  if (/^(non|no|annule|annuler|pas ca|pas bon)$/.test(folded)) return "reject";
+  return "comment";
+}
+
+export function proposalFields(draft: ClientDraft): ProposalField[] {
+  const fields: ProposalField[] = [
+    { label: "Type", value: kindLabel(draft.kind) },
+    { label: "Périmètre", value: scopeLabel(draft.scope) },
+    { label: "Nom", value: labeledName(draft) },
+    { label: "Enseigne", value: draft.tradeName },
+    { label: "Forme", value: draft.legalForm },
+    { label: "Pays", value: draft.country },
+    { label: "Adresse", value: draft.address },
+    { label: "Code postal", value: draft.postalCode },
+    { label: "Ville", value: draft.city },
+    { label: "SIREN", value: draft.siren },
+    { label: "SIRET", value: draft.siret },
+    {
+      label: "TVA",
+      value: draft.vatNumber
+        ? draft.vatDeduced
+          ? `${draft.vatNumber} (déduit du SIREN)`
+          : draft.vatNumber
+        : "",
+    },
+    {
+      label: "Contact",
+      value: [draft.contactName, draft.contactRole].filter(Boolean).join(", "),
+    },
+    { label: "E-mail", value: draft.email },
+    { label: "Téléphone", value: draft.phone },
+    { label: "Notes", value: draft.notes },
+  ];
+  return fields.filter((field) => field.value);
+}
+
+export function presentProposal(draft: ClientDraft): string {
+  const lines = proposalFields(draft).map((field) => `${field.label} : ${field.value}`);
+  const gaps =
+    draft.missing.length > 0
+      ? `À préciser : ${draft.missing.join(", ")}.`
+      : "Les informations utiles à un dossier commercial sont réunies.";
+  return [
+    draft.mode === "update"
+      ? "Je propose de mettre à jour cette fiche. Rien n’est enregistré avant votre accord."
+      : "Je propose cette fiche, comme le ferait un service commercial. Rien n’est enregistré avant votre accord.",
+    ...lines,
+    gaps,
+    "Confirmez-vous l’enregistrement ? Sinon, indiquez la correction, par exemple « le téléphone est le 06 98 76 54 32 ».",
+  ].join("\n");
+}
+
+export function isNewClientBrief(text: string): boolean {
+  return /(?:nouveau client|cr[ée]er (?:un |le |une )?(?:compte )?client|cr[ée]ation d['’]un compte client|fiche client)/i.test(
+    text,
+  );
+}
+
+export function isProjectCommand(text: string): boolean {
+  return /^(?:cr[ée]e(?:r|z)?|ajoute(?:r|z)?|ouvre(?:z)?)\s+(?:d['’]un\s+|un\s+|le\s+)?projet\b/i.test(
+    text.trim(),
+  );
+}
+
+function isOtherCatalogCommand(text: string): boolean {
+  return /^(?:cr[ée]e(?:r|z)?|ajoute(?:r|z)?|ouvre(?:z)?|enregistre(?:r|z)?|devis)\b/i.test(
+    text.trim(),
+  ) && !/client/i.test(text);
+}
+
+function looksLikeClientBrief(text: string): boolean {
+  return /client|particulier|entreprise|soci[ée]t[ée]|\b(?:sas|sarl|sasu|gmbh|ltd)\b/i.test(
+    text,
+  );
+}
+
+function extractDraft(text: string): ClientDraft {
+  const draft = emptyDraft();
+  const source = text.trim();
+  const email = source.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  if (email) draft.email = email[0];
+
+  const siret = source.match(/\b(\d{14})\b/);
+  if (siret) {
+    draft.siret = siret[1] ?? "";
+    draft.siren = draft.siret.slice(0, 9);
+  }
+  if (!draft.siren) {
+    const siren = source.match(/\b(?:siren\s*)?(\d{9})\b/i);
+    if (siren && !source.includes(siren[1] + "00000")) draft.siren = siren[1] ?? "";
+  }
+
+  const vat = source.match(
+    /\b((?:FR[0-9A-Z]{2}\d{9})|(?:DE\d{9})|(?:BE0?\d{9,10})|(?:GB[0-9A-Z]{5,12})|(?:IT\d{11})|(?:ES[A-Z0-9]\d{7}[A-Z0-9])|(?:NL\d{9}B\d{2})|(?:CHE[-.\s]?\d{3}[-.\s]?\d{3}[-.\s]?\d{3}))\b/i,
+  );
+  if (vat) draft.vatNumber = (vat[1] ?? "").replace(/\s/g, "").toUpperCase();
+
+  const withoutIds = source
+    .replace(draft.email, " ")
+    .replace(draft.siret, " ")
+    .replace(draft.vatNumber, " ")
+    .replace(draft.siren, " ");
+  const phone = withoutIds.match(
+    /(?:\+\d{1,3}[\s.-]*)?(?:\d[\s.-]*){8,14}\d/,
+  );
+  if (phone) draft.phone = phone[0].replace(/\s+/g, " ").trim();
+
+  applyKind(source, draft);
+  applyCountry(source, draft);
+  applyIdentity(source, draft);
+  applyAddress(source, draft);
+  applyContact(source, draft);
+  applyNotes(source, draft);
+  return draft;
+}
+
+function applyKind(source: string, draft: ClientDraft) {
+  const folded = fold(source);
+  const particulierAt = folded.search(/\bparticuliers?\b|\bmadame\b|\bmme\b|\bmonsieur\b/);
+  const entrepriseAt = folded.search(
+    /\bentreprises?\b|\bsociete\b|\bcompany\b|\bgmbh\b|\bsas\b|\bsarl\b|\bsasu\b|\bltd\b|\bllc\b/,
+  );
+  if (particulierAt >= 0 || entrepriseAt >= 0) {
+    draft.kind = entrepriseAt > particulierAt ? "entreprise" : "particulier";
+  }
+  if (draft.siren && !draft.kind) draft.kind = "entreprise";
+}
+
+function applyCountry(source: string, draft: ClientDraft) {
+  const folded = fold(source);
+  const countries: Array<[RegExp, string]> = [
+    [/\broyaume-uni\b|\broyaume uni\b|\bangleterre\b|\bunited kingdom\b|\bgb\b/, "Royaume-Uni"],
+    [/\ballemagne\b|\bgermany\b|\bdeutschland\b/, "Allemagne"],
+    [/\bbelgique\b|\bbelgium\b/, "Belgique"],
+    [/\bsuisse\b|\bswitzerland\b/, "Suisse"],
+    [/\bespagne\b|\bspain\b/, "Espagne"],
+    [/\bitalie\b|\bitaly\b/, "Italie"],
+    [/\bpays-bas\b|\bpays bas\b|\bnetherlands\b/, "Pays-Bas"],
+    [/\bluxembourg\b/, "Luxembourg"],
+    [/\betats-unis\b|\betats unis\b|\busa\b/, "États-Unis"],
+    [/\bfrance\b/, "France"],
+  ];
+  for (const [pattern, label] of countries) {
+    if (pattern.test(folded)) {
+      draft.country = label;
+      return;
+    }
+  }
+}
+
+function applyIdentity(source: string, draft: ClientDraft) {
+  const trade = source.match(/enseigne\s+([^,]+)/i);
+  if (trade) draft.tradeName = clean(trade[1] ?? "");
+  if (!isNewClientBrief(source) && !/^[^:]{0,40}:/.test(source)) return;
+
+  const clause = clauseAfterIntro(source);
+  if (!clause || /^(le |la |l'|c'est |c est )/i.test(clause)) return;
+  if (draft.kind === "particulier") {
+    const parsed = parsePerson(clause);
+    draft.civility = parsed.civility;
+    draft.firstName = parsed.firstName;
+    draft.lastName = parsed.lastName;
+    return;
+  }
+  const form = findLegalForm(clause);
+  draft.legalForm = form;
+  draft.legalName = clean(clause);
+  if (!draft.kind && form) draft.kind = "entreprise";
+}
+
+function applyAddress(source: string, draft: ClientDraft) {
+  const parts = source.split(",");
+  for (const part of parts) {
+    const segment = part.trim().replace(/^si[èe]ge\s+/i, "");
+    if (
+      /\b(rue|avenue|boulevard|impasse|chemin|street|stra(?:ss|ß)e|route|place|all[ée]e)\b/i.test(
+        segment,
+      )
+    ) {
+      draft.address = clean(segment);
+    }
+  }
+  const french = source.match(/\b(\d{5})\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' -]{1,40})/);
+  if (french && !draft.postalCode) {
+    draft.postalCode = french[1] ?? "";
+    draft.city = clean(french[2] ?? "");
+  }
+  const uk = source.match(/\b([A-Za-zÀ-ÿ' -]{2,30}?)\s+([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/);
+  if (uk) {
+    draft.city = draft.city || clean(uk[1] ?? "");
+    draft.postalCode = (uk[2] ?? "").toUpperCase();
+  }
+}
+
+function applyContact(source: string, draft: ClientDraft) {
+  const contact = source.match(/contact\s+([^,]+)/i);
+  if (!contact) return;
+  draft.contactName = clean(contact[1] ?? "");
+  const after = source.slice((contact.index ?? 0) + contact[0].length);
+  const role = after.match(/^\s*,\s*([^,]+)/);
+  if (role && ROLES.has(fold(role[1] ?? ""))) {
+    draft.contactRole = clean(role[1] ?? "");
+  }
+}
+
+function applyNotes(source: string, draft: ClientDraft) {
+  const sentences = source.split(/(?<=\.)\s+/);
+  const notes = sentences.filter((sentence) => {
+    const folded = sentence.trim();
+    if (!folded || folded.includes("@")) return false;
+    if (/\d{5}|\+\d|\bSIREN\b|\bSIRET\b|\bTVA\b/i.test(folded)) return false;
+    if (/nouveau client|enseigne|contact\s+/i.test(folded)) return false;
+    return folded.endsWith(".") && !/^\s*(?:Mme|M\.|Monsieur)/i.test(folded);
+  });
+  if (notes.length > 0) draft.notes = notes.join(" ").trim();
+}
+
+function finalize(draft: ClientDraft): ClientDraft {
+  const next = { ...draft };
+  if (!next.country && next.postalCode.length === 5 && /^\d{5}$/.test(next.postalCode)) {
+    next.country = "France";
+  }
+  if (!next.country && /^[A-Z]{1,2}\d/.test(next.postalCode)) next.country = "Royaume-Uni";
+  if (next.vatNumber.startsWith("FR")) next.country = next.country || "France";
+  if (next.vatNumber.startsWith("DE")) next.country = next.country || "Allemagne";
+  if (next.country === "France" || (!next.country && next.siren)) {
+    next.scope = "france";
+    if (!next.country) next.country = "France";
+  } else if (next.country) {
+    next.scope = next.country === "France" ? "france" : "international";
+  }
+  if (next.kind === "entreprise" && next.scope === "france" && isLuhn(next.siren) && !next.vatNumber) {
+    next.vatNumber = frenchVat(next.siren);
+    next.vatDeduced = true;
+  }
+  if (next.siren && !isLuhn(next.siren)) next.missing = ["SIREN à vérifier"];
+  next.missing = unique([...next.missing, ...commercialGaps(next)]);
+  return next;
+}
+
+function commercialGaps(draft: ClientDraft): string[] {
+  const gaps: string[] = [];
+  if (!draft.kind) gaps.push("particulier ou entreprise");
+  if (!draft.country) gaps.push("pays");
+  if (!displayName(draft)) gaps.push("nom");
+  if (!draft.address) gaps.push("adresse");
+  if (!draft.email && !draft.phone) gaps.push("e-mail ou téléphone");
+  if (draft.kind === "entreprise" && draft.scope === "france" && !draft.siren) gaps.push("SIREN");
+  if (draft.kind === "entreprise" && draft.scope === "international" && !draft.vatNumber) {
+    gaps.push("identifiant fiscal");
+  }
+  if (draft.kind === "entreprise" && !draft.contactName) gaps.push("contact");
+  return gaps;
+}
+
+function clauseAfterIntro(source: string): string {
+  const intro = source.includes(":") ? source.split(":").slice(1).join(":") : source;
+  const clause = intro.split(",")[0]?.trim() ?? "";
+  return clause
+    .replace(/^(?:nouveau client|client)\s+/i, "")
+    .replace(/^(?:particulier|entreprise)\s+/i, "")
+    .trim();
+}
+
+function parsePerson(clause: string): { civility: string; firstName: string; lastName: string } {
+  const match = clause.match(/^(?:(Mme|Madame|M\.|Monsieur|Mr|Mrs)\s+)?(.+)$/i);
+  const civilityRaw = match?.[1] ?? "";
+  const rest = (match?.[2] ?? clause).trim().split(/\s+/);
+  const civility = /^mme|^madame|^mrs/i.test(civilityRaw)
+    ? "Madame"
+    : civilityRaw
+      ? "Monsieur"
+      : "";
+  return {
+    civility,
+    firstName: rest[0] ?? "",
+    lastName: rest.slice(1).join(" "),
+  };
+}
+
+function findLegalForm(clause: string): string {
+  const tokens = clause.split(/\s+/);
+  const last = tokens.at(-1) ?? "";
+  return LEGAL_FORMS.find((form) => form.toLowerCase() === last.toLowerCase()) ?? "";
+}
+
+function labeledName(draft: ClientDraft): string {
+  if (draft.kind === "particulier") {
+    return [draft.civility, draft.firstName, draft.lastName].filter(Boolean).join(" ");
+  }
+  return draft.legalName;
+}
+
+function kindLabel(kind: ClientKind): string {
+  if (kind === "particulier") return "Particulier";
+  if (kind === "entreprise") return "Entreprise";
+  return "";
+}
+
+function scopeLabel(scope: ClientScope): string {
+  if (scope === "france") return "France";
+  if (scope === "international") return "International";
+  return "";
+}
+
+export function isLuhn(digits: string): boolean {
+  if (!/^\d+$/.test(digits)) return false;
+  let sum = 0;
+  let alternate = false;
+  for (let index = digits.length - 1; index >= 0; index -= 1) {
+    let digit = Number(digits[index]);
+    if (alternate) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    alternate = !alternate;
+  }
+  return sum % 10 === 0;
+}
+
+export function frenchVat(siren: string): string {
+  const key = (12 + 3 * (Number(siren) % 97)) % 97;
+  return `FR${String(key).padStart(2, "0")}${siren}`;
+}
+
+function clean(value: string): string {
+  return value.replace(/\s+/g, " ").replace(/[.,;]+$/g, "").trim();
+}
+
+function fold(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
+}

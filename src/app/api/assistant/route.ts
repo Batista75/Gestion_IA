@@ -6,10 +6,24 @@ import {
   type CatalogCommand,
 } from "@/domain/catalog";
 import {
+  identifyClient,
+  isNewClientBrief,
+  proposalFields,
+  readConfirmation,
+  reviseDraft,
+} from "@/domain/client-file";
+import {
   asksModelToComputeMoney,
   MONEY_RULE_REPLY,
 } from "@/domain/ollama-endpoint";
 import { applyCatalogCommand } from "@/lib/catalog-store";
+import {
+  confirmCurrentProposal,
+  currentProposal,
+  openClientProposal,
+  proposeFromParty,
+  type ProposalView,
+} from "@/lib/client-proposals";
 import {
   chatWithOllama,
   getOllamaStatus,
@@ -39,21 +53,9 @@ export async function POST(request: Request) {
   const lastUser = [...parsed.messages]
     .reverse()
     .find((message) => message.role === "user");
-  const command = lastUser ? parseCatalogCommand(lastUser.content) : null;
-  if (lastUser && asksModelToComputeMoney(lastUser.content)) {
-    return Response.json({
-      reply: MONEY_RULE_REPLY,
-      model: null,
-      source: "regle-metier",
-    });
-  }
-  if (command) {
-    const applied = await applyCatalogCommand(command);
-    return Response.json({
-      reply: applied.summary,
-      model: null,
-      source: "action",
-    });
+  if (lastUser) {
+    const direct = await answerDirectly(lastUser.content);
+    if (direct) return Response.json(direct);
   }
 
   const status = await getOllamaStatus();
@@ -74,7 +76,12 @@ export async function POST(request: Request) {
 
   try {
     const reply = await runAssistant(model, parsed.messages);
-    return Response.json({ reply: reply.text, model, source: reply.source });
+    return Response.json({
+      reply: reply.text,
+      model: reply.source === "proposition" ? null : model,
+      source: reply.source,
+      proposal: reply.proposal,
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "L’inférence a échoué.";
@@ -82,10 +89,82 @@ export async function POST(request: Request) {
   }
 }
 
+async function answerDirectly(text: string) {
+  const brief = isNewClientBrief(text) || Boolean(identifyClient(text));
+  if (asksModelToComputeMoney(text) && !brief) {
+    return { reply: MONEY_RULE_REPLY, model: null, source: "regle-metier" as const };
+  }
+
+  const verdict = readConfirmation(text);
+  const pending = await currentProposal();
+  if (verdict === "confirm") {
+    const saved = await confirmCurrentProposal();
+    return {
+      reply: saved.summary,
+      model: null,
+      source: saved.ok ? ("action" as const) : ("proposition" as const),
+    };
+  }
+  if (pending && verdict === "reject") {
+    return {
+      reply:
+        "La fiche n’est pas enregistrée. Indiquez ce qu’il faut changer, par exemple le téléphone, le pays ou la forme juridique.",
+      model: null,
+      source: "proposition" as const,
+      proposal: { fields: proposalFields(pending) },
+    };
+  }
+
+  const command = parseCatalogCommand(text);
+  const clientCommand =
+    command && (command.type === "create_client" || command.type === "update_client")
+      ? command
+      : null;
+  if (pending && !isNewClientBrief(text) && (!command || clientCommand)) {
+    if (clientCommand) {
+      const opened = await proposeFromParty(clientCommand);
+      return proposalResponse(opened);
+    }
+    const revised = reviseDraft(pending, text);
+    if (!revised.changed) {
+      return {
+        reply:
+          "Je n’ai pas identifié de champ à corriger. Précisez-le, par exemple « le téléphone est le 06 98 76 54 32 ».",
+        model: null,
+        source: "proposition" as const,
+        proposal: { fields: proposalFields(pending) },
+      };
+    }
+    return proposalResponse(await openClientProposal(revised.draft));
+  }
+
+  if (clientCommand) return proposalResponse(await proposeFromParty(clientCommand));
+  const identified = identifyClient(text);
+  if (identified) return proposalResponse(await openClientProposal(identified));
+  if (command) {
+    const applied = await applyCatalogCommand(command);
+    return { reply: applied.summary, model: null, source: "action" as const };
+  }
+  return null;
+}
+
+function proposalResponse(opened: ProposalView) {
+  return {
+    reply: opened.reply,
+    model: null,
+    source: "proposition" as const,
+    proposal: opened.proposal,
+  };
+}
+
 async function runAssistant(
   model: string,
   incoming: IncomingMessage[],
-): Promise<{ text: string; source: "ollama" | "action" }> {
+): Promise<{
+  text: string;
+  source: "ollama" | "action" | "proposition";
+  proposal?: ProposalView["proposal"];
+}> {
   let transcript: OllamaChatMessage[] = incoming.map((message) => ({
     role: message.role,
     content: message.content,
@@ -120,6 +199,14 @@ async function runAssistant(
       },
     ];
     for (const command of commands) {
+      if (command.type === "create_client" || command.type === "update_client") {
+        const opened = await proposeFromParty(command);
+        return {
+          text: joinReply(opened.reply, summaries),
+          source: "proposition",
+          proposal: opened.proposal,
+        };
+      }
       const applied = await applyCatalogCommand(command);
       summaries.push(applied.summary);
       transcript.push({

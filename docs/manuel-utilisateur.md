@@ -2,7 +2,7 @@
 
 Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification).
 
-Dernière mise à jour : 26 septembre 2026, avec les vues Clients, Fournisseurs et Produits.
+Dernière mise à jour : 26 septembre 2026, avec la qualification des clients (particulier ou entreprise, France ou international) et la confirmation avant enregistrement.
 
 ## Ouvrir l’application
 
@@ -24,9 +24,13 @@ Une information trop courte, moins de 3 caractères, n’est pas enregistrée.
 
 ## Clients
 
-La [vue Clients](/clients) liste les comptes. **Nouveau client** demande un nom. Le SIREN, l’e-mail, le téléphone, l’adresse et les notes sont facultatifs. **Modifier** sur une fiche enregistre la mise à jour.
+La [vue Clients](/clients) distingue un **particulier** et une **entreprise**, en **France** ou à l’**international**. Une fiche sans type affiche **Non qualifié**.
 
-La recherche porte sur le nom, l’e-mail et le SIREN. Un compte déjà présent n’est pas dupliqué.
+**Nouveau client** enregistre dès que vous validez le formulaire. Renseignez le type, le nom ou la raison sociale, le pays, l’adresse, un e-mail ou un téléphone. Pour une entreprise française, le SIREN permet de déduire le numéro de TVA. Pour une entreprise étrangère, indiquez l’identifiant fiscal. Le contact et sa fonction servent au dossier commercial.
+
+**Modifier** met à jour la fiche tout de suite. La recherche porte sur le nom, l’e-mail et le SIREN. Un compte déjà présent n’est pas dupliqué.
+
+Créer un projet ne crée plus la fiche client. Le dossier s’ouvre, et la fiche attend une proposition confirmée.
 
 ## Fournisseurs
 
@@ -50,7 +54,7 @@ Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **
 - **Client principal**, au moins 2 caractères
 - **Prochaine action**, facultative. Si vous la laissez vide, l’application retient « Qualifier le besoin »
 
-**Créer le dossier** ouvre le projet avec le statut **À qualifier**. La date d’ouverture s’affiche dans la liste. Créer un projet est une action explicite : une note de l’accueil ne le fait pas.
+**Créer le dossier** ouvre le projet avec le statut **À qualifier**. La date d’ouverture s’affiche dans la liste. Créer un projet est une action explicite : une note de l’accueil ne le fait pas. Si le client n’est pas encore au répertoire, le projet est créé quand même et la fiche reste à qualifier avec l’assistant.
 
 ## Ventes
 
@@ -67,16 +71,30 @@ Exemple de la spécification : coût `700`, marque `30`, remise `10`. Le prix af
 
 ## Assistant
 
-L’assistant prépare, explique, et enregistre les fiches que vous lui demandez. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
+L’assistant prépare et explique. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
 
-Phrases qu’il exécute sans passer par le modèle :
+Pour un client, il identifie les informations comme le ferait un service commercial, puis affiche une **proposition**. Rien n’est écrit tant que vous n’avez pas confirmé.
 
-- `créer client Atelier Nord, email contact@atelier.fr`
-- `mettre à jour le client Atelier Nord, adresse 12 rue des Lilas, Paris`
+- **Confirmer**, ou écrire `Je confirme.`, enregistre la fiche.
+- `non` laisse la proposition en attente et demande la correction.
+- Un commentaire, par exemple `le téléphone est le 06 98 76 54 32`, produit une nouvelle proposition.
+- Un nouveau texte commençant par `Nouveau client` remplace la proposition en cours.
+
+Quatre exemples sont proposés sur l’écran Assistant :
+
+- Particulier en France : Mme Marie Dupont, 14 rue des Lilas, 75011 Paris.
+- Particulier à l’international : M. John Miller, Londres, Royaume-Uni.
+- Entreprise française : Menuiserie Lambert SAS, enseigne Atelier Lambert, SIREN 732829320, TVA déduite FR44732829320, contact Paul Lambert.
+- Entreprise internationale : Holzwerk Müller GmbH, Allemagne, TVA DE136695976, contact Anna Müller.
+
+Les autres phrases sont exécutées sans passer par le modèle :
+
 - `ajouter un fournisseur Quincaillerie Durand`
 - `créer produit Vis à bois, référence VIS-01, fournisseur Quincaillerie Durand`
 - `créer projet Atlas, client Atelier Nord`
 - `devis Offre mars, produit Vis à bois, référence VIS-01, produit Charnière`
+
+`créer client Atelier Nord, email contact@atelier.fr` et `mettre à jour le client Atelier Nord, adresse 12 rue des Lilas, Paris` ouvrent une proposition, ils n’enregistrent pas tout seuls.
 
 Une demande plus libre est transmise à Ollama, qui dispose des mêmes actions. Seuls les champs présents dans votre message sont écrits.
 

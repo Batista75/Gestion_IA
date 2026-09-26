@@ -25,6 +25,17 @@ export type PartyRecord = {
   address: string;
   notes: string;
   updatedLabel: string;
+  kind?: string;
+  civility?: string;
+  tradeName?: string;
+  legalForm?: string;
+  country?: string;
+  postalCode?: string;
+  city?: string;
+  siret?: string;
+  vatNumber?: string;
+  contactName?: string;
+  contactRole?: string;
 };
 
 export function PartyManager({
@@ -34,6 +45,7 @@ export function PartyManager({
   query,
   records,
   noun,
+  profile,
   createAction,
   updateAction,
 }: {
@@ -43,6 +55,7 @@ export function PartyManager({
   query: string;
   records: PartyRecord[];
   noun: string;
+  profile?: "client";
   createAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   updateAction: (previous: FormState, formData: FormData) => Promise<FormState>;
 }) {
@@ -78,11 +91,17 @@ export function PartyManager({
           <CardHeader>
             <CardTitle>Nouveau {noun}</CardTitle>
             <CardDescription>
-              La même fiche peut être créée par l’assistant.
+              {profile === "client"
+                ? "Ce formulaire enregistre tout de suite. L’assistant, lui, propose la fiche et attend votre accord."
+                : "La même fiche peut être créée par l’assistant."}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <PartyFields action={createAction} submitLabel={`Créer le ${noun}`} />
+            <PartyFields
+              action={createAction}
+              submitLabel={`Créer le ${noun}`}
+              profile={profile}
+            />
           </CardContent>
         </Card>
 
@@ -103,14 +122,43 @@ export function PartyManager({
                     <CardHeader>
                       <CardTitle>{record.name}</CardTitle>
                       <CardDescription>
-                        {[record.email, record.phone, record.siren]
+                        {[
+                          profile === "client" ? kindText(record.kind) : "",
+                          record.country,
+                          record.city,
+                          record.email,
+                          record.phone,
+                          record.siren,
+                        ]
                           .filter(Boolean)
                           .join(" · ") || "Aucun contact renseigné"}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-3">
+                      {record.tradeName || record.legalForm || record.vatNumber ? (
+                        <p className="text-sm leading-6">
+                          {[
+                            record.tradeName ? `Enseigne ${record.tradeName}` : "",
+                            record.legalForm,
+                            record.vatNumber ? `TVA ${record.vatNumber}` : "",
+                            record.siret ? `SIRET ${record.siret}` : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      ) : null}
+                      {record.contactName ? (
+                        <p className="text-sm leading-6">
+                          Contact {record.contactName}
+                          {record.contactRole ? `, ${record.contactRole}` : ""}
+                        </p>
+                      ) : null}
                       {record.address ? (
-                        <p className="text-sm leading-6">{record.address}</p>
+                        <p className="text-sm leading-6">
+                          {[record.address, record.postalCode, record.city]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
                       ) : null}
                       {record.notes ? (
                         <p className="text-sm leading-6 text-muted-foreground">
@@ -129,6 +177,7 @@ export function PartyManager({
                             action={updateAction}
                             submitLabel="Enregistrer"
                             record={record}
+                            profile={profile}
                           />
                         </div>
                       </details>
@@ -148,28 +197,76 @@ function PartyFields({
   action,
   submitLabel,
   record,
+  profile,
 }: {
   action: (previous: FormState, formData: FormData) => Promise<FormState>;
   submitLabel: string;
   record?: PartyRecord;
+  profile?: "client";
 }) {
   const [state, formAction, pending] = useActionState(action, emptyState);
+  const prefix = record?.id ?? "new";
   return (
     <form action={formAction} className="grid gap-3">
       {record ? <input type="hidden" name="id" value={record.id} /> : null}
-      <Field prefix={record?.id ?? "new"} label="Nom" name="name" required defaultValue={record?.name} />
-      <Field prefix={record?.id ?? "new"} label="SIREN ou SIRET" name="siren" defaultValue={record?.siren} />
-      <Field prefix={record?.id ?? "new"} label="E-mail" name="email" type="email" defaultValue={record?.email} />
-      <Field prefix={record?.id ?? "new"} label="Téléphone" name="phone" defaultValue={record?.phone} />
-      <Field prefix={record?.id ?? "new"} label="Adresse" name="address" defaultValue={record?.address} />
+      {profile === "client" ? (
+        <>
+          <Choice
+            prefix={prefix}
+            label="Type"
+            name="kind"
+            defaultValue={record?.kind ?? ""}
+            options={[
+              ["", "À qualifier"],
+              ["particulier", "Particulier"],
+              ["entreprise", "Entreprise"],
+            ]}
+          />
+          <Choice
+            prefix={prefix}
+            label="Civilité"
+            name="civility"
+            defaultValue={record?.civility ?? ""}
+            options={[
+              ["", "—"],
+              ["Madame", "Madame"],
+              ["Monsieur", "Monsieur"],
+            ]}
+          />
+        </>
+      ) : null}
+      <Field
+        prefix={prefix}
+        label={profile === "client" ? "Nom ou raison sociale" : "Nom"}
+        name="name"
+        required
+        defaultValue={record?.name}
+      />
+      {profile === "client" ? (
+        <>
+          <Field prefix={prefix} label="Enseigne" name="tradeName" defaultValue={record?.tradeName} />
+          <Field prefix={prefix} label="Forme juridique" name="legalForm" defaultValue={record?.legalForm} />
+          <Field prefix={prefix} label="Pays" name="country" defaultValue={record?.country} />
+          <Field prefix={prefix} label="SIREN" name="siren" defaultValue={record?.siren} />
+          <Field prefix={prefix} label="SIRET" name="siret" defaultValue={record?.siret} />
+          <Field prefix={prefix} label="N° de TVA" name="vatNumber" defaultValue={record?.vatNumber} />
+          <Field prefix={prefix} label="Adresse" name="address" defaultValue={record?.address} />
+          <Field prefix={prefix} label="Code postal" name="postalCode" defaultValue={record?.postalCode} />
+          <Field prefix={prefix} label="Ville" name="city" defaultValue={record?.city} />
+          <Field prefix={prefix} label="Contact" name="contactName" defaultValue={record?.contactName} />
+          <Field prefix={prefix} label="Fonction du contact" name="contactRole" defaultValue={record?.contactRole} />
+        </>
+      ) : (
+        <>
+          <Field prefix={prefix} label="SIREN ou SIRET" name="siren" defaultValue={record?.siren} />
+          <Field prefix={prefix} label="Adresse" name="address" defaultValue={record?.address} />
+        </>
+      )}
+      <Field prefix={prefix} label="E-mail" name="email" type="email" defaultValue={record?.email} />
+      <Field prefix={prefix} label="Téléphone" name="phone" defaultValue={record?.phone} />
       <div className="grid gap-2">
-        <Label htmlFor={`${record?.id ?? "new"}-notes`}>Notes</Label>
-        <Textarea
-          id={`${record?.id ?? "new"}-notes`}
-          name="notes"
-          defaultValue={record?.notes}
-          rows={3}
-        />
+        <Label htmlFor={`${prefix}-notes`}>Notes</Label>
+        <Textarea id={`${prefix}-notes`} name="notes" defaultValue={record?.notes} rows={3} />
       </div>
       <FormMessage state={state} />
       <Button type="submit" disabled={pending} className="min-h-11 w-fit px-4">
@@ -177,6 +274,45 @@ function PartyFields({
       </Button>
     </form>
   );
+}
+
+function Choice({
+  prefix,
+  label,
+  name,
+  defaultValue,
+  options,
+}: {
+  prefix: string;
+  label: string;
+  name: string;
+  defaultValue: string;
+  options: Array<[string, string]>;
+}) {
+  const id = `${prefix}-${name}`;
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <select
+        id={id}
+        name={name}
+        defaultValue={defaultValue}
+        className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+      >
+        {options.map(([value, text]) => (
+          <option key={value || "empty"} value={value}>
+            {text}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function kindText(kind: string | undefined): string {
+  if (kind === "particulier") return "Particulier";
+  if (kind === "entreprise") return "Entreprise";
+  return "Non qualifié";
 }
 
 function Field({

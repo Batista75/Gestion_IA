@@ -1,7 +1,7 @@
 "use server";
 
+import { draftFromForm, saveClientDraft } from "@/lib/client-proposals";
 import {
-  saveClientForm,
   saveProductForm,
   saveQuoteForm,
   saveSupplierForm,
@@ -13,14 +13,16 @@ export async function createClientAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return toState(await saveClientForm(null, partyFromForm(formData)));
+  return toState(await saveClientDraft(draftFromForm(formData)));
 }
 
 export async function updateClientAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return toState(await saveClientForm(idFromForm(formData), partyFromForm(formData)));
+  return toState(
+    await saveClientDraft(draftFromForm(formData), { id: idFromForm(formData) }),
+  );
 }
 
 export async function createSupplierAction(

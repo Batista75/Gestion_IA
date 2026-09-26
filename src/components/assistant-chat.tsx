@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CLIENT_EXAMPLES } from "@/domain/client-file";
 
 type OllamaStatus = {
   ok: boolean;
@@ -21,11 +22,14 @@ type OllamaStatus = {
   error?: string;
 };
 
+type ProposalField = { label: string; value: string };
+
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
-  source?: "ollama" | "regle-metier" | "action";
+  source?: "ollama" | "regle-metier" | "action" | "proposition";
   model?: string | null;
+  proposal?: ProposalField[];
 };
 
 export function AssistantChat() {
@@ -58,9 +62,7 @@ export function AssistantChat() {
     };
   }, []);
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const content = draft.trim();
+  async function send(content: string) {
     if (!content || pending) return;
 
     const history = [...messages, { role: "user" as const, content }];
@@ -85,7 +87,8 @@ export function AssistantChat() {
         reply?: string;
         error?: string;
         model?: string | null;
-        source?: "ollama" | "regle-metier" | "action";
+        source?: "ollama" | "regle-metier" | "action" | "proposition";
+        proposal?: { fields?: ProposalField[] };
       };
       if (!response.ok || !body.reply) {
         setSendError(body.error ?? "L’inférence a échoué.");
@@ -98,6 +101,7 @@ export function AssistantChat() {
           content: body.reply ?? "",
           source: body.source,
           model: body.model,
+          proposal: body.proposal?.fields,
         },
       ]);
     } catch {
@@ -105,6 +109,11 @@ export function AssistantChat() {
     } finally {
       setPending(false);
     }
+  }
+
+  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void send(draft.trim());
   }
 
   return (
@@ -167,19 +176,35 @@ export function AssistantChat() {
         <CardHeader>
           <CardTitle>Conversation</CardTitle>
           <CardDescription>
-            Il peut créer ou mettre à jour un client, un fournisseur, un
-            produit, un projet ou un devis. Il ne calcule pas les prix et
-            n’émet pas de facture. La conversation elle-même n’est pas
-            conservée.
+            Pour un client, il identifie la fiche comme un service commercial,
+            puis attend votre confirmation. Un fournisseur, un produit, un
+            projet ou un devis est enregistré dès la demande. Il ne calcule pas
+            les prix. La conversation n’est pas conservée.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
           {messages.length === 0 ? (
-            <p className="text-sm leading-6 text-muted-foreground">
-              Exemples : créer client Atelier Nord, email contact@atelier.fr —
-              créer projet Atlas, client Atelier Nord — devis Offre mars,
-              produit Vis à bois. Pour un prix de vente, utilisez Ventes.
-            </p>
+            <div className="grid gap-3">
+              <p className="text-sm leading-6 text-muted-foreground">
+                Ces exemples proposent une fiche, sans l’enregistrer. Confirmez
+                ensuite, ou corrigez un champ. Pour un prix de vente, utilisez
+                Ventes.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {CLIENT_EXAMPLES.map((example) => (
+                  <Button
+                    key={example.id}
+                    type="button"
+                    variant="outline"
+                    className="min-h-11 px-3"
+                    disabled={pending}
+                    onClick={() => void send(example.text)}
+                  >
+                    {example.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
           ) : (
             <ol className="grid gap-3">
               {messages.map((message, index) => (
@@ -194,11 +219,33 @@ export function AssistantChat() {
                         ? "Règle métier"
                         : message.source === "action"
                           ? "Action enregistrée"
-                          : (message.model ?? "Assistant")}
+                          : message.source === "proposition"
+                            ? "Proposition à confirmer"
+                            : (message.model ?? "Assistant")}
                   </span>
                   <p className="text-sm leading-6 whitespace-pre-wrap">
                     {message.content}
                   </p>
+                  {message.proposal && message.proposal.length > 0 ? (
+                    <dl className="mt-2 grid gap-1 text-sm">
+                      {message.proposal.map((field) => (
+                        <div key={field.label} className="grid grid-cols-[8rem_1fr] gap-2">
+                          <dt className="text-muted-foreground">{field.label}</dt>
+                          <dd>{field.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : null}
+                  {message.source === "proposition" && index === messages.length - 1 ? (
+                    <Button
+                      type="button"
+                      className="mt-2 min-h-11 w-fit px-4"
+                      disabled={pending}
+                      onClick={() => void send("Je confirme.")}
+                    >
+                      Confirmer
+                    </Button>
+                  ) : null}
                 </li>
               ))}
             </ol>

@@ -199,13 +199,21 @@ export function validateProduct(
 }
 
 export const CATALOG_TOOLS = [
-  tool("create_client", "Crée un compte client avec les seules informations dites par l’utilisateur.", partyParameters()),
-  tool("update_client", "Met à jour un compte client identifié par son nom.", partyParameters()),
+  tool(
+    "create_client",
+    "Propose une fiche client (particulier ou entreprise, France ou international). L’enregistrement attend la confirmation de l’utilisateur.",
+    partyParameters(),
+  ),
+  tool(
+    "update_client",
+    "Propose la mise à jour d’une fiche client identifiée par son nom. Rien n’est écrit avant confirmation.",
+    partyParameters(),
+  ),
   tool("create_supplier", "Crée un fournisseur.", partyParameters()),
   tool("update_supplier", "Met à jour un fournisseur identifié par son nom.", partyParameters()),
   tool("create_product", "Ajoute un produit au catalogue.", productParameters()),
   tool("update_product", "Met à jour un produit identifié par son nom.", productParameters()),
-  tool("create_project", "Crée un projet et le compte client s’il manque.", {
+  tool("create_project", "Crée un projet. Ne crée pas la fiche client : elle passe par une proposition à confirmer.", {
     type: "object",
     properties: {
       name: { type: "string" },
