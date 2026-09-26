@@ -28,7 +28,7 @@ Un tableau collé de clients, de produits, de services, de projets ou de devis e
 
 Un devis ou un tarif confirmé ajoute une version : numéro, date, fournisseur, prix indiqué et conditions. Une version déjà enregistrée n’est pas dupliquée. Une facture, une commande ou un avoir peut créer une fiche manquante, sans devenir une version de devis. Les prix restent ceux écrits dans la pièce. Ils ne sont pas calculés et ils ne sont pas additionnés.
 
-Sans fichier, un message trop court, moins de 3 caractères, n’est pas enregistré. Les exemples de clients et l’état d’Ollama sont dans ce même assistant. Une fiche client décrite en phrase se confirme dans le fil, par **Confirmer** ou par `Je confirme.`
+Sans fichier, un message trop court, moins de 3 caractères, n’est pas enregistré. Une fiche client décrite en phrase se confirme dans le fil, par **Confirmer** ou par `Je confirme.` L’adresse du serveur, les modèles et la clé d’API se règlent dans Configuration.
 
 **Projets récents** reprend les six derniers dossiers. **Tous les projets** ouvre la liste complète.
 
@@ -113,13 +113,6 @@ Pour un client, il commence par l’analyse de l’action demandée (création o
 - Un commentaire, par exemple `le téléphone est le 06 98 76 54 32`, produit une nouvelle proposition.
 - Un nouveau texte commençant par `Nouveau client` remplace la proposition en cours.
 
-Quatre exemples sont proposés dans le bloc Assistant de l’accueil :
-
-- Particulier en France : Mme Marie Dupont, 14 rue des Lilas, 75011 Paris.
-- Particulier à l’international : M. John Miller, Londres, Royaume-Uni.
-- Entreprise française : Menuiserie Lambert SAS, enseigne Atelier Lambert, SIREN 732829320, TVA déduite FR44732829320, contact Paul Lambert.
-- Entreprise internationale : Holzwerk Müller GmbH, Allemagne, TVA DE136695976, contact Anna Müller.
-
 Les autres phrases sont exécutées sans passer par le modèle :
 
 - `ajouter un fournisseur Quincaillerie Durand`
@@ -132,11 +125,11 @@ Les autres phrases sont exécutées sans passer par le modèle :
 
 Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches, y compris les pièces jointes, l’actualité des projets et chaque version de devis. Le modèle peut relancer une recherche. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. `que sait-on de Vis à bois` reprend toutes les versions enregistrées, avec le prix indiqué et les conditions de chacune. Une pièce reçue seule reste hors projet. Elle entre dans l’actualité du dossier si le même envoi demande explicitement de créer le projet.
 
-Le bandeau **Inférence sur le PC hôte** indique si Ollama répond et l’adresse utilisée, par défaut `http://192.168.1.5:11434`. Le budget prévu est un utilisateur, 16 Go de mémoire graphique et 32 Go de RAM. L’index `nomic-embed-text` se charge, puis se décharge. Ensuite seulement le modèle de conversation, limité à 4 096 jetons. `qwen-dgfip-multisec-2ep:latest` ou `qwen2.5:7b` conviennent. Un modèle 14B, Mixtral ou `bge-m3` ne doit pas rester chargé en même temps. Sans `nomic-embed-text`, la recherche dans les fiches continue par les mots, et elle fonctionne même si Ollama ne répond pas.
+L’état du serveur, l’adresse et le modèle choisi sont dans **Configuration**, pas sur l’accueil. Le budget prévu est un utilisateur, 16 Go de mémoire graphique et 32 Go de RAM. L’index `nomic-embed-text` se charge, puis se décharge. Ensuite seulement le modèle de conversation, limité à 4 096 jetons. `qwen-dgfip-multisec-2ep:latest` ou `qwen2.5:7b` conviennent. Un modèle 14B, Mixtral ou `bge-m3` ne doit pas rester chargé en même temps. Sans `nomic-embed-text`, la recherche dans les fiches continue par les mots, et elle fonctionne même si Ollama ne répond pas.
 
 La conversation n’est pas enregistrée. **Effacer** la retire de l’écran.
 
-Si le badge indique **Ollama injoignable**, le PC hôte doit faire écouter Ollama sur le port `11434`, et le pare-feu Windows doit autoriser ce port depuis le réseau local. Dans une VM VirtualBox en NAT, l’adresse peut être `http://10.0.2.2:11434`.
+Si Configuration indique **Serveur injoignable**, le PC hôte doit faire écouter Ollama sur le port `11434`, et le pare-feu Windows doit autoriser ce port depuis le réseau local. Dans une VM VirtualBox en NAT, l’adresse peut être `http://10.0.2.2:11434`.
 
 ## Achats, Banque et Pilotage
 

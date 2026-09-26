@@ -83,15 +83,7 @@ export default async function HomePage() {
 
   return (
     <div className="grid gap-6">
-      <div className="grid gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Un seul assistant suit l’activité, achat-revente ou fourniture de
-          services : de la demande de devis reçue jusqu’à la fourniture du
-          produit ou du service dans un projet. Il propose les fiches et
-          n’ouvre pas de dossier tant que vous ne le lui demandez pas.
-        </p>
-      </div>
+      <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
 
       <AssistantChat proposals={pending} />
 

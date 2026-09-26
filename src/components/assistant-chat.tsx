@@ -1,32 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createInboxItemAction } from "@/app/actions";
 import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CLIENT_EXAMPLES } from "@/domain/client-file";
-
-type OllamaStatus = {
-  ok: boolean;
-  baseUrl: string;
-  models: string[];
-  defaultModel: string | null;
-  embedModel: string | null;
-  sizing: string;
-  warning?: string;
-  error?: string;
-};
 
 type SourceRef = { label: string; title: string };
 
@@ -42,9 +23,6 @@ type ChatMessage = {
 };
 
 export function AssistantChat({ proposals = [] }: { proposals?: PendingProposal[] }) {
-  const [status, setStatus] = useState<OllamaStatus | null>(null);
-  const [statusError, setStatusError] = useState<string | null>(null);
-  const [model, setModel] = useState("");
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [files, setFiles] = useState<File[]>([]);
@@ -52,27 +30,6 @@ export function AssistantChat({ proposals = [] }: { proposals?: PendingProposal[
   const [sendError, setSendError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const response = await fetch("/api/ollama", { cache: "no-store" });
-        const body = (await response.json()) as OllamaStatus;
-        if (cancelled) return;
-        setStatus(body);
-        setModel(body.defaultModel ?? "");
-      } catch {
-        if (!cancelled) {
-          setStatusError("Impossible de lire l’état d’Ollama.");
-        }
-      }
-    }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   async function send(content: string, attached: File[] = files) {
     const text = content.trim();
@@ -113,7 +70,6 @@ export function AssistantChat({ proposals = [] }: { proposals?: PendingProposal[
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          model: model || undefined,
           messages: history.map(({ role, content: text }) => ({
             role,
             content: text,
@@ -159,105 +115,14 @@ export function AssistantChat({ proposals = [] }: { proposals?: PendingProposal[
   return (
     <div className="grid gap-4" id="assistant">
       <Card>
-        <CardHeader>
-          <CardTitle>Assistant</CardTitle>
-          <CardDescription>
-            Un seul interlocuteur, de la demande de devis reçue jusqu’à la
-            fourniture du produit ou du service dans un projet. Achat-revente
-            ou prestation : il relit le répertoire, propose, puis attend
-            confirmation. Il ne calcule pas les prix.
-          </CardDescription>
-        </CardHeader>
         <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-          {status === null && !statusError ? (
-            <p className="text-sm text-muted-foreground">
-              Vérification d’Ollama…
-            </p>
-          ) : null}
-          {statusError ? (
-            <p className="text-sm text-destructive">{statusError}</p>
-          ) : null}
-          {status ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={status.ok ? "secondary" : "destructive"}>
-                {status.ok ? "Ollama joignable" : "Ollama injoignable"}
-              </Badge>
-              {status.baseUrl ? (
-                <span className="text-sm text-muted-foreground">
-                  {status.baseUrl}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-          {status?.error ? (
-            <p className="text-sm leading-6 text-muted-foreground">
-              {status.error}
-            </p>
-          ) : null}
-          {status?.warning ? (
-            <p className="text-sm leading-6 text-muted-foreground">{status.warning}</p>
-          ) : null}
-          {status ? (
-            <p className="text-sm leading-6 text-muted-foreground">
-              {status.sizing}{" "}
-              {status.embedModel
-                ? `Index : ${status.embedModel}.`
-                : "Index lexical tant que nomic-embed-text n’est pas installé sur l’hôte."}
-            </p>
-          ) : null}
-          {status && status.models.filter((name) => !/embed|bge-m/i.test(name)).length > 0 ? (
-            <div className="grid gap-2">
-              <Label htmlFor="ollama-model">Modèle installé sur l’hôte</Label>
-              <select
-                id="ollama-model"
-                value={model}
-                onChange={(event) => setModel(event.target.value)}
-                className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-              >
-                {status.models
-                  .filter((name) => !/embed|bge-m/i.test(name))
-                  .map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-          ) : null}
-          </div>
           {proposals.length > 0 ? (
             <div className="grid gap-2">
               <h2 className="text-sm font-medium">À confirmer</h2>
               <ProposalBoard proposals={proposals} />
             </div>
           ) : null}
-          {messages.length === 0 ? (
-            <div className="grid gap-3">
-              <p className="text-sm leading-6 text-muted-foreground">
-                Déposez une demande de devis, une offre, une commande ou une
-                facture, ou posez une question. Ces exemples proposent une
-                fiche client, sans l’enregistrer. « que sait-on de Marie
-                Dupont » répond depuis les fiches. Un prix de vente se calcule
-                dans Ventes. La conversation n’est pas conservée ; les pièces
-                et les propositions le sont.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {CLIENT_EXAMPLES.map((example) => (
-                  <Button
-                    key={example.id}
-                    type="button"
-                    variant="outline"
-                    className="min-h-11 px-3"
-                    disabled={pending}
-                    onClick={() => void send(example.text, [])}
-                  >
-                    {example.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          ) : (
+          {messages.length > 0 ? (
             <ol className="grid gap-3">
               {messages.map((message, index) => (
                 <li
