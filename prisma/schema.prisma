@@ -45,6 +45,8 @@ model Project {
   currency      String         @default("EUR")
   budgetStated  String         @default("")
   lead          String         @default("")
+  clientId      String?
+  client        Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
   tradeKey             String         @default("achat-revente-technologies")
   deliveryRecipient    String         @default("")
   deliveryAddress      String         @default("")
@@ -63,6 +65,8 @@ model Project {
   lines         ProjectLine[]
   sales         SaleDocument[]
   steps         ProjectStep[]
+
+  @@index([clientId])
 }
 
 model ProjectStep {
@@ -118,12 +122,13 @@ model Client {
   email       String   @default("")
   phone       String   @default("")
   address     String   @default("")
-  notes       String   @default("")
-  reference   String   @default("")
-  sector      String   @default("")
-  currency    String   @default("")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  notes       String    @default("")
+  reference   String    @default("")
+  sector      String    @default("")
+  currency    String    @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  projects    Project[]
 }
 
 model Conversation {

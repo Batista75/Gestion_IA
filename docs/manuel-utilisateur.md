@@ -78,7 +78,7 @@ Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **
 
 ## Projets
 
-**Ouvrir la vue** d’un dossier, ou son nom depuis l’accueil, montre le client, le contexte, puis les produits et services du projet. Chaque ligne porte une quantité, un coût HT, un taux de marque modifiable et une remise. Le prix de vente HT et la marge sont calculés par la règle de prix, pas saisis à la main. Sans coût, le prix de vente reste non indiqué. **Actualiser les chiffres** enregistre la marge. **Confirmer les chiffres du dossier** fige cette lecture, avec la date et l’heure dans l’actualité.
+**Ouvrir la vue** d’un dossier, ou son nom depuis l’accueil, montre le client, le contexte, puis les produits et services du projet. Le client se choisit dans la liste des fiches déjà au répertoire. Les produits et services se choisissent dans le catalogue, le même pour tous les dossiers. Le fournisseur d’une ligne se choisit dans la liste des fournisseurs. Chaque ligne porte une quantité, le coût du catalogue, un taux de marque modifiable et une remise. Le prix de vente HT et la marge sont calculés par la règle de prix, pas saisis à la main. Sans coût, le prix de vente reste non indiqué. **Actualiser les chiffres** enregistre la marge. **Confirmer les chiffres du dossier** fige cette lecture, avec la date et l’heure dans l’actualité.
 
 Cochez une ou plusieurs lignes, donnez un titre, puis **Établir le devis**. Le devis reprend les chiffres de cet instant. Depuis un devis en cours : **Ouvrir la commande client**, ou **Marquer non abouti**. Les devis non aboutis restent dans leur liste, ils ne deviennent pas une commande. Depuis une commande client, **Établir la commande fournisseur** regroupe les lignes par fournisseur. Une ligne sans fournisseur attend un nom, dans le champ prévu ou sur la ligne. Sur un devis ou une commande encore en cours, la marque et le coût se réactualisent, puis **Confirmer les chiffres** les date. **Reprendre les chiffres** rouvre cette confirmation. Les montants de cette vue sont hors taxes.
 
@@ -93,7 +93,7 @@ Chaque dossier garde aussi une **actualité** : ouverture, objet, devis établi,
 **Nouveau dossier** demande :
 
 - **Nom du projet**, au moins 2 caractères
-- **Client principal**, au moins 2 caractères
+- **Client**, choisi dans le répertoire
 - **Prochaine action**, facultative. Si vous la laissez vide, l’application retient « Qualifier le besoin »
 
 **Créer le dossier** ouvre le projet avec le statut **À qualifier**. La date d’ouverture s’affiche dans la liste. Créer un projet est une action explicite : une note de l’accueil ne le fait pas. Si le client n’est pas encore au répertoire, le projet est créé quand même et la fiche reste à qualifier avec l’assistant.

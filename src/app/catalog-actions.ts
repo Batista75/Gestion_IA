@@ -114,7 +114,7 @@ export async function updateProjectAction(
       updateProject({
         id: requiredId(formData),
         name: String(formData.get("name") ?? ""),
-        primaryClient: String(formData.get("primaryClient") ?? ""),
+        clientId: String(formData.get("clientId") ?? ""),
         status: String(formData.get("status") ?? ""),
         purpose: String(formData.get("purpose") ?? ""),
         nextAction: String(formData.get("nextAction") ?? ""),

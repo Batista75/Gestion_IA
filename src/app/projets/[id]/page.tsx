@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ClientPicker } from "@/components/client-picker";
 import { DeliveryForm } from "@/components/delivery-form";
 import { ProjectOperation } from "@/components/project-operation";
 import { ProjectWorkflow } from "@/components/project-workflow";
@@ -28,20 +29,26 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       sales: { orderBy: { createdAt: "desc" }, include: { lines: { orderBy: { createdAt: "asc" } } } },
       steps: true,
       events: { orderBy: { createdAt: "asc" } },
+      client: true,
     },
   });
   if (!project) notFound();
 
-  const [client, products] = await Promise.all([
-    prisma.client.findFirst({
-      where: { name: { equals: project.primaryClient, mode: "insensitive" } },
-    }),
+  const [namedClient, products, clients, suppliers] = await Promise.all([
+    project.client
+      ? Promise.resolve(project.client)
+      : prisma.client.findFirst({
+          where: { name: { equals: project.primaryClient, mode: "insensitive" } },
+        }),
     prisma.product.findMany({
       orderBy: { name: "asc" },
-      take: 200,
+      take: 500,
       include: { supplier: true },
     }),
+    prisma.client.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.supplier.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
+  const client = namedClient;
   const delivery = deliveryFromRecord(project);
   const deliveryLines = deliverySummary(delivery);
 
@@ -80,7 +87,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             <CardDescription>Compte facturé de ce dossier.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 text-sm leading-6">
-            <p className="font-medium">{project.primaryClient}</p>
+            <p className="font-medium">{client?.name ?? project.primaryClient}</p>
+            <ClientPicker
+              projectId={project.id}
+              clientId={project.clientId ?? client?.id ?? ""}
+              clients={clients}
+            />
             {client ? (
               <>
                 <p>
@@ -146,6 +158,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           supplierName: product.supplier?.name ?? "",
           costLabel: product.costStated,
         }))}
+        suppliers={suppliers}
         lines={project.lines.map((line) => ({
           id: line.id,
           name: line.name,

@@ -56,30 +56,32 @@ export async function removeQuote(id: string): Promise<AdminResult> {
 export async function updateProject(input: {
   id: string;
   name: string;
-  primaryClient: string;
+  clientId: string;
   status: string;
   purpose: string;
   nextAction: string;
 }): Promise<AdminResult> {
   const project = await prisma.project.findUnique({ where: { id: input.id } });
   if (!project) return missing("projet");
+  const client = await prisma.client.findUnique({ where: { id: input.clientId } });
+  if (!client) return { ok: false, summary: "Choisissez un client du répertoire." };
   const name = input.name.trim().replace(/\s+/g, " ");
-  const primaryClient = input.primaryClient.trim().replace(/\s+/g, " ");
+  const primaryClient = client.name;
   if (name.length < 2) return { ok: false, summary: "Indiquez un nom de projet d’au moins 2 caractères." };
-  if (primaryClient.length < 2) return { ok: false, summary: "Indiquez le client principal." };
   const status = input.status.trim().slice(0, 80) || "À qualifier";
   const purpose = input.purpose.trim().slice(0, 500);
   const nextAction = input.nextAction.trim().slice(0, 200) || "Qualifier le besoin";
   const changed =
     name !== project.name ||
     primaryClient !== project.primaryClient ||
+    client.id !== project.clientId ||
     status !== project.status ||
     purpose !== project.purpose ||
     nextAction !== project.nextAction;
   if (!changed) return { ok: true, summary: "Aucun changement à enregistrer." };
   await prisma.project.update({
     where: { id: project.id },
-    data: { name, primaryClient, status, purpose, nextAction },
+    data: { name, primaryClient, clientId: client.id, status, purpose, nextAction },
   });
   await prisma.projectEvent.create({
     data: {

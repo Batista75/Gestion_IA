@@ -11,7 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 const initialState: ActionState = { message: null };
 
-export function ProjectForm() {
+const fieldClass = "h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm";
+
+export function ProjectForm({ clients }: { clients: Array<{ id: string; name: string }> }) {
   const [state, action, pending] = useActionState(
     createProjectAction,
     initialState,
@@ -24,14 +26,15 @@ export function ProjectForm() {
         <Input id="name" name="name" required minLength={2} placeholder="Atlas" />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="primaryClient">Client principal</Label>
-        <Input
-          id="primaryClient"
-          name="primaryClient"
-          required
-          minLength={2}
-          placeholder="Atelier Nord"
-        />
+        <Label htmlFor="clientId">Client</Label>
+        <select id="clientId" name="clientId" required defaultValue="" className={fieldClass}>
+          <option value="">Choisir un client</option>
+          {clients.map((client) => (
+            <option key={client.id} value={client.id}>
+              {client.name}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="grid gap-2">
         <Label htmlFor="nextAction">Prochaine action</Label>
@@ -59,15 +62,17 @@ export function ProjectEditor({
   deleteAction,
   deleteQuoteAction,
   quotes,
+  clients,
 }: {
   project: {
     id: string;
     name: string;
-    primaryClient: string;
+    clientId: string;
     status: string;
     purpose: string;
     nextAction: string;
   };
+  clients: Array<{ id: string; name: string }>;
   updateAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   deleteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   deleteQuoteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
@@ -86,14 +91,21 @@ export function ProjectEditor({
           <Input id={`name-${project.id}`} name="name" required minLength={2} defaultValue={project.name} />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor={`client-${project.id}`}>Client principal</Label>
-          <Input
+          <Label htmlFor={`client-${project.id}`}>Client</Label>
+          <select
             id={`client-${project.id}`}
-            name="primaryClient"
+            name="clientId"
             required
-            minLength={2}
-            defaultValue={project.primaryClient}
-          />
+            defaultValue={project.clientId}
+            className={fieldClass}
+          >
+            <option value="">Choisir un client</option>
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.name}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="grid gap-2">
           <Label htmlFor={`status-${project.id}`}>Statut</Label>

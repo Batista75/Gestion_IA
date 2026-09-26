@@ -48,6 +48,7 @@ export async function addProjectLine(input: {
 }): Promise<string> {
   const project = await prisma.project.findUnique({ where: { id: input.projectId } });
   if (!project) throw new Error("Ce projet est introuvable.");
+  if (!input.productId) throw new Error("Choisissez un produit du catalogue, commun à tous les dossiers.");
   let name = input.name.trim().replace(/\s+/g, " ");
   let kind = input.kind === "service" ? "service" : "produit";
   let supplierName = input.supplierName.trim().replace(/\s+/g, " ");

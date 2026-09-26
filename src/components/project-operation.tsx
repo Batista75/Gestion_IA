@@ -63,11 +63,13 @@ export function ProjectOperation({
   lines,
   documents,
   products,
+  suppliers,
 }: {
   projectId: string;
   lines: OperationLine[];
   documents: OperationDocument[];
   products: CatalogChoice[];
+  suppliers: Array<{ id: string; name: string }>;
 }) {
   const quotes = documents.filter((document) => document.kind === "devis" && document.status !== "non_abouti");
   const lost = documents.filter((document) => document.kind === "devis" && document.status === "non_abouti");
@@ -81,7 +83,7 @@ export function ProjectOperation({
       <section id="produits" className="grid scroll-mt-6 gap-3">
         <h2 className="text-lg font-semibold">Produits et services</h2>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Le prix de vente HT vient du coût, du taux de marque et de la remise. La marge se modifie ici, puis se confirme. Les montants restent hors taxes.
+          Le catalogue est le même pour tous les dossiers. Le prix de vente HT vient du coût du produit, du taux de marque et de la remise. La marge se modifie ici, puis se confirme. Les montants restent hors taxes.
         </p>
         <AddLineForm projectId={projectId} products={products} />
         {lines.length === 0 ? (
@@ -92,7 +94,14 @@ export function ProjectOperation({
           <div className="grid gap-3">
             <ul className="grid gap-3">
               {lines.map((line, index) => (
-                <LineEditor key={line.id} line={line} figures={figures[index]!} quoteForm="project-quote" updateForm="project-lines" />
+                <LineEditor
+                  key={line.id}
+                  line={line}
+                  figures={figures[index]!}
+                  quoteForm="project-quote"
+                  updateForm="project-lines"
+                  suppliers={suppliers}
+                />
               ))}
             </ul>
             <p className="text-sm leading-6">
@@ -110,6 +119,7 @@ export function ProjectOperation({
 
       <DocumentList
         id="devis"
+        suppliers={suppliers}
         title="Devis"
         empty="Aucun devis pour ce projet. Sélectionnez une ou plusieurs lignes, puis établissez le devis."
         projectId={projectId}
@@ -117,6 +127,7 @@ export function ProjectOperation({
       />
       <DocumentList
         id="devis-non-aboutis"
+        suppliers={suppliers}
         title="Devis non aboutis"
         empty="Aucun devis non abouti."
         projectId={projectId}
@@ -124,6 +135,7 @@ export function ProjectOperation({
       />
       <DocumentList
         id="commandes-client"
+        suppliers={suppliers}
         title="Commandes client"
         empty="Aucune commande client. Elle s’ouvre depuis un devis en cours."
         projectId={projectId}
@@ -131,6 +143,7 @@ export function ProjectOperation({
       />
       <DocumentList
         id="commandes-fournisseur"
+        suppliers={suppliers}
         title="Commandes fournisseur"
         empty="Aucune commande fournisseur. Elle s’ouvre depuis une commande client, avec un fournisseur nommé."
         projectId={projectId}
@@ -157,43 +170,32 @@ function AddLineForm({ projectId, products }: { projectId: string; products: Cat
   return (
     <form action={action} className="grid gap-3 rounded-lg border border-border p-3">
       <input type="hidden" name="projectId" value={projectId} />
-      <p className="text-sm font-medium">Ajouter une ligne</p>
+      <p className="text-sm font-medium">Ajouter un produit du catalogue</p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <Label htmlFor="productId">Depuis le catalogue</Label>
-          <select id="productId" name="productId" defaultValue="" className={fieldClass}>
-            <option value="">Saisie libre</option>
+        <div className="grid gap-2 sm:col-span-2">
+          <Label htmlFor="productId">Produit ou service</Label>
+          <select id="productId" name="productId" defaultValue="" required className={fieldClass}>
+            <option value="">Choisir dans le catalogue</option>
             {products.map((product) => (
               <option key={product.id} value={product.id}>
                 {product.name}
                 {product.kind === "service" ? " · service" : ""}
+                {product.supplierName ? ` · ${product.supplierName}` : ""}
                 {product.costLabel ? ` · coût ${product.costLabel}` : ""}
               </option>
             ))}
           </select>
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="line-name">Nom</Label>
-          <Input id="line-name" name="name" placeholder="Pose sur site" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="line-kind">Type</Label>
-          <select id="line-kind" name="kind" defaultValue="produit" className={fieldClass}>
-            <option value="produit">Produit</option>
-            <option value="service">Service</option>
-          </select>
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="line-supplier">Fournisseur</Label>
-          <Input id="line-supplier" name="supplierName" placeholder="Helios" />
+          <p className="text-xs leading-5 text-muted-foreground">
+            Ce catalogue est commun à tous les dossiers. Un produit nouveau se crée dans{" "}
+            <Link href="/produits" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Produits
+            </Link>
+            .
+          </p>
         </div>
         <div className="grid gap-2">
           <Label htmlFor="line-qty">Quantité</Label>
           <Input id="line-qty" name="quantity" defaultValue="1" inputMode="numeric" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="line-cost">Coût HT</Label>
-          <Input id="line-cost" name="cost" inputMode="decimal" placeholder="700" />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="line-markup">Taux de marque (%)</Label>
@@ -205,7 +207,7 @@ function AddLineForm({ projectId, products }: { projectId: string; products: Cat
         </div>
       </div>
       <FormMessage state={state} />
-      <Button type="submit" disabled={pending} className="min-h-11 w-fit px-4">
+      <Button type="submit" disabled={pending || products.length === 0} className="min-h-11 w-fit px-4">
         {pending ? "Ajout…" : "Ajouter au projet"}
       </Button>
     </form>
@@ -217,11 +219,13 @@ function LineEditor({
   figures,
   quoteForm,
   updateForm,
+  suppliers,
 }: {
   line: OperationLine;
   figures: ReturnType<typeof saleLineFigures>;
   quoteForm: string;
   updateForm: string;
+  suppliers: Array<{ id: string; name: string }>;
 }) {
   return (
     <li className="grid gap-3 rounded-lg border border-border p-3">
@@ -237,7 +241,13 @@ function LineEditor({
         <Field label="Coût HT" name={`cost_${line.id}`} form={updateForm} defaultValue={centsInput(line.costCents)} />
         <Field label="Marque %" name={`markup_${line.id}`} form={updateForm} defaultValue={String(line.markupPercent)} />
         <Field label="Remise %" name={`discount_${line.id}`} form={updateForm} defaultValue={String(line.discountPercent)} />
-        <Field label="Fournisseur" name={`supplier_${line.id}`} form={updateForm} defaultValue={line.supplierName} />
+        <NameSelect
+          label="Fournisseur"
+          name={`supplier_${line.id}`}
+          form={updateForm}
+          value={line.supplierName}
+          names={suppliers.map((supplier) => supplier.name)}
+        />
       </div>
       <p className="text-sm leading-6">
         Prix de vente HT {formatCents(figures.lineNetCents)}
@@ -266,6 +276,35 @@ function Field({
     <div className="grid gap-2">
       <Label htmlFor={name}>{label}</Label>
       <input id={name} name={name} form={form} defaultValue={defaultValue} className={fieldClass} />
+    </div>
+  );
+}
+
+function NameSelect({
+  label,
+  name,
+  form,
+  value,
+  names,
+}: {
+  label: string;
+  name: string;
+  form: string;
+  value: string;
+  names: string[];
+}) {
+  const options = value && !names.includes(value) ? [value, ...names] : names;
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={name}>{label}</Label>
+      <select id={name} name={name} form={form} defaultValue={value} className={fieldClass}>
+        <option value="">Non nommé</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -325,12 +364,14 @@ function DocumentList({
   empty,
   projectId,
   documents,
+  suppliers,
 }: {
   id: string;
   title: string;
   empty: string;
   projectId: string;
   documents: OperationDocument[];
+  suppliers: Array<{ id: string; name: string }>;
 }) {
   return (
     <section id={id} className="grid scroll-mt-6 gap-3">
@@ -340,7 +381,7 @@ function DocumentList({
       ) : (
         <ul className="grid gap-3">
           {documents.map((document) => (
-            <DocumentCard key={document.id} projectId={projectId} document={document} />
+            <DocumentCard key={document.id} projectId={projectId} document={document} suppliers={suppliers} />
           ))}
         </ul>
       )}
@@ -348,7 +389,15 @@ function DocumentList({
   );
 }
 
-function DocumentCard({ projectId, document }: { projectId: string; document: OperationDocument }) {
+function DocumentCard({
+  projectId,
+  document,
+  suppliers,
+}: {
+  projectId: string;
+  document: OperationDocument;
+  suppliers: Array<{ id: string; name: string }>;
+}) {
   const formId = `doc-${document.id}`;
   const figures = document.lines.map((line) => saleLineFigures(line));
   const totals = saleOperationTotals(figures);
@@ -413,7 +462,7 @@ function DocumentCard({ projectId, document }: { projectId: string; document: Op
         ) : null}
       </div>
       {document.kind === "commande_client" && document.status === "en_cours" ? (
-        <SupplierOrderForm projectId={projectId} documentId={document.id} />
+        <SupplierOrderForm projectId={projectId} documentId={document.id} suppliers={suppliers} />
       ) : null}
     </li>
   );
@@ -468,7 +517,15 @@ function SimpleDocumentForm({
   );
 }
 
-function SupplierOrderForm({ projectId, documentId }: { projectId: string; documentId: string }) {
+function SupplierOrderForm({
+  projectId,
+  documentId,
+  suppliers,
+}: {
+  projectId: string;
+  documentId: string;
+  suppliers: Array<{ id: string; name: string }>;
+}) {
   const [state, action, pending] = useActionState(supplierOrderAction, initial);
   return (
     <form action={action} className="grid gap-2 sm:grid-cols-[minmax(0,16rem)_auto] sm:items-end">
@@ -476,7 +533,14 @@ function SupplierOrderForm({ projectId, documentId }: { projectId: string; docum
       <input type="hidden" name="documentId" value={documentId} />
       <div className="grid gap-2">
         <Label htmlFor={`supplier-${documentId}`}>Fournisseur si la ligne n’en a pas</Label>
-        <Input id={`supplier-${documentId}`} name="supplierName" placeholder="Helios" />
+        <select id={`supplier-${documentId}`} name="supplierName" defaultValue="" className={fieldClass}>
+          <option value="">Choisir un fournisseur</option>
+          {suppliers.map((supplier) => (
+            <option key={supplier.id} value={supplier.name}>
+              {supplier.name}
+            </option>
+          ))}
+        </select>
       </div>
       <Button type="submit" disabled={pending} className="min-h-11 px-4">
         {pending ? "Ouverture…" : "Établir la commande fournisseur"}

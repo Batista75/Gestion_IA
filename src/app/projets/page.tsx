@@ -22,7 +22,7 @@ import { listRecordEvents } from "@/lib/record-journal";
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
-  const [projects, journal] = await Promise.all([
+  const [projects, journal, clients] = await Promise.all([
     prisma.project.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -31,6 +31,7 @@ export default async function ProjectsPage() {
       },
     }),
     listRecordEvents("project", 40),
+    prisma.client.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
   return (
@@ -54,7 +55,7 @@ export default async function ProjectsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ProjectForm />
+          <ProjectForm clients={clients} />
         </CardContent>
       </Card>
 
@@ -134,7 +135,7 @@ export default async function ProjectsPage() {
                           project={{
                             id: project.id,
                             name: project.name,
-                            primaryClient: project.primaryClient,
+                            clientId: project.clientId ?? "",
                             status: project.status,
                             purpose: project.purpose,
                             nextAction: project.nextAction,
@@ -146,6 +147,7 @@ export default async function ProjectsPage() {
                           updateAction={updateProjectAction}
                           deleteAction={deleteProjectAction}
                           deleteQuoteAction={deleteQuoteAction}
+                          clients={clients}
                         />
                       </div>
                     </details>

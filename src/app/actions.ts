@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ensureSpokenProject } from "@/lib/business-records";
+import { prisma } from "@/lib/db";
 import { isConversationId, rememberTurn } from "@/lib/conversations";
 import { saveInboxPieces } from "@/lib/pieces";
 
@@ -15,19 +16,26 @@ export async function createProjectAction(
   formData: FormData,
 ): Promise<ActionState> {
   const name = String(formData.get("name") ?? "").trim();
-  const primaryClient = String(formData.get("primaryClient") ?? "").trim();
+  const clientId = String(formData.get("clientId") ?? "").trim();
   const nextAction =
     String(formData.get("nextAction") ?? "").trim() || "Qualifier le besoin";
 
   if (name.length < 2) {
     return { message: "Indiquez un nom de projet d’au moins 2 caractères." };
   }
-  if (primaryClient.length < 2) {
-    return { message: "Indiquez le client principal." };
+  const client = clientId ? await prisma.client.findUnique({ where: { id: clientId } }) : null;
+  if (!client) {
+    return { message: "Choisissez un client du répertoire." };
   }
 
-  const saved = await ensureSpokenProject({ name, primaryClient, nextAction });
+  const saved = await ensureSpokenProject({ name, primaryClient: client.name, nextAction });
   if (!saved.ok) return { message: saved.summary };
+  if (saved.projectId) {
+    await prisma.project.update({
+      where: { id: saved.projectId },
+      data: { clientId: client.id, primaryClient: client.name },
+    });
+  }
 
   revalidatePath("/");
   revalidatePath("/projets");
