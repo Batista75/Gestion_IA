@@ -13,6 +13,16 @@ import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+function previewEnrichment(value: string): string {
+  const lines = value
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const prices = lines.filter((line) => /prix indiqué/i.test(line));
+  const head = lines.filter((line) => !/prix indiqué/i.test(line)).slice(0, 2);
+  return [...head, ...prices].slice(0, 8).join("\n");
+}
+
 export default async function HomePage() {
   const [projects, inbox] = await Promise.all([
     prisma.project.findMany({
@@ -147,8 +157,8 @@ export default async function HomePage() {
                               <Badge variant="secondary">{kindLabel(file.kind)}</Badge>
                             </div>
                             {file.enrichment ? (
-                              <p className="mt-1 line-clamp-4 text-xs leading-5 break-words whitespace-pre-wrap text-muted-foreground">
-                                {file.enrichment}
+                              <p className="mt-1 text-xs leading-5 break-words whitespace-pre-wrap text-muted-foreground">
+                                {previewEnrichment(file.enrichment)}
                               </p>
                             ) : null}
                           </li>
