@@ -229,20 +229,21 @@ function MessageRow({
   confirm: boolean;
   onConfirm: () => void;
 }) {
+  const label = roleLabel(message);
   const text = message.parts
     .flatMap((part) => (part.type === "text" ? [part.text] : []))
     .join("\n")
     .trim();
   const steps = message.parts.flatMap((part) => {
     const title = stepTitle(part);
-    return title ? [title] : [];
+    return title && title !== label ? [title] : [];
   });
   const proposal = message.metadata?.proposal?.fields ?? [];
   const sources = message.metadata?.sources ?? [];
 
   return (
     <li className="grid gap-1 rounded-lg border border-border px-3 py-2">
-      <span className="text-xs font-medium text-muted-foreground">{roleLabel(message)}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       {steps.length > 0 ? (
         <ul className="grid gap-1">
           {steps.map((step, index) => (
