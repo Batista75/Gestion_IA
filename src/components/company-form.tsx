@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useActionState } from "react";
 import { saveCompanyAction, type CompanyState } from "@/app/configuration/actions";
 import { FormMessage } from "@/components/party-manager";
@@ -18,47 +19,20 @@ export function CompanyForm({
   const [state, action, pending] = useActionState(saveCompanyAction, initial);
   return (
     <form action={action} className="grid gap-4">
-      <div className="grid gap-2">
-        <Label htmlFor="legalName">Raison sociale</Label>
-        <Input id="legalName" name="legalName" defaultValue={company.legalName} className="h-11" placeholder="Atelier Nord" />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="address">Adresse</Label>
-        <Input id="address" name="address" defaultValue={company.address} className="h-11" placeholder="12 rue des Lilas" />
-      </div>
+      <TextField id="legalName" name="legalName" label="Raison sociale" saved={company.legalName} placeholder="Atelier Nord" />
+      <TextField id="address" name="address" label="Adresse" saved={company.address} placeholder="12 rue des Lilas" />
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="grid gap-2">
-          <Label htmlFor="postalCode">Code postal</Label>
-          <Input id="postalCode" name="postalCode" defaultValue={company.postalCode} className="h-11" />
-        </div>
-        <div className="grid gap-2 sm:col-span-2">
-          <Label htmlFor="city">Ville</Label>
-          <Input id="city" name="city" defaultValue={company.city} className="h-11" />
-        </div>
+        <TextField id="postalCode" name="postalCode" label="Code postal" saved={company.postalCode} />
+        <TextField id="city" name="city" label="Ville" saved={company.city} className="sm:col-span-2" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <Label htmlFor="country">Pays</Label>
-          <Input id="country" name="country" defaultValue={company.country} className="h-11" placeholder="France" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="phone">Téléphone</Label>
-          <Input id="phone" name="phone" defaultValue={company.phone} className="h-11" />
-        </div>
+        <TextField id="country" name="country" label="Pays" saved={company.country} placeholder="France" />
+        <TextField id="phone" name="phone" label="Téléphone" saved={company.phone} />
       </div>
-      <div className="grid gap-2">
-        <Label htmlFor="email">E-mail</Label>
-        <Input id="email" name="email" type="email" defaultValue={company.email} className="h-11" />
-      </div>
+      <TextField id="email" name="email" label="E-mail" saved={company.email} type="email" />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <Label htmlFor="siren">SIREN</Label>
-          <Input id="siren" name="siren" defaultValue={company.siren} className="h-11" inputMode="numeric" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="vatNumber">Numéro de TVA</Label>
-          <Input id="vatNumber" name="vatNumber" defaultValue={company.vatNumber} className="h-11" />
-        </div>
+        <TextField id="siren" name="siren" label="SIREN" saved={company.siren} inputMode="numeric" />
+        <TextField id="vatNumber" name="vatNumber" label="Numéro de TVA" saved={company.vatNumber} />
       </div>
       <div className="grid gap-2">
         <Label htmlFor="logo">Logo</Label>
@@ -67,7 +41,13 @@ export function CompanyForm({
         ) : (
           <p className="text-sm text-muted-foreground">Aucun logo enregistré.</p>
         )}
-        <Input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" className="h-11" />
+        <input
+          id="logo"
+          name="logo"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium"
+        />
         <p className="text-xs leading-5 text-muted-foreground">PNG, JPEG ou WebP, 2 Mo au plus. Il apparaît en tête des documents.</p>
         {company.hasLogo ? (
           <label className="flex min-h-11 items-center gap-2 text-sm">
@@ -81,5 +61,47 @@ export function CompanyForm({
         {pending ? "Enregistrement…" : "Enregistrer l’entreprise"}
       </Button>
     </form>
+  );
+}
+
+function TextField({
+  id,
+  name,
+  label,
+  saved,
+  className,
+  type,
+  placeholder,
+  inputMode,
+}: {
+  id: string;
+  name: string;
+  label: string;
+  saved: string;
+  className?: string;
+  type?: string;
+  placeholder?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+}) {
+  const [value, setValue] = useState(saved);
+  const [source, setSource] = useState(saved);
+  if (source !== saved) {
+    setSource(saved);
+    setValue(saved);
+  }
+  return (
+    <div className={`grid gap-2 ${className ?? ""}`}>
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        name={name}
+        type={type}
+        inputMode={inputMode}
+        value={value}
+        onValueChange={setValue}
+        placeholder={placeholder}
+        className="h-11"
+      />
+    </div>
   );
 }
