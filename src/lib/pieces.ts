@@ -65,7 +65,12 @@ export async function saveInboxPieces(
   const item = await prisma.inboxItem.create({ data: { body: text } });
   await mkdir(PIECES_DIR, { recursive: true });
 
-  const stored = [];
+  const stored: Array<{
+    id: string;
+    originalName: string;
+    reading: ReturnType<typeof readOfferFile>;
+    text: string;
+  }> = [];
   for (const entry of prepared) {
     const id = randomUUID();
     const storagePath = `${id}-${safeFileName(entry.file.name)}`;
@@ -103,9 +108,12 @@ export async function saveInboxPieces(
   const plan = parseBusinessBrief(note);
   if (!planIsEmpty(plan)) {
     const { applyBusinessPlan } = await import("@/lib/business-records");
-    const applied = await applyBusinessPlan(
-      plan,
-      stored.map((file) => ({ id: file.id, originalName: file.originalName, text: file.text })),
+    const { withChangeSource } = await import("@/lib/change-source");
+    const applied = await withChangeSource("assistant", () =>
+      applyBusinessPlan(
+        plan,
+        stored.map((file) => ({ id: file.id, originalName: file.originalName, text: file.text })),
+      ),
     );
     const fileNote = files.length === 1 ? "1 fichier enregistré." : `${files.length} fichiers enregistrés.`;
     return { ok: true, message: `${fileNote} ${applied.summary}` };

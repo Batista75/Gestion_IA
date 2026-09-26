@@ -135,7 +135,7 @@ async function syncKnowledge(): Promise<KnowledgeDoc[]> {
 }
 
 async function loadDocs(): Promise<KnowledgeDoc[]> {
-  const [clients, suppliers, products, projects, quotes, notes, files, demands] = await Promise.all([
+  const [clients, suppliers, products, projects, quotes, notes, files, demands, events] = await Promise.all([
     prisma.client.findMany({ take: 500, orderBy: { name: "asc" } }),
     prisma.supplier.findMany({ take: 500, orderBy: { name: "asc" } }),
     prisma.product.findMany({
@@ -160,11 +160,19 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
     }),
     prisma.storedFile.findMany({ take: 200, orderBy: { createdAt: "desc" } }),
     prisma.demand.findMany({ take: 200, orderBy: { updatedAt: "desc" } }),
+    prisma.recordEvent.findMany({ orderBy: { createdAt: "desc" }, take: 400 }),
   ]);
+  const history = historyLines(events);
 
   return [
     ...clients.map((client) =>
-      doc("client", client.id, client.name, clientLine(client), clientBody(client)),
+      doc(
+        "client",
+        client.id,
+        client.name,
+        clientLine(client),
+        withHistory(clientBody(client), history.get(`client:${client.id}`) ?? []),
+      ),
     ),
     ...suppliers.map((supplier) =>
       doc(
@@ -183,14 +191,17 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
           .filter(Boolean)
           .join("\n"),
       ),
-    ),
+    ).map((entry) => ({
+      ...entry,
+      body: withHistory(entry.body, history.get(`supplier:${entry.sourceId}`) ?? []),
+    })),
     ...products.map((product) =>
       doc(
         "product",
         product.id,
         product.name,
         [product.reference, product.supplier?.name].filter(Boolean).join(", "),
-        productBody(product),
+        withHistory(productBody(product), history.get(`product:${product.id}`) ?? []),
       ),
     ),
     ...projects.map((project) =>
@@ -409,6 +420,27 @@ function clientBody(client: {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function historyLines(
+  events: Array<{ entityType: string; entityId: string; createdAt: Date; summary: string; source: string }>,
+): Map<string, string[]> {
+  const grouped = new Map<string, string[]>();
+  for (const event of events) {
+    const key = `${event.entityType}:${event.entityId}`;
+    const lines = grouped.get(key) ?? [];
+    if (lines.length >= 5) continue;
+    const when = event.createdAt.toLocaleString("fr-FR");
+    const origin = event.source === "assistant" ? "assistant" : event.source === "formulaire" ? "formulaire" : "application";
+    lines.push(`${when} · ${origin} · ${event.summary}`);
+    grouped.set(key, lines);
+  }
+  return grouped;
+}
+
+function withHistory(body: string, lines: string[]): string {
+  if (lines.length === 0) return body;
+  return `${body}\nModifications\n${lines.join("\n")}`;
 }
 
 function doc(

@@ -3,6 +3,7 @@ import { presentCommand, type CatalogCommand } from "@/domain/catalog";
 import { proposalFields } from "@/domain/client-file";
 import { confirmCurrentProposal, currentProposal, proposeFromParty, type ProposalView } from "@/lib/client-proposals";
 import { applyCatalogCommand } from "@/lib/catalog-store";
+import { withChangeSource } from "@/lib/change-source";
 import { prisma } from "@/lib/db";
 
 export async function openCatalogProposal(
@@ -86,6 +87,7 @@ export async function confirmLatestWrite(): Promise<{ ok: boolean; summary: stri
     return { ok: false, summary: "Il n’y a pas de fiche en attente." };
   }
   const catalogFirst = Boolean(catalog && (!client || catalog.createdAt > client.createdAt));
-  if (catalogFirst) return confirmCatalogProposal();
-  return confirmCurrentProposal();
+  return withChangeSource("assistant", () =>
+    catalogFirst ? confirmCatalogProposal() : confirmCurrentProposal(),
+  );
 }

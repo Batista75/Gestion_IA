@@ -3,8 +3,10 @@ import {
   deleteClientAction,
   updateClientAction,
 } from "@/app/catalog-actions";
+import { ChangeJournal } from "@/components/change-journal";
 import { PartyManager } from "@/components/party-manager";
 import { listClients } from "@/lib/catalog-store";
+import { listRecordEvents } from "@/lib/record-journal";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +16,10 @@ export default async function ClientsPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "" } = await searchParams;
-  const clients = await listClients(q);
+  const [clients, journal] = await Promise.all([listClients(q), listRecordEvents("client", 40)]);
   return (
+    <div className="grid gap-6">
+    <ChangeJournal entries={journal.slice(0, 12)} />
     <PartyManager
       title="Clients"
       intro="Un client est un particulier ou une entreprise, en France ou à l’international. Le formulaire enregistre la fiche. L’assistant identifie d’abord les informations, puis demande confirmation."
@@ -26,8 +30,12 @@ export default async function ClientsPage({
       createAction={createClientAction}
       updateAction={updateClientAction}
       deleteAction={deleteClientAction}
-      records={clients.map(toRecord)}
+      records={clients.map((client) => ({
+        ...toRecord(client),
+        history: journal.filter((event) => event.entityId === client.id).slice(0, 6),
+      }))}
     />
+    </div>
   );
 }
 

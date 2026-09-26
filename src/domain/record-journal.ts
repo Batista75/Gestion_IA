@@ -1,0 +1,60 @@
+export const CLIENT_FIELD_LABELS: Record<string, string> = {
+  name: "Nom",
+  kind: "Type",
+  country: "Pays",
+  city: "Ville",
+  address: "Adresse",
+  postalCode: "Code postal",
+  siren: "SIREN",
+  siret: "SIRET",
+  vatNumber: "TVA",
+  contactName: "Contact",
+  contactRole: "Fonction",
+  email: "E-mail",
+  phone: "Téléphone",
+  notes: "Notes",
+  tradeName: "Enseigne",
+  legalForm: "Forme",
+  sector: "Secteur",
+};
+
+export const PARTY_FIELD_LABELS: Record<string, string> = {
+  name: "Nom",
+  siren: "SIREN",
+  email: "E-mail",
+  phone: "Téléphone",
+  address: "Adresse",
+  notes: "Notes",
+};
+
+export const PRODUCT_FIELD_LABELS: Record<string, string> = {
+  name: "Nom",
+  reference: "Référence",
+  unit: "Unité",
+  description: "Description",
+  statedPrice: "Prix indiqué",
+  currency: "Devise",
+};
+
+export const PROJECT_FIELD_LABELS: Record<string, string> = {
+  name: "Nom",
+  primaryClient: "Client",
+  status: "Statut",
+  purpose: "Objet",
+  nextAction: "Prochaine action",
+};
+
+export function fieldChangeSummary(
+  before: Record<string, string>,
+  after: Record<string, string>,
+  labels: Record<string, string>,
+): string {
+  return Object.entries(labels)
+    .flatMap(([key, label]) => {
+      const left = (before[key] ?? "").trim();
+      const right = (after[key] ?? "").trim();
+      if (left === right) return [];
+      return [`${label} : ${left || "non renseigné"} → ${right || "retiré"}`];
+    })
+    .join(" · ");
+}

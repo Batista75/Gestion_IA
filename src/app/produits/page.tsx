@@ -5,7 +5,9 @@ import {
   deleteQuoteAction,
   updateProductAction,
 } from "@/app/catalog-actions";
+import { ChangeJournal } from "@/components/change-journal";
 import { ProductManager } from "@/components/product-manager";
+import { listRecordEvents } from "@/lib/record-journal";
 import { productOrigin } from "@/domain/catalog";
 import { listProducts } from "@/lib/catalog-store";
 
@@ -21,9 +23,14 @@ export default async function ProductsPage({
   const source = ["devis", "assistant", "manuel"].includes(params.source ?? "")
     ? (params.source ?? "")
     : "";
-  const products = await listProducts(query, source);
+  const [products, journal] = await Promise.all([
+    listProducts(query, source),
+    listRecordEvents("product", 40),
+  ]);
 
   return (
+    <div className="grid gap-6">
+    <ChangeJournal entries={journal.slice(0, 12)} />
     <ProductManager
       query={query}
       source={source}
@@ -61,5 +68,6 @@ export default async function ProductsPage({
           })),
       }))}
     />
+    </div>
   );
 }

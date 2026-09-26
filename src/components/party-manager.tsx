@@ -39,6 +39,7 @@ export type PartyRecord = {
   contactRole?: string;
   sector?: string;
   currency?: string;
+  history?: Array<{ id: string; at: string; source: string; summary: string }>;
 };
 
 export function PartyManager({
@@ -175,6 +176,18 @@ export function PartyManager({
                       <p className="text-xs text-muted-foreground">
                         Mis à jour le {record.updatedLabel}
                       </p>
+                      {record.history && record.history.length > 0 ? (
+                        <div className="grid gap-1">
+                          <p className="text-sm font-medium">Modifications</p>
+                          <ul className="grid gap-1">
+                            {record.history.map((event) => (
+                              <li key={event.id} className="text-xs leading-5 break-words text-muted-foreground">
+                                {event.at} · {event.source} · {event.summary}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
                       <ConfirmDelete
                         action={deleteAction}
                         id={record.id}

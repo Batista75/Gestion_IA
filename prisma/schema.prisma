@@ -126,6 +126,20 @@ model ClientProposal {
   @@index([status])
 }
 
+model RecordEvent {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  entityName String
+  action     String
+  summary    String
+  source     String   @default("")
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
 model Supplier {
   id        String    @id @default(cuid())
   name      String

@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CLIENT_EXAMPLES,
+  asksToEnrichRecord,
+  emptyDraft,
   frenchVat,
   identifyClient,
+  knownRecordPrompt,
   presentProposal,
   proposalFields,
+  qualifyDraft,
   readConfirmation,
   reviseDraft,
 } from "../src/domain/client-file.ts";
@@ -116,4 +120,47 @@ test("la confirmation et la correction", () => {
   assert.equal(revised.draft.lastName, "Dupont");
   assert.match(revised.draft.legalName || `${revised.draft.firstName} ${revised.draft.lastName}`, /Dupont/);
   assert.ok(proposalFields(revised.draft).some((field) => field.label === "Nom" && field.value.includes("Dupont")));
+});
+
+test("compléter une entreprise déjà déclarée", () => {
+  assert.equal(asksToEnrichRecord("ajoute un contact chez Holzwerk"), true);
+  assert.equal(asksToEnrichRecord("liste des clients"), false);
+  assert.equal(asksToEnrichRecord("ajouter un fournisseur Quincaillerie Durand"), false);
+
+  const current = qualifyDraft({
+    ...emptyDraft(),
+    mode: "update",
+    kind: "entreprise",
+    legalName: "Holzwerk Müller GmbH",
+    legalForm: "GmbH",
+    country: "Allemagne",
+    vatNumber: "DE136695976",
+    notes: "Livraison habituelle le jeudi.",
+  });
+  const revised = reviseDraft(
+    current,
+    "ajoute un contact Anne Durand, directrice commerciale, chez Holzwerk Müller GmbH",
+  );
+  assert.equal(revised.changed, true);
+  assert.equal(revised.draft.contactName, "Anne Durand");
+  assert.equal(revised.draft.contactRole, "directrice commerciale");
+  assert.equal(revised.draft.legalName, "Holzwerk Müller GmbH");
+  assert.equal(revised.draft.country, "Allemagne");
+  assert.equal(revised.draft.vatNumber, "DE136695976");
+  assert.match(presentProposal(revised.draft), /conservées/);
+
+  const unnamed = reviseDraft(current, "ajoute un contact chez Holzwerk Müller GmbH");
+  assert.equal(unnamed.changed, false);
+  assert.equal(unnamed.draft.contactName, "");
+  const prompt = knownRecordPrompt(current);
+  assert.match(prompt, /Aucun contact n’est encore enregistré/);
+  assert.match(prompt, /Holzwerk Müller GmbH/);
+
+  const informed = reviseDraft(
+    current,
+    "ajoute une information sur Holzwerk Müller GmbH : livraison le mardi",
+  );
+  assert.equal(informed.changed, true);
+  assert.match(informed.draft.notes, /Livraison habituelle le jeudi/);
+  assert.match(informed.draft.notes, /livraison le mardi/);
 });

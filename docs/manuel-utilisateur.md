@@ -58,11 +58,13 @@ La [vue Clients](/clients) distingue un **particulier** et une **entreprise**, e
 
 **Modifier** met à jour la fiche tout de suite. **Supprimer** retire le client après confirmation. La recherche porte sur le nom, l’e-mail et le SIREN. Un compte déjà présent n’est pas dupliqué.
 
+**Modifications** liste chaque création, correction et suppression, avec la date, l’heure et l’origine : Assistant, Formulaire ou Application. La même trace apparaît sous la fiche concernée. Une entreprise déjà déclarée se complète depuis l’accueil, par exemple `ajoute un contact Anne Durand, directrice commerciale, chez Holzwerk Müller GmbH`. La proposition reprend la fiche connue, garde les champs non cités, et n’écrit qu’après confirmation. L’ancien contact, s’il y en avait un, reste dans cette liste.
+
 Créer un projet ne crée plus la fiche client. Le dossier s’ouvre, et la fiche attend une proposition confirmée.
 
 ## Fournisseurs
 
-La [vue Fournisseurs](/fournisseurs) suit le même principe : créer, modifier, supprimer. Les produits liés restent au catalogue. **Achats** y renvoie. La commande, la réception et la facture fournisseur ne se saisissent pas encore.
+La [vue Fournisseurs](/fournisseurs) suit le même principe : créer, modifier, supprimer. Les produits liés restent au catalogue. **Achats** y renvoie. La commande, la réception et la facture fournisseur ne se saisissent pas encore. **Modifications** y date chaque changement, comme pour les clients.
 
 ## Produits
 
@@ -72,11 +74,11 @@ La [vue Produits](/produits) montre tout le catalogue :
 - **Issu d’un devis** : titre du devis et un produit par ligne, ou un fichier confirmé depuis l’accueil. Chaque confirmation de devis ajoute une version : prix indiqué et conditions. Une version ne remplace pas la précédente.
 - **Saisi par l’assistant** : quand vous lui demandez d’ajouter un produit.
 
-Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **Saisie manuelle** limitent la liste. Une fiche peut porter à la fois une saisie et plusieurs devis. La carte **Versions de devis** liste chaque prix et chaque condition, sans les fusionner. **Supprimer le produit** retire la fiche et ses lignes. **Supprimer cette version** retire un devis et laisse le produit.
+Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **Saisie manuelle** limitent la liste. Une fiche peut porter à la fois une saisie et plusieurs devis. La carte **Versions de devis** liste chaque prix et chaque condition, sans les fusionner. **Supprimer le produit** retire la fiche et ses lignes. **Supprimer cette version** retire un devis et laisse le produit. **Modifications** date chaque création, correction et suppression de produit.
 
 ## Projets
 
-Chaque dossier garde une **actualité** : ouverture, objet, devis enregistré, pièce rattachée, mise à jour. Elle sert à relire ce qui s’est passé. **Modifier ou supprimer** change le nom, le client, le statut, l’objet et la prochaine action, retire un devis du dossier, ou supprime le projet. Les devis retirés restent au catalogue. Un devis rattaché affiche la devise, les totaux indiqués et la mention de TVA. La conversion en euro et la marge brute restent absentes tant que le taux ou le coût de revient n’est pas indiqué.
+Chaque dossier garde une **actualité** : ouverture, objet, devis enregistré, pièce rattachée, mise à jour. Elle sert à relire ce qui s’est passé. **Modifications** date à part les changements de la fiche projet : création, correction, suppression. **Modifier ou supprimer** change le nom, le client, le statut, l’objet et la prochaine action, retire un devis du dossier, ou supprime le projet. Les devis retirés restent au catalogue. Un devis rattaché affiche la devise, les totaux indiqués et la mention de TVA. La conversion en euro et la marge brute restent absentes tant que le taux ou le coût de revient n’est pas indiqué.
 
 **Nouveau dossier** demande :
 
@@ -109,6 +111,7 @@ Il distingue cinq demandes :
 - **Lister** : `liste des clients`, `quels fournisseurs`. La liste vient du répertoire.
 - **Nom seul déjà connu** : `Marie Dupont`. Il demande si vous voulez consulter la fiche ou la modifier. Il n’ouvre pas une création.
 - **Corriger une fiche connue** : `le téléphone de Holzwerk Müller GmbH est le +49 89 000111`. Il retrouve la fiche, garde les autres champs, et propose la mise à jour.
+- **Compléter une entreprise déjà déclarée** : `ajoute un contact Anne Durand, directrice commerciale, chez Holzwerk Müller GmbH` ou `ajoute une information sur Holzwerk Müller GmbH : livraison le mardi`. Il s’appuie sur la fiche enregistrée, conserve ce qui n’est pas cité, et propose la mise à jour. `ajoute un contact chez Holzwerk Müller GmbH`, sans nommer la personne, décrit la fiche et n’écrit rien.
 - **Créer ou mettre à jour** avec une phrase explicite, comme ci-dessous.
 
 Pour un client, il commence par l’analyse de l’action demandée (création ou mise à jour), puis sépare le nom, la forme, l’adresse, le pays et les identifiants. Un bloc collé sur plusieurs lignes est lu de la même façon. Exemple : `ajoute le client : Grid Solutions Oy`, puis la rue, le code postal, la ville, le pays, le Business ID et le VAT ID. La proposition affiche **Action demandée** et **Analyse**. Rien n’est écrit tant que vous n’avez pas confirmé. Les champs encore absents, comme l’e-mail ou le contact, sont listés à part.

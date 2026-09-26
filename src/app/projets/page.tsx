@@ -4,6 +4,7 @@ import {
   deleteQuoteAction,
   updateProjectAction,
 } from "@/app/catalog-actions";
+import { ChangeJournal } from "@/components/change-journal";
 import { ProjectEditor, ProjectForm } from "@/components/project-form";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,19 +15,25 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { prisma } from "@/lib/db";
+import { listRecordEvents } from "@/lib/record-journal";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
-  const projects = await prisma.project.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      events: { orderBy: { createdAt: "asc" } },
-      quotes: { orderBy: { createdAt: "desc" }, include: { lines: true } },
-    },
-  });
+  const [projects, journal] = await Promise.all([
+    prisma.project.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        events: { orderBy: { createdAt: "asc" } },
+        quotes: { orderBy: { createdAt: "desc" }, include: { lines: true } },
+      },
+    }),
+    listRecordEvents("project", 40),
+  ]);
 
   return (
+    <div className="grid gap-6">
+    <ChangeJournal entries={journal.slice(0, 12)} />
     <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
       <Card>
         <CardHeader>
@@ -166,6 +173,7 @@ export default async function ProjectsPage() {
           </ul>
         )}
       </section>
+    </div>
     </div>
   );
 }

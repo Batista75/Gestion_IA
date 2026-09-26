@@ -1,6 +1,7 @@
 import { isEmbedOnlyModel, isRerankModel } from "@/domain/agent";
 import { parseCatalogCommand, type CatalogCommand } from "@/domain/catalog";
 import {
+  asksToEnrichRecord,
   identifyClient,
   isNewClientBrief,
   proposalFields,
@@ -14,6 +15,7 @@ import {
 } from "@/domain/ollama-endpoint";
 import { parseBusinessBrief, planIsEmpty } from "@/domain/business-brief";
 import { applyBusinessPlan } from "@/lib/business-records";
+import { withChangeSource } from "@/lib/change-source";
 import { confirmLatestWrite, openCatalogProposal, rejectLatestWrite } from "@/lib/catalog-proposals";
 import {
   currentProposal,
@@ -116,7 +118,7 @@ function stepFor(source: DirectReply["source"]): string {
 async function answerDirectly(text: string): Promise<DirectReply | null> {
   const plan = parseBusinessBrief(text);
   if (!planIsEmpty(plan)) {
-    const saved = await applyBusinessPlan(plan);
+    const saved = await withChangeSource("assistant", () => applyBusinessPlan(plan));
     return { reply: saved.summary, model: null, source: "action" as const };
   }
 
@@ -153,6 +155,19 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
   const intent = understandIntent(text);
   if (intent === "lookup" || intent === "directory") {
     return withGpuLane(() => answerFromDossier(text, intent));
+  }
+
+  if (asksToEnrichRecord(text) || intent === "change") {
+    const changed = await proposeChangeFromMessage(text);
+    if (changed) {
+      return {
+        reply: changed.reply,
+        model: null,
+        source: changed.proposal ? ("proposition" as const) : ("dossier" as const),
+        proposal: changed.proposal,
+        sources: changed.sources,
+      };
+    }
   }
 
   if (clientCommand) {
@@ -192,18 +207,6 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
     return proposalResponse(await openClientProposal(revised.draft));
   }
 
-  if (intent === "change") {
-    const changed = await proposeChangeFromMessage(text);
-    if (changed) {
-      return {
-        reply: changed.reply,
-        model: null,
-        source: changed.proposal ? ("proposition" as const) : ("dossier" as const),
-        proposal: changed.proposal,
-        sources: changed.sources,
-      };
-    }
-  }
   return null;
 }
 

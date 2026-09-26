@@ -243,7 +243,16 @@ export function reviseDraft(
     if (key === "kind") continue;
     const value = found[key];
     if (typeof value === "string" && value && value !== current[key]) {
-      next[key] = value;
+      if (
+        key === "notes" &&
+        current.notes &&
+        !current.notes.includes(value) &&
+        !value.includes(current.notes)
+      ) {
+        next.notes = `${current.notes} ${value}`.trim();
+      } else {
+        next[key] = value;
+      }
       changed = true;
     }
   }
@@ -318,9 +327,12 @@ export function presentProposal(draft: ClientDraft): string {
       ? `Analyse : ${read.join(" ; ")}.`
       : "Analyse : le message ne permet pas de séparer les informations.",
     gaps,
+    draft.mode === "update" ? "Les informations déjà enregistrées et non citées sont conservées." : "",
     "Rien n’est enregistré avant votre accord.",
     "Confirmez-vous l’enregistrement ? Sinon, indiquez la correction, par exemple « le téléphone est le 06 98 76 54 32 ».",
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function notesWithRegistration(notes: string, registration: string): string {
@@ -491,18 +503,80 @@ function applyAddress(source: string, draft: ClientDraft) {
   }
 }
 
+export function asksToEnrichRecord(text: string): boolean {
+  const folded = fold(text);
+  const verb = /\b(ajoute\w*|complete\w*|renseigne\w*|precis\w*|indique\w*|mettre|mets|mettez|modifi\w*|chang\w*|corrig\w*)\b/.test(folded);
+  const topic = /\b(contact|contacts|information|informations|fiche|note|notes|secteur|adresse|telephone|tel|e-mail|email|mail|siret|siren|tva)\b/.test(folded);
+  if (verb && topic) return true;
+  return /\bcontacts?\b/.test(folded) && /\b(est|sont)\b/.test(folded);
+}
+
+export function knownRecordPrompt(draft: ClientDraft): string {
+  const lines = proposalFields(draft)
+    .filter((field) => field.label !== "Action" && field.label !== "Périmètre")
+    .map((field) => `${field.label} : ${field.value}`);
+  const contact = draft.contactName
+    ? `Le contact enregistré est ${draft.contactName}${draft.contactRole ? `, ${draft.contactRole}` : ""}.`
+    : "Aucun contact n’est encore enregistré.";
+  return [
+    `${displayName(draft)} est déjà dans les fiches.`,
+    ...lines,
+    contact,
+    "Dites le contact à ajouter, par exemple « contact Anne Durand, directrice », ou l’information à compléter. Rien n’est enregistré avant votre accord.",
+  ].join("\n");
+}
+
+export function clientFieldMap(draft: ClientDraft): Record<string, string> {
+  return {
+    name: displayName(draft),
+    kind: draft.kind,
+    country: draft.country,
+    city: draft.city,
+    address: draft.address,
+    postalCode: draft.postalCode,
+    siren: draft.siren,
+    siret: draft.siret,
+    vatNumber: draft.vatNumber,
+    contactName: draft.contactName,
+    contactRole: draft.contactRole,
+    email: draft.email,
+    phone: draft.phone,
+    notes: draft.notes,
+    tradeName: draft.tradeName,
+    legalForm: draft.legalForm,
+    sector: "",
+  };
+}
+
 function applyContact(source: string, draft: ClientDraft) {
-  const contact = source.match(/contact\s+([^,]+)/i);
-  if (!contact) return;
-  draft.contactName = clean(contact[1] ?? "");
-  const after = source.slice((contact.index ?? 0) + contact[0].length);
-  const role = after.match(/^\s*,\s*([^,]+)/);
-  if (role && ROLES.has(fold(role[1] ?? ""))) {
-    draft.contactRole = clean(role[1] ?? "");
-  }
+  const keyword = /contacts?/i.exec(source);
+  if (!keyword) return;
+  const rest = source.slice(keyword.index + keyword[0].length);
+  const person = "([A-ZÀ-Ÿ][A-Za-zÀ-ÿ'’-]+(?:\\s+[A-ZÀ-Ÿ][A-Za-zÀ-ÿ'’-]+){0,3})";
+  const match =
+    rest.match(new RegExp(`^\\s+(?:de|du|des|pour|chez)\\s+[^,:]{0,80}[:：]\\s*${person}`)) ??
+    rest.match(new RegExp(`^\\s*[:：]\\s*${person}`)) ??
+    rest.match(new RegExp(`^\\s+(?:est\\s+|s['’]appelle\\s+)?${person}`));
+  if (!match) return;
+  const name = clean(match[1] ?? "");
+  const first = name.split(/\s+/)[0] ?? "";
+  if (!name || /^(un|une|le|la|les|des|du|de|chez|pour)$/i.test(first)) return;
+  draft.contactName = name;
+  const after = rest.slice((match.index ?? 0) + match[0].length);
+  const role = after.match(/^\s*[,:(]\s*([^,;\n)]+)/);
+  if (!role) return;
+  const raw = clean(role[1] ?? "");
+  const folded = fold(raw);
+  const head = folded.split(/\s+/)[0] ?? "";
+  if (ROLES.has(folded) || ROLES.has(head)) draft.contactRole = raw;
 }
 
 function applyNotes(source: string, draft: ClientDraft) {
+  const info = source.match(/(?:informations?|pr[eé]cision|notes?)\s*(?:sur [^,:]{0,80})?\s*[:：]\s*([^\n]+)/i);
+  if (info) {
+    draft.notes = clean(info[1] ?? "");
+    return;
+  }
   const sentences = source.split(/(?<=\.)\s+/);
   const notes = sentences.filter((sentence) => {
     const folded = sentence.trim();

@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { nameKey, type PartyInput } from "@/domain/catalog";
+import { CLIENT_FIELD_LABELS, fieldChangeSummary } from "@/domain/record-journal";
 import {
   displayName,
   draftFromKnownFields,
@@ -10,10 +11,14 @@ import {
   proposalFields,
   qualifyDraft,
   reviseDraft,
+  asksToEnrichRecord,
+  clientFieldMap,
+  knownRecordPrompt,
   type ClientDraft,
   type ClientKind,
 } from "@/domain/client-file";
 import { mentionedNames, sourceLabel, uniqueNameMatch } from "@/domain/knowledge";
+import { withChangeSource } from "@/lib/change-source";
 import { prisma } from "@/lib/db";
 
 const PATHS = [
@@ -64,7 +69,7 @@ export async function confirmCurrentProposal(): Promise<{
   if (!draft) {
     return { ok: false, summary: "Il n’y a pas de fiche client en attente." };
   }
-  const saved = await saveClientDraft(draft, { allowUpdate: true });
+  const saved = await withChangeSource("assistant", () => saveClientDraft(draft, { allowUpdate: true }));
   if (!saved.ok) return saved;
   await prisma.clientProposal.updateMany({
     where: { status: "en_attente" },
@@ -89,18 +94,23 @@ export async function proposeChangeFromMessage(text: string): Promise<{
   }
   const client = clients.find((item) => item.name === names[0]);
   if (!client) return null;
-  const revised = reviseDraft(clientToDraft(client), text);
+  const before = clientToDraft(client);
+  const revised = reviseDraft(before, text);
+  const sources = [{ label: sourceLabel("client"), title: client.name }];
   if (!revised.changed) {
     return {
-      reply: `J’ai trouvé ${client.name}, mais pas le champ à modifier. Précisez-le, par exemple le téléphone.`,
-      sources: [{ label: sourceLabel("client"), title: client.name }],
+      reply: asksToEnrichRecord(text)
+        ? knownRecordPrompt(before)
+        : `J’ai trouvé ${client.name}, mais pas le champ à modifier. Précisez-le, par exemple le contact, le téléphone ou une information sur l’entreprise.`,
+      sources,
     };
   }
   const opened = await openClientProposal(revised.draft);
+  const delta = fieldChangeSummary(clientFieldMap(before), clientFieldMap(revised.draft), CLIENT_FIELD_LABELS);
   return {
-    reply: opened.reply,
+    reply: [`D’après la fiche enregistrée.`, delta, opened.reply].filter(Boolean).join("\n"),
     proposal: opened.proposal,
-    sources: [{ label: sourceLabel("client"), title: client.name }],
+    sources,
   };
 }
 

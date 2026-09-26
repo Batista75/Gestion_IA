@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { withChangeSource } from "@/lib/change-source";
 import { confirmDocumentProposal, dismissDocumentProposal } from "@/lib/document-proposals";
 
 export type ProposalState = {
@@ -14,7 +15,7 @@ async function refresh() {
 }
 
 export async function confirmDocumentAction(id: string): Promise<ProposalState> {
-  const result = await confirmDocumentProposal(id);
+  const result = await withChangeSource("assistant", () => confirmDocumentProposal(id));
   await refresh();
   return { message: result.message };
 }

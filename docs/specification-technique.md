@@ -18,11 +18,11 @@ Les prix, la TVA et les numéros de pièce ne sont pas calculés par le modèle.
 2. Une question de prix de vente reçoit la règle métier, sans modèle.
 3. `Je confirme.` enregistre la proposition la plus récente, fiche client ou autre fiche. `non` n’écrit rien.
 4. Une consultation ou une liste est lue dans les fiches, sans modèle.
-5. Une phrase de client ouvre une proposition.
-6. Une phrase de fournisseur, de produit, de projet court ou de devis ouvre une proposition. Elle n’écrit pas.
-7. Un commentaire sur une fiche client en attente produit une nouvelle proposition.
-8. Un nom seul déjà connu, sans verbe d’action, demande s’il faut consulter ou modifier.
-9. Une correction explicite propose la mise à jour de la fiche retrouvée.
+5. Une demande d’ajouter un contact ou une information, ou une correction, relit d’abord la fiche client déjà enregistrée. Si le nom est unique et que la nouvelle valeur est comprise, une proposition de mise à jour s’ouvre. Les champs non cités restent ceux de la fiche. Une note nouvelle s’ajoute à la note déjà écrite. Si la valeur manque, la réponse décrit la fiche et demande le contact ou l’information, sans proposition.
+6. Une phrase de client ouvre une proposition.
+7. Une phrase de fournisseur, de produit, de projet court ou de devis ouvre une proposition. Elle n’écrit pas.
+8. Un commentaire sur une fiche client en attente produit une nouvelle proposition.
+9. Un nom seul déjà connu, sans verbe d’action, demande s’il faut consulter ou modifier.
 
 S’il ne reste rien de tout cela, et si Ollama répond, le modèle de conversation prend le relais. S’il ne répond pas, le fil affiche l’indisponibilité. La consultation des fiches continue par les mots.
 
@@ -56,7 +56,13 @@ La recherche élargie réunit le tri par les mots, le tri vectoriel et le tri hy
 
 Sans embeddings, la recherche par les mots continue. Le passage envoyé au reranker reprend les lignes qui portent les mots de la question.
 
-Le contexte donné au modèle est limité à 4 fiches. Une consultation en affiche au plus 5.
+Le contexte donné au modèle est limité à 4 fiches. Une consultation en affiche au plus 5. Le texte d’une fiche client, fournisseur ou produit reprend aussi jusqu’à cinq lignes de modifications, datées, pour qu’une question du type `que sait-on de …` puisse citer la trace.
+
+## Journal des modifications
+
+Chaque création, mise à jour et suppression d’un client, d’un fournisseur, d’un produit ou d’un projet écrit une ligne `RecordEvent` : type, identifiant, nom, action, résumé, source et horodatage. Le résumé ne cite que les champs qui changent, sous la forme `ancien → nouveau`. Un champ vide à l’origine est « non renseigné », un champ vidé est « retiré ». Une mise à jour sans différence n’écrit pas de ligne.
+
+La source vient du contexte d’appel : `assistant` pour une confirmation, un dossier parlé ou une pièce confirmée ; `formulaire` pour les écrans ; sinon `application`. L’écriture est branchée sur le client Prisma, afin qu’un appel oublié reste tracé. Clients, Fournisseurs, Produits et Projets affichent les dernières lignes. L’actualité d’un projet reste distincte : elle décrit le dossier, le journal décrit les changements de fiche.
 
 ## Modèles et GPU
 

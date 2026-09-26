@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { withChangeSource } from "@/lib/change-source";
 import { draftFromForm, saveClientDraft } from "@/lib/client-proposals";
 import {
   saveProductForm,
@@ -25,56 +26,50 @@ export async function createClientAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return toState(await saveClientDraft(draftFromForm(formData)));
+  return traced(() => saveClientDraft(draftFromForm(formData)));
 }
 
 export async function updateClientAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return toState(
-    await saveClientDraft(draftFromForm(formData), { id: idFromForm(formData) }),
-  );
+  return traced(() => saveClientDraft(draftFromForm(formData), { id: idFromForm(formData) }));
 }
 
 export async function createSupplierAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return toState(await saveSupplierForm(null, partyFromForm(formData)));
+  return traced(() => saveSupplierForm(null, partyFromForm(formData)));
 }
 
 export async function updateSupplierAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return toState(
-    await saveSupplierForm(idFromForm(formData), partyFromForm(formData)),
-  );
+  return traced(() => saveSupplierForm(idFromForm(formData), partyFromForm(formData)));
 }
 
 export async function createProductAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return toState(await saveProductForm(null, productFromForm(formData)));
+  return traced(() => saveProductForm(null, productFromForm(formData)));
 }
 
 export async function updateProductAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return toState(
-    await saveProductForm(idFromForm(formData), productFromForm(formData)),
-  );
+  return traced(() => saveProductForm(idFromForm(formData), productFromForm(formData)));
 }
 
 export async function createQuoteAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return toState(
-    await saveQuoteForm({
+  return traced(() =>
+    saveQuoteForm({
       title: String(formData.get("title") ?? ""),
       productsText: String(formData.get("products") ?? ""),
       supplierName: String(formData.get("supplierName") ?? ""),
@@ -86,43 +81,45 @@ export async function deleteClientAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return done(await removeClient(requiredId(formData)));
+  return traced(() => removeClient(requiredId(formData)), true);
 }
 
 export async function deleteSupplierAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return done(await removeSupplier(requiredId(formData)));
+  return traced(() => removeSupplier(requiredId(formData)), true);
 }
 
 export async function deleteProductAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return done(await removeProduct(requiredId(formData)));
+  return traced(() => removeProduct(requiredId(formData)), true);
 }
 
 export async function deleteQuoteAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return done(await removeQuote(requiredId(formData)));
+  return traced(() => removeQuote(requiredId(formData)), true);
 }
 
 export async function updateProjectAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return done(
-    await updateProject({
-      id: requiredId(formData),
-      name: String(formData.get("name") ?? ""),
-      primaryClient: String(formData.get("primaryClient") ?? ""),
-      status: String(formData.get("status") ?? ""),
-      purpose: String(formData.get("purpose") ?? ""),
-      nextAction: String(formData.get("nextAction") ?? ""),
-    }),
+  return traced(
+    () =>
+      updateProject({
+        id: requiredId(formData),
+        name: String(formData.get("name") ?? ""),
+        primaryClient: String(formData.get("primaryClient") ?? ""),
+        status: String(formData.get("status") ?? ""),
+        purpose: String(formData.get("purpose") ?? ""),
+        nextAction: String(formData.get("nextAction") ?? ""),
+      }),
+    true,
   );
 }
 
@@ -130,7 +127,7 @@ export async function deleteProjectAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return done(await removeProject(requiredId(formData)));
+  return traced(() => removeProject(requiredId(formData)), true);
 }
 
 export async function updateInboxAction(
@@ -163,6 +160,19 @@ function done(result: { ok: boolean; summary: string }): FormState {
 
 function requiredId(formData: FormData): string {
   return String(formData.get("id") ?? "").trim();
+}
+
+function traced(
+  work: () => Promise<{ ok: boolean; summary: string }>,
+  refresh = false,
+): Promise<FormState> {
+  return withChangeSource("formulaire", async () => {
+    const result = await work();
+    if (refresh) {
+      for (const path of REFRESH) revalidatePath(path);
+    }
+    return { message: result.summary, ok: result.ok };
+  });
 }
 
 function toState(result: { ok: boolean; summary: string }): FormState {
