@@ -53,6 +53,21 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </Link>
       </div>
 
+      <nav className="flex flex-wrap gap-2 text-sm" aria-label="Sections du dossier">
+        {[
+          ["#parcours", "Parcours"],
+          ["#produits", "Produits et services"],
+          ["#devis", "Devis"],
+          ["#commandes-client", "Commandes client"],
+          ["#commandes-fournisseur", "Commandes fournisseur"],
+          ["#actualite", "Actualité"],
+        ].map(([href, label]) => (
+          <a key={href} href={href} className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-3")}>
+            {label}
+          </a>
+        ))}
+      </nav>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -102,17 +117,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </Card>
       </div>
 
-      <ProjectWorkflow
-        projectId={project.id}
-        steps={TRADE_STEPS}
-        records={project.steps.map((step) => ({
-          key: step.stepKey,
-          status: readStepStatus(step.status),
-          proofRef: step.proofRef,
-          proofNote: step.proofNote,
-        }))}
-      />
-
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="order-2 grid min-w-0 gap-6 lg:order-1">
       <ProjectOperation
         projectId={project.id}
         products={products.map((product) => ({
@@ -155,7 +161,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         }))}
       />
 
-      <section className="grid gap-2">
+      <section id="actualite" className="grid scroll-mt-6 gap-2">
         <h2 className="text-lg font-semibold">Actualité</h2>
         {project.events.length === 0 ? (
           <p className="text-sm text-muted-foreground">Aucun événement enregistré.</p>
@@ -170,6 +176,18 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           </ol>
         )}
       </section>
+      </div>
+      <ProjectWorkflow
+        projectId={project.id}
+        steps={TRADE_STEPS}
+        records={project.steps.map((step) => ({
+          key: step.stepKey,
+          status: readStepStatus(step.status),
+          proofRef: step.proofRef,
+          proofNote: step.proofNote,
+        }))}
+      />
+      </div>
     </div>
   );
 }

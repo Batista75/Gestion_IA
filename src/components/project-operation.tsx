@@ -78,7 +78,7 @@ export function ProjectOperation({
 
   return (
     <div className="grid gap-6">
-      <section className="grid gap-3">
+      <section id="produits" className="grid scroll-mt-6 gap-3">
         <h2 className="text-lg font-semibold">Produits et services</h2>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
           Le prix de vente HT vient du coût, du taux de marque et de la remise. La marge se modifie ici, puis se confirme. Les montants restent hors taxes.
@@ -109,24 +109,28 @@ export function ProjectOperation({
       </section>
 
       <DocumentList
+        id="devis"
         title="Devis"
         empty="Aucun devis pour ce projet. Sélectionnez une ou plusieurs lignes, puis établissez le devis."
         projectId={projectId}
         documents={quotes}
       />
       <DocumentList
+        id="devis-non-aboutis"
         title="Devis non aboutis"
         empty="Aucun devis non abouti."
         projectId={projectId}
         documents={lost}
       />
       <DocumentList
+        id="commandes-client"
         title="Commandes client"
         empty="Aucune commande client. Elle s’ouvre depuis un devis en cours."
         projectId={projectId}
         documents={customerOrders}
       />
       <DocumentList
+        id="commandes-fournisseur"
         title="Commandes fournisseur"
         empty="Aucune commande fournisseur. Elle s’ouvre depuis une commande client, avec un fournisseur nommé."
         projectId={projectId}
@@ -311,18 +315,20 @@ function QuoteForm({ projectId }: { projectId: string }) {
 }
 
 function DocumentList({
+  id,
   title,
   empty,
   projectId,
   documents,
 }: {
+  id: string;
   title: string;
   empty: string;
   projectId: string;
   documents: OperationDocument[];
 }) {
   return (
-    <section className="grid gap-3">
+    <section id={id} className="grid scroll-mt-6 gap-3">
       <h2 className="text-lg font-semibold">{title}</h2>
       {documents.length === 0 ? (
         <p className="text-sm text-muted-foreground">{empty}</p>
