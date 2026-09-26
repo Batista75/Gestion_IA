@@ -1,3 +1,4 @@
+import { SEARCH_TOOL, isEmbedOnlyModel } from "@/domain/agent";
 import {
   CATALOG_TOOLS,
   commandFromTool,
@@ -12,6 +13,7 @@ import {
   readConfirmation,
   reviseDraft,
 } from "@/domain/client-file";
+import { renderKnowledge, retrievalContext, sourceLabel, understandIntent } from "@/domain/knowledge";
 import {
   asksModelToComputeMoney,
   MONEY_RULE_REPLY,
@@ -21,12 +23,16 @@ import {
   confirmCurrentProposal,
   currentProposal,
   openClientProposal,
+  proposeChangeFromMessage,
   proposeFromParty,
   type ProposalView,
 } from "@/lib/client-proposals";
+import { withGpuLane } from "@/lib/gpu-lane";
+import { searchKnowledge } from "@/lib/knowledge-store";
 import {
   chatWithOllama,
   getOllamaStatus,
+  SYSTEM_PROMPT,
   type OllamaChatMessage,
 } from "@/lib/ollama";
 
@@ -36,6 +42,9 @@ const MAX_MESSAGES = 12;
 const MAX_CHARS = 4_000;
 
 type IncomingMessage = { role: "user" | "assistant"; content: string };
+type SourceRef = { label: string; title: string };
+
+const AGENT_TOOLS = [...CATALOG_TOOLS, SEARCH_TOOL];
 
 export async function POST(request: Request) {
   let payload: unknown;
@@ -61,7 +70,9 @@ export async function POST(request: Request) {
   const status = await getOllamaStatus();
   if (!status.ok || !status.defaultModel) {
     return Response.json(
-      { error: status.error ?? "Ollama est indisponible." },
+      {
+        error: `${status.error ?? "Ollama est indisponible."} Une recherche dans les fiches, par exemple « que sait-on de Marie Dupont », fonctionne sans le modèle.`,
+      },
       { status: 503 },
     );
   }
@@ -74,13 +85,24 @@ export async function POST(request: Request) {
     );
   }
 
+  if (isEmbedOnlyModel(model)) {
+    return Response.json(
+      { error: "Ce modèle sert à l’index des fiches, pas à la conversation." },
+      { status: 400 },
+    );
+  }
+
   try {
-    const reply = await runAssistant(model, parsed.messages);
+    const reply = await withGpuLane(async () => {
+      const docs = await searchKnowledge(lastUser?.content ?? "", "context");
+      return runAssistant(model, parsed.messages, docs);
+    });
     return Response.json({
       reply: reply.text,
-      model: reply.source === "proposition" ? null : model,
+      model: reply.source === "proposition" || reply.source === "dossier" ? null : model,
       source: reply.source,
       proposal: reply.proposal,
+      sources: reply.sources,
     });
   } catch (error) {
     const message =
@@ -120,11 +142,22 @@ async function answerDirectly(text: string) {
     command && (command.type === "create_client" || command.type === "update_client")
       ? command
       : null;
-  if (pending && !isNewClientBrief(text) && (!command || clientCommand)) {
-    if (clientCommand) {
-      const opened = await proposeFromParty(clientCommand);
-      return proposalResponse(opened);
-    }
+  const intent = understandIntent(text);
+  if (intent === "lookup" || intent === "directory") {
+    return withGpuLane(() => answerFromDossier(text, intent));
+  }
+
+  if (clientCommand) return proposalFromCommand(clientCommand);
+  if (!pending || isNewClientBrief(text)) {
+    const identified = identifyClient(text);
+    if (identified) return proposalResponse(await openClientProposal(identified));
+  }
+  if (command) {
+    const applied = await applyCatalogCommand(command);
+    return { reply: applied.summary, model: null, source: "action" as const };
+  }
+
+  if (pending && !isNewClientBrief(text)) {
     const revised = reviseDraft(pending, text);
     if (!revised.changed) {
       return {
@@ -138,14 +171,39 @@ async function answerDirectly(text: string) {
     return proposalResponse(await openClientProposal(revised.draft));
   }
 
-  if (clientCommand) return proposalResponse(await proposeFromParty(clientCommand));
-  const identified = identifyClient(text);
-  if (identified) return proposalResponse(await openClientProposal(identified));
-  if (command) {
-    const applied = await applyCatalogCommand(command);
-    return { reply: applied.summary, model: null, source: "action" as const };
+  if (intent === "change") {
+    const changed = await proposeChangeFromMessage(text);
+    if (changed) {
+      return {
+        reply: changed.reply,
+        model: null,
+        source: changed.proposal ? ("proposition" as const) : ("dossier" as const),
+        proposal: changed.proposal,
+        sources: changed.sources,
+      };
+    }
   }
   return null;
+}
+
+async function proposalFromCommand(
+  command: Extract<CatalogCommand, { type: "create_client" | "update_client" }>,
+) {
+  const opened = await proposeFromParty(command);
+  if ("clarify" in opened) {
+    return { reply: opened.clarify, model: null, source: "dossier" as const };
+  }
+  return proposalResponse(opened);
+}
+
+async function answerFromDossier(text: string, intent: "lookup" | "directory") {
+  const docs = await searchKnowledge(text, intent);
+  return {
+    reply: renderKnowledge(docs, intent),
+    model: null,
+    source: "dossier" as const,
+    sources: docs.map((doc) => ({ label: sourceLabel(doc.sourceType), title: doc.title })),
+  };
 }
 
 function proposalResponse(opened: ProposalView) {
@@ -160,33 +218,44 @@ function proposalResponse(opened: ProposalView) {
 async function runAssistant(
   model: string,
   incoming: IncomingMessage[],
+  docs: Awaited<ReturnType<typeof searchKnowledge>>,
 ): Promise<{
   text: string;
-  source: "ollama" | "action" | "proposition";
+  source: "ollama" | "action" | "proposition" | "dossier";
   proposal?: ProposalView["proposal"];
+  sources?: SourceRef[];
 }> {
-  let transcript: OllamaChatMessage[] = incoming.map((message) => ({
-    role: message.role,
-    content: message.content,
-  }));
+  const sources = docs.map((doc) => ({ label: sourceLabel(doc.sourceType), title: doc.title }));
+  let transcript: OllamaChatMessage[] = [
+    {
+      role: "system",
+      content: `${SYSTEM_PROMPT}\n\n${retrievalContext(docs)}\nUne note À classer n’est pas un projet.`,
+    },
+    ...incoming.map((message) => ({
+      role: message.role,
+      content: message.content,
+    })),
+  ];
   const summaries: string[] = [];
 
-  for (let round = 0; round < 3; round += 1) {
+  for (let round = 0; round < 2; round += 1) {
     const result = await chatWithOllama({
       model,
       messages: transcript,
-      tools: CATALOG_TOOLS,
+      tools: AGENT_TOOLS,
     });
+    const searches = result.toolCalls.filter((call) => call.function.name === "search_records");
     const commands = uniqueCommands([
       ...result.toolCalls.map((call) =>
         commandFromTool(call.function.name, parseArguments(call.function.arguments)),
       ),
       ...commandsFromText(result.content),
     ]);
-    if (commands.length === 0) {
+    if (commands.length === 0 && searches.length === 0) {
       return {
         text: joinReply(result.content, summaries),
         source: summaries.length > 0 ? "action" : "ollama",
+        sources,
       };
     }
 
@@ -198,13 +267,31 @@ async function runAssistant(
         tool_calls: result.toolCalls,
       },
     ];
+    for (const call of searches) {
+      const args = parseArguments(call.function.arguments);
+      const query =
+        args && typeof args === "object" && "query" in args && typeof args.query === "string"
+          ? args.query
+          : incoming.at(-1)?.content ?? "";
+      const found = await searchKnowledge(query, "lookup");
+      const rendered = renderKnowledge(found, "lookup");
+      summaries.push(rendered);
+      for (const doc of found) {
+        sources.push({ label: sourceLabel(doc.sourceType), title: doc.title });
+      }
+      transcript.push({ role: "tool", content: rendered, tool_name: "search_records" });
+    }
     for (const command of commands) {
       if (command.type === "create_client" || command.type === "update_client") {
         const opened = await proposeFromParty(command);
+        if ("clarify" in opened) {
+          return { text: opened.clarify, source: "dossier", sources };
+        }
         return {
           text: joinReply(opened.reply, summaries),
           source: "proposition",
           proposal: opened.proposal,
+          sources,
         };
       }
       const applied = await applyCatalogCommand(command);
@@ -215,9 +302,10 @@ async function runAssistant(
         tool_name: command.type,
       });
     }
+    if (searches.length === 0) break;
   }
 
-  return { text: joinReply("", summaries), source: "action" };
+  return { text: joinReply("", summaries), source: "action", sources };
 }
 
 function parseArguments(raw: unknown): unknown {

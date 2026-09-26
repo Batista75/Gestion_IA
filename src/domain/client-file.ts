@@ -115,6 +115,46 @@ export function draftFromKnownFields(
   });
 }
 
+const MERGE_KEYS = [
+  "civility",
+  "firstName",
+  "lastName",
+  "legalName",
+  "tradeName",
+  "legalForm",
+  "country",
+  "address",
+  "postalCode",
+  "city",
+  "siren",
+  "siret",
+  "vatNumber",
+  "email",
+  "phone",
+  "contactName",
+  "contactRole",
+  "notes",
+] as const;
+
+export function mergeKnownClient(existing: ClientDraft, incoming: ClientDraft): ClientDraft {
+  const next = { ...existing, mode: "update" as const, missing: [] as string[], vatDeduced: false };
+  const existingName = fold(displayName(existing));
+  const incomingName = fold(displayName(incoming));
+  const fragment =
+    incomingName.length > 0 &&
+    incomingName.length < existingName.length &&
+    existingName.includes(incomingName);
+  for (const key of MERGE_KEYS) {
+    if (fragment && (key === "legalName" || key === "firstName" || key === "lastName" || key === "civility")) {
+      continue;
+    }
+    const value = incoming[key];
+    if (value) next[key] = value;
+  }
+  if (incoming.kind) next.kind = incoming.kind;
+  return qualifyDraft(next);
+}
+
 export function emptyDraft(): ClientDraft {
   return {
     mode: "create",

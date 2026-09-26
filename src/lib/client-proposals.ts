@@ -4,12 +4,15 @@ import {
   displayName,
   draftFromKnownFields,
   emptyDraft,
+  mergeKnownClient,
   presentProposal,
   proposalFields,
   qualifyDraft,
+  reviseDraft,
   type ClientDraft,
   type ClientKind,
 } from "@/domain/client-file";
+import { mentionedNames, sourceLabel, uniqueNameMatch } from "@/domain/knowledge";
 import { prisma } from "@/lib/db";
 
 const PATHS = [
@@ -28,15 +31,12 @@ export type ProposalView = {
 };
 
 export async function openClientProposal(draft: ClientDraft): Promise<ProposalView> {
-  const name = displayName(draft).trim();
-  const existing =
-    name.length >= 2
-      ? await prisma.client.findUnique({ where: { nameKey: nameKey(name) } })
-      : null;
-  const ready = qualifyDraft({
-    ...draft,
-    mode: existing ? "update" : "create",
-  });
+  const clients = await prisma.client.findMany({ take: 500 });
+  const matchName = uniqueNameMatch(displayName(draft), clients.map((client) => client.name));
+  const existing = matchName ? clients.find((client) => client.name === matchName) ?? null : null;
+  const ready = existing
+    ? mergeKnownClient(clientToDraft(existing), draft)
+    : qualifyDraft({ ...draft, mode: "create" });
   await prisma.clientProposal.updateMany({
     where: { status: "en_attente" },
     data: { status: "remplacee" },
@@ -72,14 +72,52 @@ export async function confirmCurrentProposal(): Promise<{
   return saved;
 }
 
+export async function proposeChangeFromMessage(text: string): Promise<{
+  reply: string;
+  proposal?: ProposalView["proposal"];
+  sources: Array<{ label: string; title: string }>;
+} | null> {
+  const clients = await prisma.client.findMany({ take: 500, orderBy: { name: "asc" } });
+  const names = mentionedNames(text, clients.map((client) => client.name));
+  if (names.length === 0) return null;
+  if (names.length > 1) {
+    return {
+      reply: `Plusieurs fiches correspondent : ${names.join(", ")}. Précisez le nom complet. Rien n’est enregistré.`,
+      sources: names.map((name) => ({ label: sourceLabel("client"), title: name })),
+    };
+  }
+  const client = clients.find((item) => item.name === names[0]);
+  if (!client) return null;
+  const revised = reviseDraft(clientToDraft(client), text);
+  if (!revised.changed) {
+    return {
+      reply: `J’ai trouvé ${client.name}, mais pas le champ à modifier. Précisez-le, par exemple le téléphone.`,
+      sources: [{ label: sourceLabel("client"), title: client.name }],
+    };
+  }
+  const opened = await openClientProposal(revised.draft);
+  return {
+    reply: opened.reply,
+    proposal: opened.proposal,
+    sources: [{ label: sourceLabel("client"), title: client.name }],
+  };
+}
+
 export async function proposeFromParty(command: {
   type: "create_client" | "update_client";
   party: PartyInput;
-}): Promise<ProposalView> {
+}): Promise<ProposalView | { clarify: string }> {
   if (command.type === "update_client") {
-    const existing = await prisma.client.findUnique({
-      where: { nameKey: nameKey(command.party.name) },
-    });
+    const clients = await prisma.client.findMany({ take: 500 });
+    const exact = clients.find((client) => nameKey(client.name) === nameKey(command.party.name));
+    const hits = mentionedNames(command.party.name, clients.map((client) => client.name));
+    if (!exact && hits.length > 1) {
+      return {
+        clarify: `Plusieurs fiches correspondent : ${hits.join(", ")}. Précisez le nom complet. Rien n’est enregistré.`,
+      };
+    }
+    const matchName = exact?.name ?? (hits.length === 1 ? hits[0] : null);
+    const existing = matchName ? clients.find((client) => client.name === matchName) ?? null : null;
     if (!existing) {
       const draft = draftFromKnownFields(command.party, "create");
       draft.notes = [draft.notes, "Aucun compte de ce nom : proposition de création."]

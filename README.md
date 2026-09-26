@@ -43,16 +43,20 @@ Sur le PC hôte, dans un PowerShell :
 New-NetFirewallRule -DisplayName "Ollama LAN" -Direction Inbound -Protocol TCP -LocalPort 11434 -RemoteAddress 192.168.1.0/24 -Action Allow
 ```
 
-Quittez Ollama depuis la barre des tâches, relancez-le, puis :
+Quittez Ollama depuis la barre des tâches, relancez-le, puis installez un modèle de conversation d’environ 7 milliards de paramètres et le petit modèle d’index. Les deux ne restent pas en mémoire ensemble : l’index se décharge avant la réponse. Cela tient sur une carte de 16 Go, avec 32 Go de RAM, pour un utilisateur.
 
 ```powershell
-ollama pull qwen2.5:14b
+ollama pull qwen2.5:7b
+ollama pull nomic-embed-text
 ```
+
+Si `qwen-dgfip-multisec-2ep` est déjà installé, gardez-le pour la conversation. N’utilisez pas Mixtral ni un modèle 14B ou plus sur cette carte. `bge-m3` n’est pas chargé : il est plus lourd que `nomic-embed-text`.
 
 Sur l’Ubuntu, dans `~/Gestion_IA/.env` :
 
 ```bash
 OLLAMA_BASE_URL="http://192.168.1.5:11434"
+OLLAMA_EMBED_MODEL="nomic-embed-text"
 ```
 
 Vérifiez le lien avant d’ouvrir l’assistant :

@@ -19,17 +19,23 @@ type OllamaStatus = {
   baseUrl: string;
   models: string[];
   defaultModel: string | null;
+  embedModel: string | null;
+  sizing: string;
+  warning?: string;
   error?: string;
 };
+
+type SourceRef = { label: string; title: string };
 
 type ProposalField = { label: string; value: string };
 
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
-  source?: "ollama" | "regle-metier" | "action" | "proposition";
+  source?: "ollama" | "regle-metier" | "action" | "proposition" | "dossier";
   model?: string | null;
   proposal?: ProposalField[];
+  sources?: SourceRef[];
 };
 
 export function AssistantChat() {
@@ -87,8 +93,9 @@ export function AssistantChat() {
         reply?: string;
         error?: string;
         model?: string | null;
-        source?: "ollama" | "regle-metier" | "action" | "proposition";
+        source?: "ollama" | "regle-metier" | "action" | "proposition" | "dossier";
         proposal?: { fields?: ProposalField[] };
+        sources?: SourceRef[];
       };
       if (!response.ok || !body.reply) {
         setSendError(body.error ?? "L’inférence a échoué.");
@@ -102,6 +109,7 @@ export function AssistantChat() {
           source: body.source,
           model: body.model,
           proposal: body.proposal?.fields,
+          sources: body.sources,
         },
       ]);
     } catch {
@@ -152,7 +160,18 @@ export function AssistantChat() {
               {status.error}
             </p>
           ) : null}
-          {status && status.models.length > 0 ? (
+          {status?.warning ? (
+            <p className="text-sm leading-6 text-muted-foreground">{status.warning}</p>
+          ) : null}
+          {status ? (
+            <p className="text-sm leading-6 text-muted-foreground">
+              {status.sizing}{" "}
+              {status.embedModel
+                ? `Index : ${status.embedModel}.`
+                : "Index lexical tant que nomic-embed-text n’est pas installé sur l’hôte."}
+            </p>
+          ) : null}
+          {status && status.models.filter((name) => !/embed|bge-m/i.test(name)).length > 0 ? (
             <div className="grid gap-2">
               <Label htmlFor="ollama-model">Modèle installé sur l’hôte</Label>
               <select
@@ -161,11 +180,13 @@ export function AssistantChat() {
                 onChange={(event) => setModel(event.target.value)}
                 className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
               >
-                {status.models.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
+                {status.models
+                  .filter((name) => !/embed|bge-m/i.test(name))
+                  .map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
               </select>
             </div>
           ) : null}
@@ -176,19 +197,19 @@ export function AssistantChat() {
         <CardHeader>
           <CardTitle>Conversation</CardTitle>
           <CardDescription>
-            Pour un client, il identifie la fiche comme un service commercial,
-            puis attend votre confirmation. Un fournisseur, un produit, un
-            projet ou un devis est enregistré dès la demande. Il ne calcule pas
-            les prix. La conversation n’est pas conservée.
+            Il reconnaît l’intention, relit les fiches déjà enregistrées, puis
+            agit. Une fiche client reste une proposition à confirmer. Il ne
+            calcule pas les prix. La conversation n’est pas conservée.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
           {messages.length === 0 ? (
             <div className="grid gap-3">
               <p className="text-sm leading-6 text-muted-foreground">
-                Ces exemples proposent une fiche, sans l’enregistrer. Confirmez
-                ensuite, ou corrigez un champ. Pour un prix de vente, utilisez
-                Ventes.
+                Ces exemples proposent une fiche, sans l’enregistrer. Vous pouvez
+                aussi demander « que sait-on de Marie Dupont » ou « liste des
+                clients » : la réponse vient des fiches, pas d’une invention.
+                Pour un prix de vente, utilisez Ventes.
               </p>
               <div className="flex flex-wrap gap-2">
                 {CLIENT_EXAMPLES.map((example) => (
@@ -221,11 +242,21 @@ export function AssistantChat() {
                           ? "Action enregistrée"
                           : message.source === "proposition"
                             ? "Proposition à confirmer"
-                            : (message.model ?? "Assistant")}
+                            : message.source === "dossier"
+                              ? "D’après les fiches"
+                              : (message.model ?? "Assistant")}
                   </span>
                   <p className="text-sm leading-6 whitespace-pre-wrap">
                     {message.content}
                   </p>
+                  {message.sources && message.sources.length > 0 ? (
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      Sources :{" "}
+                      {message.sources
+                        .map((source) => `${source.label} ${source.title}`)
+                        .join(" · ")}
+                    </p>
+                  ) : null}
                   {message.proposal && message.proposal.length > 0 ? (
                     <dl className="mt-2 grid gap-1 text-sm">
                       {message.proposal.map((field) => (

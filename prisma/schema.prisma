@@ -93,6 +93,21 @@ model Quote {
   lines     QuoteLine[]
 }
 
+model KnowledgeChunk {
+  id          String   @id @default(cuid())
+  sourceType  String
+  sourceId    String
+  title       String
+  summary     String   @default("")
+  body        String
+  contentHash String
+  embedding   Json
+  updatedAt   DateTime @updatedAt
+
+  @@unique([sourceType, sourceId])
+  @@index([sourceType])
+}
+
 model QuoteLine {
   id        String  @id @default(cuid())
   quoteId   String

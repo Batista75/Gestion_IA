@@ -2,7 +2,7 @@
 
 Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification).
 
-Dernière mise à jour : 26 septembre 2026, avec la qualification des clients (particulier ou entreprise, France ou international) et la confirmation avant enregistrement.
+Dernière mise à jour : 26 septembre 2026, avec l’assistant qui reconnaît l’intention et répond à partir des fiches déjà enregistrées.
 
 ## Ouvrir l’application
 
@@ -71,9 +71,16 @@ Exemple de la spécification : coût `700`, marque `30`, remise `10`. Le prix af
 
 ## Assistant
 
-L’assistant prépare et explique. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
+L’assistant reconnaît l’intention, relit les fiches déjà enregistrées, puis agit. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
 
-Pour un client, il identifie les informations comme le ferait un service commercial, puis affiche une **proposition**. Rien n’est écrit tant que vous n’avez pas confirmé.
+Il distingue quatre demandes :
+
+- **Consulter** : `que sait-on de Marie Dupont`, `cherche Holzwerk`. La réponse reprend uniquement les fiches trouvées. S’il n’y en a pas, il le dit et n’invente rien.
+- **Lister** : `liste des clients`, `quels fournisseurs`. La liste vient du répertoire.
+- **Corriger une fiche connue** : `le téléphone de Holzwerk Müller GmbH est le +49 89 000111`. Il retrouve la fiche, garde les autres champs, et propose la mise à jour.
+- **Créer ou mettre à jour** avec une phrase explicite, comme ci-dessous.
+
+Pour un client, il identifie les informations comme le ferait un service commercial, en s’appuyant sur la fiche déjà là quand elle existe, puis affiche une **proposition**. Rien n’est écrit tant que vous n’avez pas confirmé.
 
 - **Confirmer**, ou écrire `Je confirme.`, enregistre la fiche.
 - `non` laisse la proposition en attente et demande la correction.
@@ -96,9 +103,9 @@ Les autres phrases sont exécutées sans passer par le modèle :
 
 `créer client Atelier Nord, email contact@atelier.fr` et `mettre à jour le client Atelier Nord, adresse 12 rue des Lilas, Paris` ouvrent une proposition, ils n’enregistrent pas tout seuls.
 
-Une demande plus libre est transmise à Ollama, qui dispose des mêmes actions. Seuls les champs présents dans votre message sont écrits.
+Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches. Le modèle peut relancer une recherche. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. Une note de l’accueil reste « À classer » : elle ne devient un projet que si vous le demandez.
 
-Le bandeau **Inférence sur le PC hôte** indique si Ollama répond et l’adresse utilisée, par défaut `http://192.168.1.5:11434`. Choisissez un modèle de conversation. `qwen-dgfip-multisec-2ep:latest` convient. Les modèles d’embedding, comme `bge-m3` ou `nomic-embed-text`, ne répondent pas au chat.
+Le bandeau **Inférence sur le PC hôte** indique si Ollama répond et l’adresse utilisée, par défaut `http://192.168.1.5:11434`. Le budget prévu est un utilisateur, 16 Go de mémoire graphique et 32 Go de RAM. L’index `nomic-embed-text` se charge, puis se décharge. Ensuite seulement le modèle de conversation, limité à 4 096 jetons. `qwen-dgfip-multisec-2ep:latest` ou `qwen2.5:7b` conviennent. Un modèle 14B, Mixtral ou `bge-m3` ne doit pas rester chargé en même temps. Sans `nomic-embed-text`, la recherche dans les fiches continue par les mots, et elle fonctionne même si Ollama ne répond pas.
 
 La conversation n’est pas enregistrée. **Effacer** la retire de l’écran.
 
