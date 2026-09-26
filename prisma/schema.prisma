@@ -29,12 +29,29 @@ model Project {
   currency      String         @default("EUR")
   budgetStated  String         @default("")
   lead          String         @default("")
+  tradeKey      String         @default("achat-revente-technologies")
   createdAt     DateTime       @default(now())
   events        ProjectEvent[]
   quotes        Quote[]
   conversations Conversation[]
   lines         ProjectLine[]
   sales         SaleDocument[]
+  steps         ProjectStep[]
+}
+
+model ProjectStep {
+  id         String    @id @default(cuid())
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stepKey    String
+  status     String    @default("a_faire")
+  proofRef   String    @default("")
+  proofNote  String    @default("")
+  recordedAt DateTime?
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([projectId, stepKey])
+  @@index([projectId])
 }
 
 model ProjectEvent {

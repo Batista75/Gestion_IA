@@ -21,7 +21,8 @@ export default function MorePage() {
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Plus</h1>
         <p className="text-sm leading-6 text-muted-foreground">
-          Le manuel décrit les écrans en service. La spécification fonctionnelle
+          Le manuel décrit les écrans en service. L’instruction métier fixe
+          l’ordre des preuves de l’achat-revente. La spécification fonctionnelle
           décrit le produit visé, la spécification technique décrit le socle
           livré. Les listes sont dans Répertoire. Le serveur, les modèles
           et la clé d’API sont dans{" "}
@@ -36,7 +37,8 @@ export default function MorePage() {
         <CardHeader>
           <CardTitle>Documentation</CardTitle>
           <CardDescription>
-            Les trois documents sont aussi dans le dossier docs du dépôt.
+            Le manuel et les spécifications sont dans docs. L’instruction métier
+            est dans instructions/metiers.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -45,6 +47,12 @@ export default function MorePage() {
             className={cn(buttonVariants(), "min-h-11 px-4")}
           >
             Ouvrir le manuel
+          </Link>
+          <Link
+            href="/documentation/metier"
+            className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
+          >
+            Instruction métier
           </Link>
           <a
             href="/documentation/specification"

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { workflowKnowledge, type StepRecord } from "@/domain/trade-workflow";
 import {
   rankKnowledge,
   recallCandidates,
@@ -135,7 +136,7 @@ async function syncKnowledge(): Promise<KnowledgeDoc[]> {
 }
 
 async function loadDocs(): Promise<KnowledgeDoc[]> {
-  const [clients, suppliers, products, projects, quotes, notes, files, demands, events] = await Promise.all([
+  const [clients, suppliers, products, projects, quotes, notes, files, demands, events, projectSteps] = await Promise.all([
     prisma.client.findMany({ take: 500, orderBy: { name: "asc" } }),
     prisma.supplier.findMany({ take: 500, orderBy: { name: "asc" } }),
     prisma.product.findMany({
@@ -161,8 +162,20 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
     prisma.storedFile.findMany({ take: 200, orderBy: { createdAt: "desc" } }),
     prisma.demand.findMany({ take: 200, orderBy: { updatedAt: "desc" } }),
     prisma.recordEvent.findMany({ orderBy: { createdAt: "desc" }, take: 400 }),
+    prisma.projectStep.findMany({ take: 4000 }),
   ]);
   const history = historyLines(events);
+  const stepsByProject = new Map<string, StepRecord[]>();
+  for (const step of projectSteps) {
+    const bucket = stepsByProject.get(step.projectId) ?? [];
+    bucket.push({
+      key: step.stepKey,
+      status: step.status === "fait" || step.status === "en_cours" ? step.status : "a_faire",
+      proofRef: step.proofRef,
+      proofNote: step.proofNote,
+    });
+    stepsByProject.set(step.projectId, bucket);
+  }
 
   return [
     ...clients.map((client) =>
@@ -218,6 +231,7 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
           project.purpose ? `Le projet consiste à ${project.purpose}` : "",
           project.budgetStated ? `Budget indiqué ${project.budgetStated}` : "",
           project.nextAction ? `Prochaine action ${project.nextAction}` : "",
+          workflowKnowledge(stepsByProject.get(project.id) ?? []),
           project.events.length ? "Actualité :" : "",
           ...project.events.map((event) => event.body),
         ]

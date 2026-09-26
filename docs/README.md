@@ -10,10 +10,14 @@ Dans l’application, le même PDF s’ouvre par [Spécification fonctionnelle](
 
 ## Spécification technique
 
-[Spécification technique](specification-technique.md). Elle décrit le socle qui tourne : orchestration de l’assistant, fil conservé, confirmation, recherche dans les fiches, journal des modifications, vue projet, modèles et usage du GPU. Elle ne remplace pas le PDF. Quand ce fonctionnement change, ce fichier est mis à jour dans le même changement.
+[Spécification technique](specification-technique.md). Elle décrit le socle qui tourne : orchestration de l’assistant, fil conservé, confirmation, recherche dans les fiches, journal des modifications, vue projet, instruction métier, modèles et usage du GPU. Elle ne remplace pas le PDF. Quand ce fonctionnement change, ce fichier est mis à jour dans le même changement.
 
 Dans l’application : [Spécification technique](/documentation/technique).
 
 ## Manuel utilisateur
 
 [Manuel utilisateur](manuel-utilisateur.md). C’est le texte affiché à l’écran Manuel. Quand un écran, un libellé ou une règle change, ce fichier est mis à jour dans le même changement.
+
+## Instruction métier
+
+[Achat et revente — technologies](../instructions/metiers/achat-revente-technologies.md). Ordre des preuves commerciales pour les dossiers de technologies. L’assistant et la fiche projet s’y réfèrent. Dans l’application : [Instruction métier](/documentation/metier).

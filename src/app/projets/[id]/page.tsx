@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProjectOperation } from "@/components/project-operation";
+import { ProjectWorkflow } from "@/components/project-workflow";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -10,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { TRADE_STEPS, readStepStatus } from "@/domain/trade-workflow";
 import { prisma } from "@/lib/db";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +24,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     include: {
       lines: { orderBy: { createdAt: "asc" } },
       sales: { orderBy: { createdAt: "desc" }, include: { lines: { orderBy: { createdAt: "asc" } } } },
+      steps: true,
       events: { orderBy: { createdAt: "asc" } },
     },
   });
@@ -98,6 +101,17 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           </CardContent>
         </Card>
       </div>
+
+      <ProjectWorkflow
+        projectId={project.id}
+        steps={TRADE_STEPS}
+        records={project.steps.map((step) => ({
+          key: step.stepKey,
+          status: readStepStatus(step.status),
+          proofRef: step.proofRef,
+          proofNote: step.proofNote,
+        }))}
+      />
 
       <ProjectOperation
         projectId={project.id}

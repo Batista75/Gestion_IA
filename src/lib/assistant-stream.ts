@@ -18,6 +18,7 @@ import { rememberTurn } from "@/lib/conversations";
 import { withGpuLane } from "@/lib/gpu-lane";
 import { searchKnowledge } from "@/lib/knowledge-store";
 import { SYSTEM_PROMPT } from "@/lib/ollama";
+import { readTradeInstruction } from "@/lib/trade-steps";
 import { loadTechnicalConfig } from "@/lib/technical-settings";
 
 type FieldList = { fields: Array<{ label: string; value: string }> };
@@ -140,7 +141,7 @@ export async function streamModel(input: {
         writer.write({ type: "finish-step" });
         const result = streamText({
           model: openai.chat(input.model),
-          system: `${SYSTEM_PROMPT}\n\n${retrievalContext(docs)}\nUne écriture de fiche n’est pas faite tant que l’utilisateur n’a pas confirmé.`,
+          system: `${SYSTEM_PROMPT}\n\nInstruction métier :\n${readTradeInstruction()}\n\n${retrievalContext(docs)}\nUne écriture de fiche n’est pas faite tant que l’utilisateur n’a pas confirmé.`,
           messages: textMessages(input.messages),
           stopWhen: stepCountIs(3),
           temperature: 0.1,

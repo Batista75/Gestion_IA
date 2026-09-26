@@ -28,7 +28,10 @@ import { streamDirect, streamModel } from "@/lib/assistant-stream";
 import { conversationIdOrNew, rememberTurn } from "@/lib/conversations";
 import type { UIMessage } from "ai";
 import { withGpuLane } from "@/lib/gpu-lane";
+import { mentionedNames } from "@/domain/knowledge";
+import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
 import { searchKnowledge } from "@/lib/knowledge-store";
+import { listProjectSteps } from "@/lib/trade-steps";
 import { getOllamaStatus } from "@/lib/ollama";
 import { prisma } from "@/lib/db";
 
@@ -152,6 +155,11 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
     command && (command.type === "create_client" || command.type === "update_client")
       ? command
       : null;
+  if (asksTradeWorkflow(text)) {
+    const trade = await answerTrade(text);
+    if (trade) return trade;
+  }
+
   const intent = understandIntent(text);
   if (intent === "lookup" || intent === "directory") {
     return withGpuLane(() => answerFromDossier(text, intent));
@@ -218,6 +226,30 @@ async function proposalFromCommand(
     return { reply: opened.clarify, model: null, source: "dossier" as const };
   }
   return proposalResponse(opened);
+}
+
+async function answerTrade(text: string): Promise<DirectReply | null> {
+  const projects = await prisma.project.findMany({ select: { id: true, name: true }, take: 500 });
+  const names = mentionedNames(text, projects.map((project) => project.name));
+  if (names.length > 1) {
+    return {
+      reply: `Plusieurs dossiers correspondent : ${names.join(", ")}. Précisez le nom complet.`,
+      model: null,
+      source: "dossier",
+    };
+  }
+  if (names.length === 1) {
+    const project = projects.find((item) => item.name === names[0]);
+    if (!project) return null;
+    const steps = await listProjectSteps(project.id);
+    return {
+      reply: projectTradeReply(project.name, steps),
+      model: null,
+      source: "dossier",
+      sources: [{ label: "Projet", title: project.name }],
+    };
+  }
+  return { reply: tradeRuleReply(text), model: null, source: "dossier" };
 }
 
 async function answerFromDossier(text: string, intent: "lookup" | "directory") {

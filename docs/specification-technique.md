@@ -17,12 +17,13 @@ Les prix, la TVA et les numéros de pièce ne sont pas calculés par le modèle.
 1. Une phrase parlée du type « Créer le projet : … Le projet consiste à … », ou un tableau collé, est enregistrée tout de suite.
 2. Une question de prix de vente reçoit la règle métier, sans modèle.
 3. `Je confirme.` enregistre la proposition la plus récente, fiche client ou autre fiche. `non` n’écrit rien.
-4. Une consultation ou une liste est lue dans les fiches, sans modèle.
-5. Une demande d’ajouter un contact ou une information, ou une correction, relit d’abord la fiche client déjà enregistrée. Si le nom est unique et que la nouvelle valeur est comprise, une proposition de mise à jour s’ouvre. Les champs non cités restent ceux de la fiche. Une note nouvelle s’ajoute à la note déjà écrite. Si la valeur manque, la réponse décrit la fiche et demande le contact ou l’information, sans proposition.
-6. Une phrase de client ouvre une proposition.
-7. Une phrase de fournisseur, de produit, de projet court ou de devis ouvre une proposition. Elle n’écrit pas.
-8. Un commentaire sur une fiche client en attente produit une nouvelle proposition.
-9. Un nom seul déjà connu, sans verbe d’action, demande s’il faut consulter ou modifier.
+4. Une question de parcours commercial, de prochaine étape ou de preuve documentaire est répondue depuis l’instruction métier, sans modèle. Un seul projet nommé fait lire ses étapes enregistrées.
+5. Une consultation ou une liste est lue dans les fiches, sans modèle.
+6. Une demande d’ajouter un contact ou une information, ou une correction, relit d’abord la fiche client déjà enregistrée. Si le nom est unique et que la nouvelle valeur est comprise, une proposition de mise à jour s’ouvre. Les champs non cités restent ceux de la fiche. Une note nouvelle s’ajoute à la note déjà écrite. Si la valeur manque, la réponse décrit la fiche et demande le contact ou l’information, sans proposition.
+7. Une phrase de client ouvre une proposition.
+8. Une phrase de fournisseur, de produit, de projet court ou de devis ouvre une proposition. Elle n’écrit pas.
+9. Un commentaire sur une fiche client en attente produit une nouvelle proposition.
+10. Un nom seul déjà connu, sans verbe d’action, demande s’il faut consulter ou modifier.
 
 S’il ne reste rien de tout cela, et si Ollama répond, le modèle de conversation prend le relais. S’il ne répond pas, le fil affiche l’indisponibilité. La consultation des fiches continue par les mots.
 
@@ -77,6 +78,8 @@ La clé d’API n’est envoyée qu’en en-tête `Authorization` vers cet hôte
 `/projets/[id]` charge le client du répertoire quand le nom correspond, le contexte du dossier, les lignes `ProjectLine` et les documents `SaleDocument`. Une ligne porte un coût en centimes, un taux de marque et une remise, entiers de 0 à 99. Le prix de vente et la marge passent par `quoteFromTargetMarkup` dans `src/domain/pricing.ts`. Un coût absent laisse le prix non indiqué. Le total n’additionne que les lignes chiffrées.
 
 Établir un devis copie les lignes sélectionnées. Un devis en cours devient une commande client, ou un devis non abouti. Une commande client ouvre une commande fournisseur par fournisseur nommé. Confirmer les chiffres écrit la date dans l’actualité du projet. Reprendre les chiffres retire cette confirmation. Aucun numéro de facture n’est attribué.
+
+Le parcours commercial est `ProjectStep`, une ligne par étape et par projet. Les neuf étapes, leurs actions et leurs preuves sont dans `src/domain/trade-workflow.ts` (`TRADE_STEPS`). Le fichier lu à l’écran et ajouté au prompt du modèle est `instructions/metiers/achat-revente-technologies.md`. Une situation « fait » exige une référence d’au moins deux caractères. L’avertissement d’ordre est indicatif : les étapes de remise et de réception attendent l’expédition, la facturation attend un bon de livraison ou un procès-verbal. `asksTradeWorkflow` répond avant la consultation des fiches. Si un seul projet est nommé, `listProjectSteps` et `projectTradeReply` décrivent la prochaine preuve.
 
 ## Hors de ce socle
 
