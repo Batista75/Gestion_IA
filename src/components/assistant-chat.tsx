@@ -176,7 +176,7 @@ export function AssistantChat({ proposals = [] }: { proposals?: PendingProposal[
                 </li>
               ))}
             </ol>
-          )}
+          ) : null}
 
           <form onSubmit={onSubmit} className="grid gap-3">
             <Label htmlFor="assistant-draft">Message</Label>
