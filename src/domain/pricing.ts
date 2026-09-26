@@ -97,6 +97,111 @@ export function convertToEur(
   return Math.round(cents * eurPerUsd);
 }
 
+const euroFormat = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+
+export type SaleLineDraft = {
+  quantity: number;
+  costCents: number | null;
+  markupPercent: number;
+  discountPercent: number;
+};
+
+export type SaleLineFigures = {
+  unitNetCents: number | null;
+  unitListCents: number | null;
+  lineCostCents: number | null;
+  lineNetCents: number | null;
+  lineMarginCents: number | null;
+};
+
+export function saleLineFigures(input: SaleLineDraft): SaleLineFigures {
+  const quantity = readSaleQuantity(String(input.quantity));
+  const markupPercent = readSalePercent(String(input.markupPercent), "Le taux de marque");
+  const discountPercent = readSalePercent(String(input.discountPercent), "La remise");
+  if (input.costCents === null) {
+    return {
+      unitNetCents: null,
+      unitListCents: null,
+      lineCostCents: null,
+      lineNetCents: null,
+      lineMarginCents: null,
+    };
+  }
+  if (!Number.isInteger(input.costCents) || input.costCents < 0) {
+    throw new Error("Le coût HT doit être un montant en centimes, positif ou nul.");
+  }
+  const quote = quoteFromTargetMarkup({
+    directCostHt: input.costCents / 100,
+    targetMarkupRate: markupPercent / 100,
+    discountRate: discountPercent / 100,
+  });
+  const unitNetCents = Math.round(quote.netPriceHt * 100);
+  const unitListCents = Math.round(quote.listPriceHt * 100);
+  const lineNetCents = unitNetCents * quantity;
+  const lineCostCents = input.costCents * quantity;
+  return {
+    unitNetCents,
+    unitListCents,
+    lineCostCents,
+    lineNetCents,
+    lineMarginCents: lineNetCents - lineCostCents,
+  };
+}
+
+export function saleOperationTotals(lines: SaleLineFigures[]): {
+  costCents: number;
+  netCents: number;
+  marginCents: number;
+  missing: number;
+} {
+  const priced = lines.filter((line) => line.lineNetCents !== null && line.lineCostCents !== null);
+  return {
+    costCents: priced.reduce((sum, line) => sum + (line.lineCostCents ?? 0), 0),
+    netCents: priced.reduce((sum, line) => sum + (line.lineNetCents ?? 0), 0),
+    marginCents: priced.reduce((sum, line) => sum + (line.lineMarginCents ?? 0), 0),
+    missing: lines.length - priced.length,
+  };
+}
+
+export function formatCents(cents: number | null): string {
+  if (cents === null) return "non indiqué";
+  return euroFormat.format(cents / 100);
+}
+
+export function centsInput(cents: number | null): string {
+  if (cents === null) return "";
+  const euros = cents / 100;
+  return Number.isInteger(euros) ? String(euros) : euros.toFixed(2).replace(".", ",");
+}
+
+export function readSaleQuantity(raw: string): number {
+  const trimmed = raw.trim();
+  if (!/^\d{1,4}$/.test(trimmed)) {
+    throw new Error("La quantité est un entier entre 1 et 9999.");
+  }
+  const value = Number(trimmed);
+  if (value < 1) throw new Error("La quantité est un entier entre 1 et 9999.");
+  return value;
+}
+
+export function readSalePercent(raw: string, label: string): number {
+  const trimmed = raw.trim().replace("%", "");
+  if (!/^\d{1,2}$/.test(trimmed)) {
+    throw new Error(`${label} est un entier entre 0 et 99.`);
+  }
+  return Number(trimmed);
+}
+
+export function readCostCents(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const cents = centsFromStated(trimmed);
+  if (cents === null || cents < 0) {
+    throw new Error("Le coût HT n’est pas un montant lisible.");
+  }
+  return cents;
+}
+
 export function grossMarginCents(
   saleHtCents: number,
   costHtCents: number,

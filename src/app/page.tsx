@@ -133,7 +133,11 @@ export default async function HomePage({
               <li key={project.id}>
                 <Card className="h-full">
                   <CardHeader>
-                    <CardTitle>{project.name}</CardTitle>
+                    <CardTitle>
+                      <Link href={`/projets/${project.id}`} className="underline-offset-4 hover:underline">
+                        {project.name}
+                      </Link>
+                    </CardTitle>
                     <CardDescription>{project.primaryClient}</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-2">

@@ -7,6 +7,8 @@ import {
 import { ChangeJournal } from "@/components/change-journal";
 import { ProjectEditor, ProjectForm } from "@/components/project-form";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -70,7 +72,11 @@ export default async function ProjectsPage() {
               <li key={project.id}>
                 <Card>
                   <CardHeader>
-                    <CardTitle>{project.name}</CardTitle>
+                    <CardTitle>
+                      <Link href={`/projets/${project.id}`} className="underline-offset-4 hover:underline">
+                        {project.name}
+                      </Link>
+                    </CardTitle>
                     <CardDescription>
                       Client principal · {project.primaryClient}
                     </CardDescription>
@@ -86,6 +92,12 @@ export default async function ProjectsPage() {
                         Ouvert le {project.createdAt.toLocaleDateString("fr-FR")}
                       </p>
                     </div>
+                    <Link
+                      href={`/projets/${project.id}`}
+                      className={cn(buttonVariants({ variant: "outline" }), "min-h-11 w-fit px-4")}
+                    >
+                      Ouvrir la vue
+                    </Link>
                     {project.purpose ? (
                       <p className="text-sm leading-6">Le projet consiste à {project.purpose}.</p>
                     ) : null}

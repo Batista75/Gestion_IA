@@ -72,6 +72,12 @@ Le budget est un utilisateur, 16 Go de mémoire graphique et 32 Go de RAM. Les t
 
 La clé d’API n’est envoyée qu’en en-tête `Authorization` vers cet hôte privé. Une adresse publique est refusée. L’écran de santé ne teste que la base.
 
+## Vue projet
+
+`/projets/[id]` charge le client du répertoire quand le nom correspond, le contexte du dossier, les lignes `ProjectLine` et les documents `SaleDocument`. Une ligne porte un coût en centimes, un taux de marque et une remise, entiers de 0 à 99. Le prix de vente et la marge passent par `quoteFromTargetMarkup` dans `src/domain/pricing.ts`. Un coût absent laisse le prix non indiqué. Le total n’additionne que les lignes chiffrées.
+
+Établir un devis copie les lignes sélectionnées. Un devis en cours devient une commande client, ou un devis non abouti. Une commande client ouvre une commande fournisseur par fournisseur nommé. Confirmer les chiffres écrit la date dans l’actualité du projet. Reprendre les chiffres retire cette confirmation. Aucun numéro de facture n’est attribué.
+
 ## Hors de ce socle
 
-La facture, l’avoir, la commande, le paiement, le rapprochement bancaire, le pilotage chiffré, l’export et le connecteur agréé ne sont pas implémentés. Ils restent dans la spécification fonctionnelle.
+La facture, l’avoir, le paiement, le rapprochement bancaire, le pilotage chiffré, l’export et le connecteur agréé ne sont pas implémentés. Ils restent dans la spécification fonctionnelle. La commande client et la commande fournisseur de la vue projet préparent l’opération, sans numéro de pièce ni transmission.
