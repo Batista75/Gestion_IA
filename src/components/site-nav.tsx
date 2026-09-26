@@ -25,7 +25,23 @@ export function SiteNav() {
           <Link href="/" className="text-base font-semibold tracking-tight">
             Gestion IA
           </Link>
-          <p className="text-xs text-muted-foreground">Société pilote · local</p>
+          <div className="flex items-baseline gap-3">
+            <Link
+              href="/manuel"
+              aria-current={pathname.startsWith("/manuel") ? "page" : undefined}
+              className={cn(
+                "inline-flex min-h-11 items-center text-sm font-medium underline-offset-4 hover:underline",
+                pathname.startsWith("/manuel")
+                  ? "text-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              Manuel
+            </Link>
+            <p className="hidden text-xs text-muted-foreground sm:block">
+              Société pilote · local
+            </p>
+          </div>
         </div>
         <nav aria-label="Domaines" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <ul className="flex min-w-max gap-1">

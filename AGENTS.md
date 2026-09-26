@@ -16,3 +16,4 @@ Application locale de gestion pour TPE. La spécification est dans `docs/specifi
 - L’assistant appelle Ollama sur le réseau local (`OLLAMA_BASE_URL`, par défaut `http://192.168.1.5:11434`). Aucun texte n’est envoyé vers un service d’IA public.
 - PostgreSQL tourne sur la machine. `bash scripts/setup-ubuntu.sh` installe Node.js 22 et PostgreSQL sur une Ubuntu neuve, puis lance l’interface sur le port 3847. `bash scripts/cloud-agent-start.sh --prepare` prépare seulement la base.
 - Rien n’est classé dans un projet sans une action explicite de l’utilisateur.
+- Le manuel affiché dans l’interface est `docs/manuel-utilisateur.md`. Tout changement d’écran ou de règle visible met à jour ce fichier. La spécification reste `docs/specifications-gestion-ia.pdf`.
