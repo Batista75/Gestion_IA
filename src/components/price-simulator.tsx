@@ -58,7 +58,7 @@ export function PriceSimulator() {
             id="cost"
             inputMode="decimal"
             value={cost}
-            onChange={(event) => setCost(event.target.value)}
+            onValueChange={setCost}
           />
         </div>
         <div className="grid gap-2">
@@ -67,7 +67,7 @@ export function PriceSimulator() {
             id="markup"
             inputMode="decimal"
             value={markup}
-            onChange={(event) => setMarkup(event.target.value)}
+            onValueChange={setMarkup}
           />
         </div>
         <div className="grid gap-2">
@@ -76,7 +76,7 @@ export function PriceSimulator() {
             id="discount"
             inputMode="decimal"
             value={discount}
-            onChange={(event) => setDiscount(event.target.value)}
+            onValueChange={setDiscount}
           />
         </div>
       </div>
