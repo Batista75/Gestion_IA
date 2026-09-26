@@ -4,6 +4,7 @@ import {
   CLIENT_EXAMPLES,
   frenchVat,
   identifyClient,
+  proposalFields,
   readConfirmation,
   reviseDraft,
 } from "../src/domain/client-file.ts";
@@ -62,6 +63,8 @@ test("entreprise internationale", () => {
   assert.equal(draft.city, "München");
   assert.equal(draft.contactName, "Anna Müller");
   assert.equal(draft.contactRole, "achats");
+  assert.equal(draft.address, "Musterstraße 10");
+  assert.equal(draft.missing.includes("adresse"), false);
 });
 
 test("la confirmation et la correction", () => {
@@ -75,4 +78,6 @@ test("la confirmation et la correction", () => {
   assert.equal(revised.draft.kind, "entreprise");
   assert.match(revised.draft.phone, /06 98 76 54 32/);
   assert.equal(revised.draft.lastName, "Dupont");
+  assert.match(revised.draft.legalName || `${revised.draft.firstName} ${revised.draft.lastName}`, /Dupont/);
+  assert.ok(proposalFields(revised.draft).some((field) => field.label === "Nom" && field.value.includes("Dupont")));
 });

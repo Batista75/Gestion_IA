@@ -389,7 +389,7 @@ function applyAddress(source: string, draft: ClientDraft) {
   for (const part of parts) {
     const segment = part.trim().replace(/^si[èe]ge\s+/i, "");
     if (
-      /\b(rue|avenue|boulevard|impasse|chemin|street|stra(?:ss|ß)e|route|place|all[ée]e)\b/i.test(
+      /rue|avenue|boulevard|impasse|chemin|street|stra(?:ss|ß)e|route|place|all[ée]e/i.test(
         segment,
       )
     ) {
@@ -501,10 +501,11 @@ function findLegalForm(clause: string): string {
 }
 
 function labeledName(draft: ClientDraft): string {
+  const person = [draft.firstName, draft.lastName].filter(Boolean).join(" ");
   if (draft.kind === "particulier") {
-    return [draft.civility, draft.firstName, draft.lastName].filter(Boolean).join(" ");
+    return [draft.civility, person].filter(Boolean).join(" ") || draft.legalName;
   }
-  return draft.legalName;
+  return draft.legalName || person;
 }
 
 function kindLabel(kind: ClientKind): string {
