@@ -11,9 +11,10 @@ model AppSetting {
   id         String   @id @default("local")
   serverUrl  String   @default("")
   apiKey     String   @default("")
-  chatModel  String   @default("")
-  embedModel String   @default("")
-  updatedAt  DateTime @updatedAt
+  chatModel   String   @default("")
+  embedModel  String   @default("")
+  rerankModel String   @default("")
+  updatedAt   DateTime @updatedAt
 }
 
 model Project {

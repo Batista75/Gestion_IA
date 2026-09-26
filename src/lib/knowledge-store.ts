@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  applyRerank,
   rankKnowledge,
   recordFocus,
   type KnowledgeDoc,
@@ -7,7 +8,7 @@ import {
   type SourceType,
 } from "@/domain/knowledge";
 import { prisma } from "@/lib/db";
-import { embedWithOllama, getOllamaStatus } from "@/lib/ollama";
+import { embedWithOllama, getOllamaStatus, rerankWithOllama } from "@/lib/ollama";
 
 const EMBED_BATCH = 20;
 
@@ -29,8 +30,25 @@ export async function searchKnowledge(
     ? await embedQuery(status.embedModel, query, docs)
     : null;
   const pool = focus ? docs.filter((doc) => doc.sourceType === focus) : docs;
-  const ranked = rankKnowledge(query, pool.length > 0 ? pool : docs, queryVector);
-  return mode === "context" ? ranked.slice(0, 4) : ranked;
+  const candidates = rankKnowledge(query, pool.length > 0 ? pool : docs, queryVector, 8);
+  const reranked = status.rerankModel
+    ? await orderByReranker(status.rerankModel, query, candidates)
+    : null;
+  const ranked = reranked ?? candidates;
+  return mode === "context" ? ranked.slice(0, 4) : ranked.slice(0, 5);
+}
+
+async function orderByReranker(
+  model: string,
+  query: string,
+  docs: RankedDoc[],
+): Promise<RankedDoc[] | null> {
+  const scores = await rerankWithOllama(
+    model,
+    query,
+    docs.map((doc) => `${doc.title}\n${doc.body}`),
+  );
+  return scores ? applyRerank(docs, scores) : null;
 }
 
 async function embedQuery(

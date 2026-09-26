@@ -43,20 +43,20 @@ Sur le PC hôte, dans un PowerShell :
 New-NetFirewallRule -DisplayName "Ollama LAN" -Direction Inbound -Protocol TCP -LocalPort 11434 -RemoteAddress 192.168.1.0/24 -Action Allow
 ```
 
-Quittez Ollama depuis la barre des tâches, relancez-le, puis installez un modèle de conversation d’environ 7 milliards de paramètres et le petit modèle d’index. Les deux ne restent pas en mémoire ensemble : l’index se décharge avant la réponse. Cela tient sur une carte de 16 Go, avec 32 Go de RAM, pour un utilisateur.
+Quittez Ollama depuis la barre des tâches, relancez-le, puis installez les trois modèles. Ils ne restent pas en mémoire ensemble : embeddings et reranker se déchargent avant la conversation. Cela vise une carte de 16 Go, avec 32 Go de RAM, pour un utilisateur. `qwen2.5:14b` est la variante Qwen2.5-14B-Instruct quantifiée Q4_K_M.
 
 ```powershell
-ollama pull qwen2.5:7b
-ollama pull nomic-embed-text
+ollama pull qwen2.5:14b
+ollama pull bge-m3
+ollama pull dengcao/bge-reranker-v2-m3
 ```
 
-Si `qwen-dgfip-multisec-2ep` est déjà installé, gardez-le pour la conversation. N’utilisez pas Mixtral ni un modèle 14B ou plus sur cette carte. `bge-m3` n’est pas chargé : il est plus lourd que `nomic-embed-text`.
+L’écran Configuration liste les noms réellement installés et en choisit un par type. Si le reranker n’est pas sous ce nom, tout modèle dont le nom contient `bge-reranker-v2-m3` convient.
 
 Sur l’Ubuntu, dans `~/Gestion_IA/.env` :
 
 ```bash
 OLLAMA_BASE_URL="http://192.168.1.5:11434"
-OLLAMA_EMBED_MODEL="nomic-embed-text"
 ```
 
 Vérifiez le lien avant d’ouvrir l’assistant :

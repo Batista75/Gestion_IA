@@ -15,16 +15,20 @@ export function ConfigurationForm({
   serverUrl,
   chatModel,
   embedModel,
+  rerankModel,
   keyHint,
   chatModels,
   embedModels,
+  rerankModels,
 }: {
   serverUrl: string;
   chatModel: string;
   embedModel: string;
+  rerankModel: string;
   keyHint: string;
   chatModels: string[];
   embedModels: string[];
+  rerankModels: string[];
 }) {
   const [state, action, pending] = useActionState(saveConfigurationAction, emptyState);
   return (
@@ -66,19 +70,26 @@ export function ConfigurationForm({
           Retirer la clé enregistrée
         </label>
       </div>
-      <ModelField
+      <ModelSelect
         id="chatModel"
-        label="Modèle de conversation"
-        hint="Vide : le premier modèle adapté, de préférence environ 7 milliards de paramètres."
-        defaultValue={chatModel}
+        label="Modèle conversationnel"
+        hint="Liste limitée aux modèles de conversation du serveur. Automatique : Qwen2.5-14B-Instruct quantifié Q4_K_M, s’il est installé (souvent qwen2.5:14b)."
+        value={chatModel}
         options={chatModels}
       />
-      <ModelField
+      <ModelSelect
         id="embedModel"
-        label="Modèle d’index"
-        hint="Vide : nomic-embed-text s’il est installé. Il se décharge avant la conversation."
-        defaultValue={embedModel}
+        label="Modèle d’embeddings"
+        hint="Liste limitée aux modèles d’embeddings du serveur. Automatique : bge-m3, s’il est installé. Il se décharge avant la conversation."
+        value={embedModel}
         options={embedModels}
+      />
+      <ModelSelect
+        id="rerankModel"
+        label="Reranker"
+        hint="Liste limitée aux rerankers du serveur. Automatique : bge-reranker-v2-m3, s’il est installé. Sans lui, le tri reste lexical et vectoriel."
+        value={rerankModel}
+        options={rerankModels}
       />
       {state.message ? (
         <p role={state.ok ? "status" : "alert"} className={state.ok ? "text-sm" : "text-sm text-destructive"}>
@@ -92,37 +103,40 @@ export function ConfigurationForm({
   );
 }
 
-function ModelField({
+function ModelSelect({
   id,
   label,
   hint,
-  defaultValue,
+  value,
   options,
 }: {
   id: string;
   label: string;
   hint: string;
-  defaultValue: string;
+  value: string;
   options: string[];
 }) {
+  const choices = value && !options.includes(value) ? [value, ...options] : options;
   return (
     <div className="grid gap-2">
       <Label htmlFor={id}>{label}</Label>
-      <Input
+      <select
         id={id}
         name={id}
-        list={`${id}-choices`}
-        defaultValue={defaultValue}
-        placeholder="Automatique"
-        className="h-11"
-        autoComplete="off"
-      />
-      <datalist id={`${id}-choices`}>
-        {options.map((option) => (
-          <option key={option} value={option} />
+        defaultValue={choices.includes(value) ? value : ""}
+        className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+      >
+        <option value="">Automatique</option>
+        {choices.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
         ))}
-      </datalist>
-      <p className="text-xs leading-5 text-muted-foreground">{hint}</p>
+      </select>
+      <p className="text-xs leading-5 text-muted-foreground">
+        {choices.length === 0 ? "Aucun modèle de ce type n’est annoncé par le serveur. " : ""}
+        {hint}
+      </p>
     </div>
   );
 }

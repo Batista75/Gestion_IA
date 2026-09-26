@@ -1,0 +1,1 @@
+ALTER TABLE "AppSetting" ADD COLUMN "rerankModel" TEXT NOT NULL DEFAULT '';

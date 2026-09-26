@@ -1,4 +1,4 @@
-import { SEARCH_TOOL, isEmbedOnlyModel } from "@/domain/agent";
+import { SEARCH_TOOL, isEmbedOnlyModel, isRerankModel } from "@/domain/agent";
 import {
   CATALOG_TOOLS,
   commandFromTool,
@@ -87,9 +87,9 @@ export async function POST(request: Request) {
     );
   }
 
-  if (isEmbedOnlyModel(model)) {
+  if (isEmbedOnlyModel(model) || isRerankModel(model)) {
     return Response.json(
-      { error: "Ce modèle sert à l’index des fiches, pas à la conversation." },
+      { error: "Ce modèle sert à l’index ou au reranker, pas à la conversation." },
       { status: 400 },
     );
   }
@@ -393,7 +393,7 @@ function parsePayload(
     typeof body.model === "string" && body.model.trim()
       ? body.model.trim()
       : null;
-  if (model && !/^[\w.:-]{1,80}$/.test(model)) {
+  if (model && !/^[\w./:-]{1,120}$/.test(model)) {
     return { ok: false, error: "Nom de modèle invalide." };
   }
 

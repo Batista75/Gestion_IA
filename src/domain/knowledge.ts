@@ -171,6 +171,7 @@ export function rankKnowledge(
   query: string,
   docs: KnowledgeDoc[],
   queryVector: number[] | null,
+  limit = 5,
 ): RankedDoc[] {
   return docs
     .map((doc) => {
@@ -187,7 +188,29 @@ export function rankKnowledge(
     })
     .filter((doc) => doc.score > 0)
     .sort((left, right) => right.score - left.score)
-    .slice(0, 5);
+    .slice(0, limit);
+}
+
+export function applyRerank(
+  docs: RankedDoc[],
+  scores: Array<{ index: number; score: number }>,
+): RankedDoc[] {
+  const byIndex = new Map<number, number>();
+  for (const item of scores) {
+    if (!Number.isInteger(item.index) || item.index < 0 || item.index >= docs.length) continue;
+    if (!Number.isFinite(item.score)) continue;
+    byIndex.set(item.index, item.score);
+  }
+  if (byIndex.size === 0) return docs;
+  return docs
+    .map((doc, index) => ({ doc, index, rerank: byIndex.get(index) }))
+    .sort((left, right) => {
+      const leftScore = left.rerank ?? Number.NEGATIVE_INFINITY;
+      const rightScore = right.rerank ?? Number.NEGATIVE_INFINITY;
+      if (rightScore !== leftScore) return rightScore - leftScore;
+      return left.index - right.index;
+    })
+    .map((item) => ({ ...item.doc, score: item.rerank ?? item.doc.score }));
 }
 
 export function renderKnowledge(

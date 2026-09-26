@@ -3,11 +3,15 @@ import test from "node:test";
 import {
   isEmbedOnlyModel,
   isOversizedChatModel,
+  isRerankModel,
+  modelRole,
   pickChatModel,
   pickEmbedModel,
+  pickRerankModel,
 } from "../src/domain/agent.ts";
 import { CLIENT_EXAMPLES, identifyClient, mergeKnownClient, reviseDraft } from "../src/domain/client-file.ts";
 import {
+  applyRerank,
   cosine,
   mentionedNames,
   rankKnowledge,
@@ -19,19 +23,33 @@ import {
 
 const installed = [
   "bge-m3:latest",
+  "dengcao/bge-reranker-v2-m3:latest",
   "nomic-embed-text:latest",
   "mixtral:latest",
+  "qwen2.5:14b-instruct-q4_K_M",
+  "qwen2.5:14b",
   "qwen-dgfip-multisec-2ep:latest",
   "llama3.1:8b",
 ];
 
-test("le modèle de conversation tient dans 16 Go", () => {
-  assert.equal(pickChatModel(installed), "qwen-dgfip-multisec-2ep:latest");
+test("les trois modèles par défaut sont ceux du serveur", () => {
+  assert.equal(pickChatModel(installed), "qwen2.5:14b-instruct-q4_K_M");
+  assert.equal(pickChatModel(["qwen2.5:14b", "qwen-dgfip-multisec-2ep:latest"]), "qwen2.5:14b");
+  assert.equal(pickChatModel(["qwen-dgfip-multisec-2ep:latest", "llama3.1:8b"]), "qwen-dgfip-multisec-2ep:latest");
   assert.equal(pickChatModel(installed, "mixtral:latest"), "mixtral:latest");
-  assert.equal(pickEmbedModel(installed), "nomic-embed-text:latest");
-  assert.equal(pickEmbedModel(["bge-m3:latest"]), null);
+  assert.equal(pickEmbedModel(installed), "bge-m3:latest");
+  assert.equal(pickEmbedModel(["nomic-embed-text:latest"]), "nomic-embed-text:latest");
+  assert.equal(pickRerankModel(installed), "dengcao/bge-reranker-v2-m3:latest");
+  assert.equal(pickRerankModel(["bge-m3:latest"]), null);
+  assert.equal(modelRole("bge-m3:latest"), "embed");
+  assert.equal(modelRole("dengcao/bge-reranker-v2-m3:latest"), "rerank");
+  assert.equal(modelRole("qwen2.5:14b"), "chat");
+  assert.equal(isRerankModel("bge-reranker-v2-m3"), true);
+  assert.equal(isEmbedOnlyModel("bge-reranker-v2-m3"), false);
+  assert.equal(isEmbedOnlyModel("bge-m3:latest"), true);
   assert.equal(isEmbedOnlyModel("nomic-embed-text:latest"), true);
   assert.equal(isOversizedChatModel("mixtral:latest"), true);
+  assert.equal(isOversizedChatModel("qwen2.5:14b"), false);
   assert.equal(isOversizedChatModel("qwen2.5:7b"), false);
 });
 
@@ -79,6 +97,17 @@ test("la recherche lexicale retrouve la fiche et n’invente pas", () => {
   }));
   const hybrid = rankKnowledge("question", withVectors, vector);
   assert.equal(hybrid[0]?.title, "Marie Dupont");
+  const reranked = applyRerank(
+    [
+      { ...docs[0], score: 0.2 },
+      { ...docs[1], score: 0.8 },
+    ],
+    [
+      { index: 0, score: 0.95 },
+      { index: 1, score: 0.05 },
+    ],
+  );
+  assert.equal(reranked[0]?.title, "Holzwerk Müller GmbH");
   assert.ok(cosine([1, 0], [1, 0]) > 0.99);
   assert.match(renderKnowledge([], "lookup"), /Aucune fiche/);
 });

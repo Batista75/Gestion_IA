@@ -1,4 +1,4 @@
-import { GPU_SIZING_NOTE, isEmbedOnlyModel } from "@/domain/agent";
+import { GPU_SIZING_NOTE, modelsForRole } from "@/domain/agent";
 import { maskSecret } from "@/domain/technical-settings";
 import { ConfigurationForm } from "@/components/configuration-form";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +16,9 @@ export const dynamic = "force-dynamic";
 
 export default async function ConfigurationPage() {
   const [config, status] = await Promise.all([loadTechnicalConfig(), getOllamaStatus()]);
-  const chatModels = status.models.filter((model) => !isEmbedOnlyModel(model));
-  const embedModels = status.models.filter((model) => isEmbedOnlyModel(model));
+  const chatModels = modelsForRole(status.models, "chat");
+  const embedModels = modelsForRole(status.models, "embed");
+  const rerankModels = modelsForRole(status.models, "rerank");
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-6">
       <div className="grid gap-2">
@@ -46,8 +47,9 @@ export default async function ConfigurationPage() {
           {status.error ? <p className="text-destructive">{status.error}</p> : null}
           {status.warning ? <p>{status.warning}</p> : null}
           <p>
-            Modèle de conversation : {status.defaultModel || "aucun pour l’instant"}. Index :{" "}
-            {status.embedModel || "aucun pour l’instant"}.
+            Modèle conversationnel : {status.defaultModel || "aucun sur ce serveur"}. Embeddings :{" "}
+            {status.embedModel || "aucun sur ce serveur"}. Reranker :{" "}
+            {status.rerankModel || "aucun sur ce serveur"}.
           </p>
           <p>Clé d’API : {config.hasSavedKey ? maskSecret(config.apiKey) : "aucune"}.</p>
           <p className="text-muted-foreground">{GPU_SIZING_NOTE}</p>
@@ -67,11 +69,13 @@ export default async function ConfigurationPage() {
         <CardContent>
           <ConfigurationForm
             serverUrl={config.serverUrl || status.baseUrl}
-            chatModel={config.chatModel}
-            embedModel={config.embedModel}
+            chatModel={config.chatModel || status.defaultModel || ""}
+            embedModel={config.embedModel || status.embedModel || ""}
+            rerankModel={config.rerankModel || status.rerankModel || ""}
             keyHint={maskSecret(config.apiKey)}
             chatModels={chatModels}
             embedModels={embedModels}
+            rerankModels={rerankModels}
           />
         </CardContent>
       </Card>

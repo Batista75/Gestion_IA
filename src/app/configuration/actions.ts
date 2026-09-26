@@ -13,6 +13,7 @@ export async function saveConfigurationAction(
     serverUrl: String(formData.get("serverUrl") ?? ""),
     chatModel: String(formData.get("chatModel") ?? ""),
     embedModel: String(formData.get("embedModel") ?? ""),
+    rerankModel: String(formData.get("rerankModel") ?? ""),
     apiKey: String(formData.get("apiKey") ?? ""),
     clearKey: formData.get("clearKey") === "on",
   });

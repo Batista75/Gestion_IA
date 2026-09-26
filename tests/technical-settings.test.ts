@@ -19,5 +19,9 @@ test("une clé vide conserve l’ancienne, une case la retire", () => {
 test("le nom de modèle reste un identifiant court", () => {
   assert.deepEqual(cleanModelName(""), { ok: true, value: "" });
   assert.deepEqual(cleanModelName("qwen2.5:7b"), { ok: true, value: "qwen2.5:7b" });
+  assert.deepEqual(cleanModelName("dengcao/bge-reranker-v2-m3:latest"), {
+    ok: true,
+    value: "dengcao/bge-reranker-v2-m3:latest",
+  });
   assert.equal(cleanModelName("modèle français").ok, false);
 });

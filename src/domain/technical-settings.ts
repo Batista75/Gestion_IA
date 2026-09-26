@@ -2,6 +2,7 @@ export type TechnicalDraft = {
   serverUrl: string;
   chatModel: string;
   embedModel: string;
+  rerankModel: string;
   apiKey: string;
 };
 
@@ -34,7 +35,7 @@ export function cleanModelName(
 ): { ok: true; value: string } | { ok: false; error: string } {
   const name = value.trim();
   if (!name) return { ok: true, value: "" };
-  if (!/^[\w.:-]{1,80}$/.test(name)) {
+  if (!/^[\w./:-]{1,120}$/.test(name)) {
     return { ok: false, error: "Le nom du modèle n’est pas valide." };
   }
   return { ok: true, value: name };

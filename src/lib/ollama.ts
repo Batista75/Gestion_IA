@@ -1,4 +1,10 @@
-import { GPU_SIZING_NOTE, isOversizedChatModel, pickChatModel, pickEmbedModel } from "@/domain/agent";
+import {
+  GPU_SIZING_NOTE,
+  isOversizedChatModel,
+  pickChatModel,
+  pickEmbedModel,
+  pickRerankModel,
+} from "@/domain/agent";
 import { resolveOllamaBaseUrl } from "@/domain/ollama-endpoint";
 import { loadTechnicalConfig } from "@/lib/technical-settings";
 
@@ -11,6 +17,7 @@ export type OllamaStatus = {
   models: string[];
   defaultModel: string | null;
   embedModel: string | null;
+  rerankModel: string | null;
   sizing: string;
   warning?: string;
   error?: string;
@@ -34,6 +41,7 @@ async function inferenceTarget(): Promise<{
   headers: Record<string, string>;
   chatModel: string;
   embedModel: string;
+  rerankModel: string;
 }> {
   const config = await loadTechnicalConfig();
   const baseUrl = resolveOllamaBaseUrl(config.serverUrl || undefined);
@@ -42,6 +50,7 @@ async function inferenceTarget(): Promise<{
     headers: config.apiKey ? { authorization: `Bearer ${config.apiKey}` } : {},
     chatModel: config.chatModel,
     embedModel: config.embedModel,
+    rerankModel: config.rerankModel,
   };
 }
 
@@ -50,12 +59,14 @@ export async function getOllamaStatus(): Promise<OllamaStatus> {
   let headers: Record<string, string> = {};
   let chatModel = "";
   let embedModel = "";
+  let rerankModel = "";
   try {
     const target = await inferenceTarget();
     baseUrl = target.baseUrl;
     headers = target.headers;
     chatModel = target.chatModel;
     embedModel = target.embedModel;
+    rerankModel = target.rerankModel;
   } catch (error) {
     return {
       ok: false,
@@ -63,6 +74,7 @@ export async function getOllamaStatus(): Promise<OllamaStatus> {
       models: [],
       defaultModel: null,
       embedModel: null,
+      rerankModel: null,
       sizing: GPU_SIZING_NOTE,
       error: ollamaConfigError(error),
     };
@@ -82,6 +94,7 @@ export async function getOllamaStatus(): Promise<OllamaStatus> {
         models: [],
         defaultModel: null,
         embedModel: null,
+        rerankModel: null,
         sizing: GPU_SIZING_NOTE,
         error: `Ollama a répondu ${response.status} sur ${baseUrl}.`,
       };
@@ -93,6 +106,7 @@ export async function getOllamaStatus(): Promise<OllamaStatus> {
       .filter((name) => name.length > 0);
     const defaultModel = pickChatModel(models, chatModel);
     const chosenEmbed = pickEmbedModel(models, embedModel);
+    const chosenRerank = pickRerankModel(models, rerankModel);
 
     return {
       ok: Boolean(defaultModel),
@@ -100,13 +114,14 @@ export async function getOllamaStatus(): Promise<OllamaStatus> {
       models,
       defaultModel,
       embedModel: chosenEmbed,
+      rerankModel: chosenRerank,
       sizing: GPU_SIZING_NOTE,
       warning: defaultModel && isOversizedChatModel(defaultModel)
-        ? "Ce modèle de conversation dépasse le budget de 16 Go. Préférez qwen-dgfip-multisec-2ep ou qwen2.5:7b."
+        ? "Ce modèle de conversation dépasse le budget de 16 Go."
         : undefined,
       error: defaultModel
         ? undefined
-        : `Ollama répond sur ${baseUrl}, mais aucun modèle de conversation adapté n’est installé. Sur le PC hôte : ollama pull qwen2.5:7b && ollama pull nomic-embed-text`,
+        : `Ollama répond sur ${baseUrl}, mais aucun modèle de conversation n’est installé. Sur le PC hôte : ollama pull qwen2.5:14b`,
     };
   } catch {
     return {
@@ -115,6 +130,7 @@ export async function getOllamaStatus(): Promise<OllamaStatus> {
       models: [],
       defaultModel: null,
       embedModel: null,
+      rerankModel: null,
       sizing: GPU_SIZING_NOTE,
       error: unreachableMessage(baseUrl),
     };
@@ -192,6 +208,43 @@ function normalizeToolCalls(raw: unknown): OllamaToolCall[] {
       },
     ];
   });
+}
+
+export async function rerankWithOllama(
+  model: string,
+  query: string,
+  documents: string[],
+): Promise<Array<{ index: number; score: number }> | null> {
+  if (!model || documents.length < 2) return null;
+  try {
+    const target = await inferenceTarget();
+    const response = await fetch(`${target.baseUrl}/api/rerank`, {
+      method: "POST",
+      cache: "no-store",
+      redirect: "error",
+      headers: { "content-type": "application/json", ...target.headers },
+      body: JSON.stringify({
+        model,
+        query: query.slice(0, 2_000),
+        documents: documents.map((document) => document.slice(0, 1_500)),
+        top_n: documents.length,
+        keep_alive: 0,
+      }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    const body = (await response.json().catch(() => null)) as {
+      results?: Array<{ index?: number; relevance_score?: number; score?: number }>;
+    } | null;
+    if (!response.ok || !body?.results) return null;
+    const scores = body.results.flatMap((item) => {
+      const index = item.index;
+      const score = item.relevance_score ?? item.score;
+      return typeof index === "number" && typeof score === "number" ? [{ index, score }] : [];
+    });
+    return scores.length > 0 ? scores : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function embedWithOllama(model: string, inputs: string[]): Promise<number[][]> {
