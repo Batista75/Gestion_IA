@@ -147,7 +147,11 @@ async function answerDirectly(text: string) {
     return withGpuLane(() => answerFromDossier(text, intent));
   }
 
-  if (clientCommand) return proposalFromCommand(clientCommand);
+  if (clientCommand) {
+    const identified = identifyClient(text);
+    if (identified) return proposalResponse(await openClientProposal(identified));
+    return proposalFromCommand(clientCommand);
+  }
   if (!pending || isNewClientBrief(text)) {
     const identified = identifyClient(text);
     if (identified) return proposalResponse(await openClientProposal(identified));

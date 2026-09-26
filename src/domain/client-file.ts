@@ -23,6 +23,7 @@ export type ClientDraft = {
   phone: string;
   contactName: string;
   contactRole: string;
+  registration: string;
   notes: string;
   missing: string[];
 };
@@ -67,6 +68,13 @@ const LEGAL_FORMS = [
   "SpA",
   "SA",
   "AG",
+  "Oy",
+  "Oyj",
+  "ApS",
+  "AS",
+  "PLC",
+  "NV",
+  "KG",
   "EI",
 ];
 
@@ -133,6 +141,7 @@ const MERGE_KEYS = [
   "phone",
   "contactName",
   "contactRole",
+  "registration",
   "notes",
 ] as const;
 
@@ -178,6 +187,7 @@ export function emptyDraft(): ClientDraft {
     phone: "",
     contactName: "",
     contactRole: "",
+    registration: "",
     notes: "",
     missing: [],
   };
@@ -192,7 +202,7 @@ export function displayName(draft: ClientDraft): string {
 }
 
 export function identifyClient(text: string): ClientDraft | null {
-  const raw = text.trim().replace(/\s+/g, " ");
+  const raw = text.trim().replace(/[^\S\n]+/g, " ");
   if (!raw || isOtherCatalogCommand(raw) || isProjectCommand(raw)) return null;
   if (!looksLikeClientBrief(raw)) return null;
   const draft = finalize(extractDraft(raw));
@@ -225,6 +235,7 @@ export function reviseDraft(
     "phone",
     "contactName",
     "contactRole",
+    "registration",
     "notes",
   ] as const;
   let changed = false;
@@ -260,6 +271,7 @@ export function readConfirmation(
 
 export function proposalFields(draft: ClientDraft): ProposalField[] {
   const fields: ProposalField[] = [
+    { label: "Action", value: draft.mode === "update" ? "Mise à jour" : "Création" },
     { label: "Type", value: kindLabel(draft.kind) },
     { label: "Périmètre", value: scopeLabel(draft.scope) },
     { label: "Nom", value: labeledName(draft) },
@@ -269,6 +281,7 @@ export function proposalFields(draft: ClientDraft): ProposalField[] {
     { label: "Adresse", value: draft.address },
     { label: "Code postal", value: draft.postalCode },
     { label: "Ville", value: draft.city },
+    { label: "Identifiant", value: draft.registration },
     { label: "SIREN", value: draft.siren },
     { label: "SIRET", value: draft.siret },
     {
@@ -291,23 +304,33 @@ export function proposalFields(draft: ClientDraft): ProposalField[] {
 }
 
 export function presentProposal(draft: ClientDraft): string {
-  const lines = proposalFields(draft).map((field) => `${field.label} : ${field.value}`);
+  const action = draft.mode === "update" ? "mise à jour d’un client" : "création d’un client";
+  const read = proposalFields(draft)
+    .filter((field) => field.label !== "Action")
+    .map((field) => `${field.label} : ${field.value}`);
   const gaps =
     draft.missing.length > 0
       ? `À préciser : ${draft.missing.join(", ")}.`
       : "Les informations utiles à un dossier commercial sont réunies.";
   return [
-    draft.mode === "update"
-      ? "Je propose de mettre à jour cette fiche. Rien n’est enregistré avant votre accord."
-      : "Je propose cette fiche, comme le ferait un service commercial. Rien n’est enregistré avant votre accord.",
-    ...lines,
+    `Action demandée : ${action}.`,
+    read.length > 0
+      ? `Analyse : ${read.join(" ; ")}.`
+      : "Analyse : le message ne permet pas de séparer les informations.",
     gaps,
+    "Rien n’est enregistré avant votre accord.",
     "Confirmez-vous l’enregistrement ? Sinon, indiquez la correction, par exemple « le téléphone est le 06 98 76 54 32 ».",
   ].join("\n");
 }
 
+export function notesWithRegistration(notes: string, registration: string): string {
+  if (!registration || notes.includes(registration)) return notes;
+  const line = `Identifiant d'entreprise : ${registration}`;
+  return notes ? `${line}. ${notes}` : line;
+}
+
 export function isNewClientBrief(text: string): boolean {
-  return /(?:nouveau client|cr[ée]er (?:un |le |une )?(?:compte )?client|cr[ée]ation d['’]un compte client|fiche client)/i.test(
+  return /(?:nouveau client|cr[ée]er (?:un |le |une )?(?:compte )?client|cr[ée]ation d['’]un compte client|ajoute(?:r|z)?(?:\s+le|\s+un|\s+une)?(?:\s+compte)?\s+client|fiche client)/i.test(
     text,
   );
 }
@@ -325,7 +348,7 @@ function isOtherCatalogCommand(text: string): boolean {
 }
 
 function looksLikeClientBrief(text: string): boolean {
-  return /client|particulier|entreprise|soci[ée]t[ée]|\b(?:sas|sarl|sasu|gmbh|ltd)\b/i.test(
+  return /client|particulier|entreprise|soci[ée]t[ée]|\b(?:sas|sarl|sasu|gmbh|ltd|oy|oyj)\b|vat\s*id|business\s*id/i.test(
     text,
   );
 }
@@ -346,15 +369,20 @@ function extractDraft(text: string): ClientDraft {
     if (siren && !source.includes(siren[1] + "00000")) draft.siren = siren[1] ?? "";
   }
 
-  const vat = source.match(
-    /\b((?:FR[0-9A-Z]{2}\d{9})|(?:DE\d{9})|(?:BE0?\d{9,10})|(?:GB[0-9A-Z]{5,12})|(?:IT\d{11})|(?:ES[A-Z0-9]\d{7}[A-Z0-9])|(?:NL\d{9}B\d{2})|(?:CHE[-.\s]?\d{3}[-.\s]?\d{3}[-.\s]?\d{3}))\b/i,
+  const labeledVat = source.match(
+    /(?:vat(?:\s*id)?|n°?\s*tva|tva)\s*[:：]?\s*([A-Z]{2}[\s-]?[A-Z0-9]{6,14})/i,
   );
-  if (vat) draft.vatNumber = (vat[1] ?? "").replace(/\s/g, "").toUpperCase();
+  const vat = labeledVat ?? source.match(
+    /\b((?:FR[0-9A-Z]{2}\d{9})|(?:DE\d{9})|(?:FI\d{8})|(?:BE0?\d{9,10})|(?:GB[0-9A-Z]{5,12})|(?:IT\d{11})|(?:ES[A-Z0-9]\d{7}[A-Z0-9])|(?:NL\d{9}B\d{2})|(?:CHE[-.\s]?\d{3}[-.\s]?\d{3}[-.\s]?\d{3}))\b/i,
+  );
+  if (vat) draft.vatNumber = (vat[1] ?? "").replace(/[\s-]/g, "").toUpperCase();
+  applyRegistration(source, draft);
 
   const withoutIds = source
     .replace(draft.email, " ")
     .replace(draft.siret, " ")
     .replace(draft.vatNumber, " ")
+    .replace(draft.registration, " ")
     .replace(draft.siren, " ");
   const phone = withoutIds.match(
     /(?:\+\d{1,3}[\s.-]*)?(?:\d[\s.-]*){8,14}\d/,
@@ -374,7 +402,7 @@ function applyKind(source: string, draft: ClientDraft) {
   const folded = fold(source);
   const particulierAt = folded.search(/\bparticuliers?\b|\bmadame\b|\bmme\b|\bmonsieur\b/);
   const entrepriseAt = folded.search(
-    /\bentreprises?\b|\bsociete\b|\bcompany\b|\bgmbh\b|\bsas\b|\bsarl\b|\bsasu\b|\bltd\b|\bllc\b/,
+    /\bentreprises?\b|\bsociete\b|\bcompany\b|\bgmbh\b|\bsas\b|\bsarl\b|\bsasu\b|\bltd\b|\bllc\b|\boyj?\b/,
   );
   if (particulierAt >= 0 || entrepriseAt >= 0) {
     draft.kind = entrepriseAt > particulierAt ? "entreprise" : "particulier";
@@ -393,7 +421,15 @@ function applyCountry(source: string, draft: ClientDraft) {
     [/\bitalie\b|\bitaly\b/, "Italie"],
     [/\bpays-bas\b|\bpays bas\b|\bnetherlands\b/, "Pays-Bas"],
     [/\bluxembourg\b/, "Luxembourg"],
-    [/\betats-unis\b|\betats unis\b|\busa\b/, "États-Unis"],
+    [/\betats-unis\b|\betats unis\b|\busa\b|\bunited states\b/, "États-Unis"],
+    [/\bfinlande\b|\bfinland\b/, "Finlande"],
+    [/\bsuede\b|\bsu[eè]de\b|\bsweden\b/, "Suède"],
+    [/\bnorv[eè]ge\b|\bnorway\b/, "Norvège"],
+    [/\bdanemark\b|\bdenmark\b/, "Danemark"],
+    [/\bautriche\b|\baustria\b/, "Autriche"],
+    [/\bpologne\b|\bpoland\b/, "Pologne"],
+    [/\bportugal\b/, "Portugal"],
+    [/\birlande\b|\bireland\b/, "Irlande"],
     [/\bfrance\b/, "France"],
   ];
   for (const [pattern, label] of countries) {
@@ -425,21 +461,28 @@ function applyIdentity(source: string, draft: ClientDraft) {
 }
 
 function applyAddress(source: string, draft: ClientDraft) {
-  const parts = source.split(",");
+  const parts = source.split(/[,\n]/);
   for (const part of parts) {
     const segment = part.trim().replace(/^si[èe]ge\s+/i, "");
+    if (!segment || segment.length > 80) continue;
+    const postal = segment.match(/^(\d{4,5})\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' .-]{1,40})$/);
+    if (postal) {
+      draft.postalCode = draft.postalCode || (postal[1] ?? "");
+      draft.city = draft.city || titleWord(postal[2] ?? "");
+      continue;
+    }
     if (
-      /rue|avenue|boulevard|impasse|chemin|street|stra(?:ss|ß)e|route|place|all[ée]e/i.test(
+      /rue|avenue|boulevard|impasse|chemin|street|stra(?:ss|ß)e|strasse|route|place|all[ée]e|katu|tie|kuja|polku|gatan|vej|straat|road|lane/i.test(
         segment,
       )
     ) {
-      draft.address = clean(segment);
+      draft.address = draft.address || clean(segment);
     }
   }
   const french = source.match(/\b(\d{5})\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ' -]{1,40})/);
   if (french && !draft.postalCode) {
     draft.postalCode = french[1] ?? "";
-    draft.city = clean(french[2] ?? "");
+    draft.city = titleWord(french[2] ?? "");
   }
   const uk = source.match(/\b([A-Za-zÀ-ÿ' -]{2,30}?)\s+([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/);
   if (uk) {
@@ -479,6 +522,8 @@ function finalize(draft: ClientDraft): ClientDraft {
   if (!next.country && /^[A-Z]{1,2}\d/.test(next.postalCode)) next.country = "Royaume-Uni";
   if (next.vatNumber.startsWith("FR")) next.country = next.country || "France";
   if (next.vatNumber.startsWith("DE")) next.country = next.country || "Allemagne";
+  if (next.vatNumber.startsWith("FI")) next.country = next.country || "Finlande";
+  if (next.registration && !next.kind) next.kind = "entreprise";
   if (next.country === "France" || (!next.country && next.siren)) {
     next.scope = "france";
     if (!next.country) next.country = "France";
@@ -509,12 +554,26 @@ function commercialGaps(draft: ClientDraft): string[] {
   return gaps;
 }
 
+function applyRegistration(source: string, draft: ClientDraft) {
+  const found = new Set<string>();
+  const pattern =
+    /(?:business\s*id|trade\s*reg(?:istration)?\.?\s*no\.?|y-tunnus|company\s*(?:no|number)|n°\s*d['’]immatriculation)\s*[:：.]?\s*([A-Z0-9][A-Z0-9./-]{2,24})/gi;
+  for (const match of source.matchAll(pattern)) {
+    const value = (match[1] ?? "").replace(/[.,;]+$/g, "");
+    if (value) found.add(value);
+  }
+  if (found.size > 0) draft.registration = [...found].join(", ");
+}
+
 function clauseAfterIntro(source: string): string {
   const intro = source.includes(":") ? source.split(":").slice(1).join(":") : source;
-  const clause = intro.split(",")[0]?.trim() ?? "";
+  const clause = intro.split(/,|\n/)[0]?.trim() ?? "";
   return clause
-    .replace(/^(?:nouveau client|client)\s+/i, "")
-    .replace(/^(?:particulier|entreprise)\s+/i, "")
+    .replace(
+      /^(?:ajoute(?:r|z)?|cr[ée]e(?:r|z)?|cr[ée]ation(?:\s+d['’]un)?|nouveau)\s+(?:le\s+|un\s+|une\s+|d['’]un\s+)?(?:compte\s+)?/i,
+      "",
+    )
+    .replace(/^(?:nouveau client|client|particulier|entreprise)\s+/i, "")
     .trim();
 }
 
@@ -579,6 +638,16 @@ export function isLuhn(digits: string): boolean {
 export function frenchVat(siren: string): string {
   const key = (12 + 3 * (Number(siren) % 97)) % 97;
   return `FR${String(key).padStart(2, "0")}${siren}`;
+}
+
+function titleWord(value: string): string {
+  const text = clean(value);
+  if (text !== text.toUpperCase() || text === text.toLowerCase()) return text;
+  return text
+    .toLowerCase()
+    .replace(/(^|[\s'-])([a-zà-ÿ])/g, (_all, separator: string, character: string) =>
+      separator + character.toUpperCase(),
+    );
 }
 
 function clean(value: string): string {

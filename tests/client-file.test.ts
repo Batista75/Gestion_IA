@@ -4,6 +4,7 @@ import {
   CLIENT_EXAMPLES,
   frenchVat,
   identifyClient,
+  presentProposal,
   proposalFields,
   readConfirmation,
   reviseDraft,
@@ -65,6 +66,41 @@ test("entreprise internationale", () => {
   assert.equal(draft.contactRole, "achats");
   assert.equal(draft.address, "Musterstraße 10");
   assert.equal(draft.missing.includes("adresse"), false);
+});
+
+test("bloc entreprise finlandaise, action et champs séparés", () => {
+  const draft = identifyClient(`ajoute le client : Grid Solutions Oy
+
+Vehmaistenkatu 5
+
+33730 TAMPERE
+
+FINLAND
+
+Business ID: 1558237-3
+
+Trade Reg. No.: 1558237-3
+
+VAT ID: FI15582373`);
+  assert.ok(draft);
+  assert.equal(draft.kind, "entreprise");
+  assert.equal(draft.scope, "international");
+  assert.equal(draft.legalName, "Grid Solutions Oy");
+  assert.equal(draft.legalForm, "Oy");
+  assert.equal(draft.country, "Finlande");
+  assert.equal(draft.address, "Vehmaistenkatu 5");
+  assert.equal(draft.postalCode, "33730");
+  assert.equal(draft.city, "Tampere");
+  assert.equal(draft.vatNumber, "FI15582373");
+  assert.equal(draft.registration, "1558237-3");
+  assert.equal(draft.missing.includes("pays"), false);
+  assert.equal(draft.missing.includes("adresse"), false);
+  assert.ok(draft.missing.includes("e-mail ou téléphone"));
+  const proposal = presentProposal(draft);
+  assert.match(proposal, /Action demandée : création d’un client/);
+  assert.match(proposal, /Grid Solutions Oy/);
+  assert.doesNotMatch(proposal, /Vehmaistenkatu 5 33730/);
+  assert.ok(proposalFields(draft).some((field) => field.label === "Action" && field.value === "Création"));
 });
 
 test("la confirmation et la correction", () => {

@@ -5,6 +5,7 @@ import {
   draftFromKnownFields,
   emptyDraft,
   mergeKnownClient,
+  notesWithRegistration,
   presentProposal,
   proposalFields,
   qualifyDraft,
@@ -179,7 +180,7 @@ export async function saveClientDraft(
     email: ready.email,
     phone: ready.phone,
     address: ready.address,
-    notes: ready.notes,
+    notes: notesWithRegistration(ready.notes, ready.registration),
   };
   if (target) {
     await prisma.client.update({ where: { id: target.id }, data });
