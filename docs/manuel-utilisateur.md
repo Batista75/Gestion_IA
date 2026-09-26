@@ -2,7 +2,7 @@
 
 Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification).
 
-Dernière mise à jour : 26 septembre 2026, avec un seul assistant sur l’accueil, de la demande de devis à la fourniture.
+Dernière mise à jour : 26 septembre 2026. L’accueil reste un seul assistant. Une demande explicite ouvre le projet et son actualité.
 
 ## Ouvrir l’application
 
@@ -18,7 +18,11 @@ L’accueil est l’assistant, et il n’y en a qu’un. C’est l’expert de l
 
 Le même bloc sert à écrire, à joindre des fichiers et à poser une question. Le bouton **Envoyer** lance la lecture. Jusqu’à 8 fichiers de 20 Mo. Un texte, un tableau, un document Word ou un PDF dont le texte peut être lu est indexé. Si le texte ne peut pas être extrait, le fichier est quand même enregistré.
 
-Il reconnaît le type sur la première ligne ou le nom du fichier : demande de prix (RFQ), devis, commande, facture, tarif, avoir, bon de livraison, contrat. Il situe l’étape dans le fil, relève le client, le fournisseur et les produits, et les compare aux fiches déjà enregistrées. Si le message cite un projet déjà ouvert, il le nomme. La pièce n’y est pas rattachée, et aucun projet n’est créé, tant que vous ne le demandez pas.
+Il reconnaît le type sur la première ligne ou le nom du fichier : demande de prix (RFQ), devis, commande, facture, tarif, avoir, bon de livraison, contrat, fiche technique. Il situe l’étape dans le fil, relève le client, le fournisseur et les produits, et les compare aux fiches déjà enregistrées. Si le message cite un projet déjà ouvert, il le nomme. La pièce n’y est pas rattachée, et aucun projet n’est créé, tant que vous ne le demandez pas.
+
+Une phrase explicite est enregistrée tout de suite. Exemple : `Créer le projet : Cartes et kits de développement pour le client grid solutions. Le projet consiste à fournir un kit de développement.` Le dossier s’ouvre, l’objet est repris, et l’actualité commence par cette ouverture. Si le client est déjà au répertoire, son nom est repris. Sinon la fiche client attend une description, puis une confirmation. Une fiche technique jointe au même envoi, par exemple un kit de développement, est rattachée à ce projet. Elle ne porte pas de prix si la fiche n’en indique pas.
+
+Un tableau collé de clients, de produits, de services, de projets ou de devis est lu de la même façon. Les prix, les devises et les mentions de TVA sont conservés tels qu’ils sont écrits. Le contrôle des lignes confirme ou non les totaux indiqués, sans les remplacer. Un montant en dollars reste en dollars tant qu’un taux vers l’euro n’est pas indiqué. La marge brute d’une affaire n’est calculée que si un coût de revient est indiqué.
 
 **À confirmer**, dans le même bloc, propose de créer un client, un fournisseur ou un produit, d’ouvrir une demande, d’ajouter une version de devis, ou de marquer une demande comme offre reçue. **Confirmer** écrit ces fiches. **Écarter** laisse le fichier dans Pièces reçues.
 
@@ -57,6 +61,8 @@ La [vue Produits](/produits) montre tout le catalogue :
 Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **Saisie manuelle** limitent la liste. Une fiche peut porter à la fois une saisie et plusieurs devis. La carte **Versions de devis** liste chaque prix et chaque condition, sans les fusionner.
 
 ## Projets
+
+Chaque dossier garde une **actualité** : ouverture, objet, devis enregistré, pièce rattachée. Elle sert à relire ce qui s’est passé. Un devis rattaché affiche la devise, les totaux indiqués et la mention de TVA. La conversion en euro et la marge brute restent absentes tant que le taux ou le coût de revient n’est pas indiqué.
 
 **Nouveau dossier** demande :
 
@@ -109,11 +115,12 @@ Les autres phrases sont exécutées sans passer par le modèle :
 - `ajouter un fournisseur Quincaillerie Durand`
 - `créer produit Vis à bois, référence VIS-01, fournisseur Quincaillerie Durand`
 - `créer projet Atlas, client Atelier Nord`
+- `Créer le projet : Cartes et kits de développement pour le client grid solutions. Le projet consiste à fournir un kit de développement.`
 - `devis Offre mars, produit Vis à bois, référence VIS-01, produit Charnière`
 
 `créer client Atelier Nord, email contact@atelier.fr` et `mettre à jour le client Atelier Nord, adresse 12 rue des Lilas, Paris` ouvrent une proposition, ils n’enregistrent pas tout seuls.
 
-Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches, y compris les pièces jointes et chaque version de devis. Le modèle peut relancer une recherche. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. `que sait-on de Vis à bois` reprend toutes les versions enregistrées, avec le prix indiqué et les conditions de chacune. Une pièce reçue sur l’accueil reste hors projet : elle n’entre dans un dossier que si vous le demandez.
+Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches, y compris les pièces jointes, l’actualité des projets et chaque version de devis. Le modèle peut relancer une recherche. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. `que sait-on de Vis à bois` reprend toutes les versions enregistrées, avec le prix indiqué et les conditions de chacune. Une pièce reçue seule reste hors projet. Elle entre dans l’actualité du dossier si le même envoi demande explicitement de créer le projet.
 
 Le bandeau **Inférence sur le PC hôte** indique si Ollama répond et l’adresse utilisée, par défaut `http://192.168.1.5:11434`. Le budget prévu est un utilisateur, 16 Go de mémoire graphique et 32 Go de RAM. L’index `nomic-embed-text` se charge, puis se décharge. Ensuite seulement le modèle de conversation, limité à 4 096 jetons. `qwen-dgfip-multisec-2ep:latest` ou `qwen2.5:7b` conviennent. Un modèle 14B, Mixtral ou `bge-m3` ne doit pas rester chargé en même temps. Sans `nomic-embed-text`, la recherche dans les fiches continue par les mots, et elle fonctionne même si Ollama ne répond pas.
 

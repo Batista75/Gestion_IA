@@ -7,6 +7,7 @@ import {
   type PartyInput,
   type ProductInput,
 } from "@/domain/catalog";
+import { ensureSpokenProject } from "@/lib/business-records";
 import { prisma } from "@/lib/db";
 
 export type ActionResult = { ok: boolean; summary: string };
@@ -299,31 +300,12 @@ async function updateProductById(
 async function createProject(
   command: Extract<CatalogCommand, { type: "create_project" }>,
 ): Promise<ActionResult> {
-  const name = command.name.trim().replace(/\s+/g, " ");
-  const primaryClient = command.primaryClient.trim().replace(/\s+/g, " ");
-  if (name.length < 2) {
-    return { ok: false, summary: "Indiquez un nom de projet d’au moins 2 caractères." };
-  }
-  if (primaryClient.length < 2) {
-    return { ok: false, summary: "Indiquez le client du projet." };
-  }
-  const existing = await prisma.client.findUnique({
-    where: { nameKey: nameKey(primaryClient) },
+  const saved = await ensureSpokenProject({
+    name: command.name,
+    primaryClient: command.primaryClient,
+    nextAction: command.nextAction,
   });
-  await prisma.project.create({
-    data: {
-      name,
-      primaryClient,
-      nextAction: command.nextAction.trim() || "Qualifier le besoin",
-    },
-  });
-  const clientNote = existing
-    ? `Le client « ${existing.name} » est déjà au répertoire.`
-    : `La fiche « ${primaryClient} » n’est pas enregistrée : décrivez-la à l’assistant, puis confirmez.`;
-  return {
-    ok: true,
-    summary: `Projet « ${name} » créé, statut À qualifier. ${clientNote}`,
-  };
+  return { ok: saved.ok, summary: saved.summary };
 }
 
 async function recordQuote(

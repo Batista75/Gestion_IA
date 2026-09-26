@@ -119,7 +119,11 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
       include: { supplier: true, lines: { include: { quote: true } } },
       orderBy: { name: "asc" },
     }),
-    prisma.project.findMany({ take: 500, orderBy: { createdAt: "desc" } }),
+    prisma.project.findMany({
+      take: 500,
+      orderBy: { createdAt: "desc" },
+      include: { events: { orderBy: { createdAt: "asc" }, take: 12 } },
+    }),
     prisma.quote.findMany({
       take: 200,
       orderBy: { createdAt: "desc" },
@@ -173,9 +177,14 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
         [project.primaryClient, project.status].filter(Boolean).join(", "),
         [
           `Projet ${project.name}`,
+          project.reference ? `Référence ${project.reference}` : "",
           `Client ${project.primaryClient}`,
           `Statut ${project.status}`,
+          project.purpose ? `Le projet consiste à ${project.purpose}` : "",
+          project.budgetStated ? `Budget indiqué ${project.budgetStated}` : "",
           project.nextAction ? `Prochaine action ${project.nextAction}` : "",
+          project.events.length ? "Actualité :" : "",
+          ...project.events.map((event) => event.body),
         ]
           .filter(Boolean)
           .join("\n"),
@@ -243,6 +252,10 @@ function productBody(product: {
   reference: string;
   unit: string;
   description: string;
+  statedPrice: string;
+  currency: string;
+  vatNote: string;
+  kind: string;
   supplier: { name: string } | null;
   lines: Array<{
     statedPrice: string;
@@ -260,9 +273,11 @@ function productBody(product: {
     .sort((left, right) => right.quote.createdAt.getTime() - left.quote.createdAt.getTime())
     .map((line) => versionSentence(line));
   return [
-    `Produit ${product.name}`,
+    product.kind === "service" ? `Service ${product.name}` : `Produit ${product.name}`,
     product.reference ? `Référence ${product.reference}` : "",
     product.unit ? `Unité ${product.unit}` : "",
+    product.statedPrice ? `Prix unitaire indiqué ${product.statedPrice}` : "",
+    product.vatNote ? `TVA indiquée ${product.vatNote}` : "",
     product.supplier ? `Fournisseur ${product.supplier.name}` : "",
     product.description,
     versions.length
@@ -279,6 +294,9 @@ function quoteBody(quote: {
   versionLabel: string;
   issuedOn: string;
   supplierName: string;
+  currency: string;
+  statedTotalHt: string;
+  vatMention: string;
   lines: Array<{ statedPrice: string; conditions: string; product: { name: string; reference: string } }>;
 }): string {
   const lines = quote.lines.map((line) => versionSentence({ ...line, quote }));
@@ -286,6 +304,9 @@ function quoteBody(quote: {
     `Devis ${quote.title}`,
     quote.versionLabel ? `Version ${quote.versionLabel}` : "",
     quote.issuedOn ? `Date ${quote.issuedOn}` : "",
+    quote.currency ? `Devise ${quote.currency}` : "",
+    quote.statedTotalHt ? `Total HT indiqué ${quote.statedTotalHt}` : "",
+    quote.vatMention ? quote.vatMention : "",
     quote.supplierName ? `Fournisseur ${quote.supplierName}` : "",
     "Cette version est conservée à part. Elle ne remplace pas un autre devis du même produit.",
     ...lines,

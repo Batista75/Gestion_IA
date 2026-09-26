@@ -125,6 +125,11 @@ export default async function HomePage() {
                   <CardContent className="grid gap-2">
                     <Badge variant="secondary">{project.status}</Badge>
                     <p className="text-sm">{project.nextAction}</p>
+                    {project.purpose ? (
+                      <p className="text-sm text-muted-foreground">
+                        Le projet consiste à {project.purpose}.
+                      </p>
+                    ) : null}
                   </CardContent>
                 </Card>
               </li>

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { ensureSpokenProject } from "@/lib/business-records";
 import { saveInboxPieces } from "@/lib/pieces";
 
 export type ActionState = {
@@ -25,9 +25,8 @@ export async function createProjectAction(
     return { message: "Indiquez le client principal." };
   }
 
-  await prisma.project.create({
-    data: { name, primaryClient, nextAction },
-  });
+  const saved = await ensureSpokenProject({ name, primaryClient, nextAction });
+  if (!saved.ok) return { message: saved.summary };
 
   revalidatePath("/");
   revalidatePath("/projets");

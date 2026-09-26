@@ -36,6 +36,9 @@ export type ProductRecord = {
   description: string;
   supplierName: string;
   origin: string;
+  statedPrice: string;
+  vatNote: string;
+  kind: string;
   updatedLabel: string;
   versions: ProductVersionView[];
 };
@@ -165,6 +168,13 @@ export function ProductManager({
                 <CardContent className="grid gap-3">
                   {record.description ? (
                     <p className="text-sm leading-6">{record.description}</p>
+                  ) : null}
+                  {record.statedPrice ? (
+                    <p className="text-sm">
+                      Prix unitaire indiqué {record.statedPrice}
+                      {record.vatNote ? ` · TVA indiquée ${record.vatNote}` : ""}
+                      {record.kind === "service" ? " · service" : ""}
+                    </p>
                   ) : null}
                   <p className="text-sm">{record.origin}</p>
                   {record.versions.length > 0 ? (

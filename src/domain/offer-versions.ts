@@ -25,6 +25,7 @@ export type DocumentKind =
   | "avoir"
   | "livraison"
   | "contrat"
+  | "fiche"
   | "document"
   | "autre";
 
@@ -85,6 +86,22 @@ function readSingle(text: string, filename: string): DocumentReading {
   };
 }
 
+export function datasheetProduct(
+  text: string,
+): { reference: string; name: string; ordering: string } | null {
+  const kit = text.match(/AOM-DK\d{3,5}/i)?.[0] ?? "";
+  const described = /\b(development kit|fiche technique|datasheet|data sheet)\b/i.test(text);
+  const namedSheet = /(?:^|[_-])DS(?:[_-]|\.)/i.test(text);
+  if (!kit || (!described && !namedSheet)) return null;
+  const ordering = text.match(/AOM-DK\d{3,5}-[A-Z0-9]+/i)?.[0] ?? "";
+  const reference = kit;
+  return {
+    reference,
+    name: `Kit de développement ${reference}`,
+    ordering,
+  };
+}
+
 export function keepsCommercialVersion(kind: DocumentKind): boolean {
   return kind === "devis" || kind === "tarif";
 }
@@ -107,6 +124,8 @@ export function kindLabel(kind: string): string {
       return "Bon de livraison";
     case "contrat":
       return "Contrat";
+    case "fiche":
+      return "Fiche technique";
     case "document":
       return "Document";
     default:
@@ -221,6 +240,7 @@ const KIND_RULES: Array<{ kind: DocumentKind; pattern: RegExp }> = [
   { kind: "devis", pattern: /\b(devis|offres?|quotations?)\b/i },
   { kind: "tarif", pattern: /\btarifs?\b/i },
   { kind: "contrat", pattern: /\b(contrat|conditions g[ée]n[ée]rales|cgv)\b/i },
+  { kind: "fiche", pattern: /\b(development kit|fiche technique|datasheet|data sheet)\b/i },
 ];
 
 function documentKind(text: string, filename: string): DocumentKind {
@@ -395,6 +415,22 @@ export function proposeFromReading(
       (item) => item.status !== "offre reçue" && sameText(item.supplierName, supplierName),
     );
     if (demand) actions.push({ type: "mark_demand", title: demand.title, status: "offre reçue" });
+  } else if (reading.kind === "fiche") {
+    const sheet = datasheetProduct(`${filename}\n${reading.heading}\n${reading.enrichment}`);
+    const known = sheet
+      ? directory.products.some(
+          (product) => sameText(product.reference, sheet.reference) || sameText(product.name, sheet.name),
+        )
+      : false;
+    if (sheet && !known) {
+      actions.push({
+        type: "create_product",
+        name: sheet.name,
+        reference: sheet.reference,
+        supplierName,
+        source: "fiche",
+      });
+    }
   } else if (reading.kind === "rfq") {
     const same = directory.demands.find(
       (item) => sameText(item.title, title) && sameText(item.supplierName, supplierName),
@@ -582,6 +618,8 @@ export function cycleSentence(kind: DocumentKind): string {
       return "Pièce après la fourniture. Elle ne devient pas une version de devis.";
     case "contrat":
       return "Cadre de la fourniture, avant ou pendant le projet.";
+    case "fiche":
+      return "Fiche technique du produit ou du kit à fournir. Elle n’indique pas un prix de devis.";
     default:
       return "Pièce reçue dans le fil de l’activité.";
   }

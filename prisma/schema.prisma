@@ -8,12 +8,32 @@ datasource db {
 }
 
 model Project {
-  id            String   @id @default(cuid())
+  id            String         @id @default(cuid())
   name          String
   primaryClient String
-  status        String   @default("À qualifier")
+  status        String         @default("À qualifier")
   nextAction    String
-  createdAt     DateTime @default(now())
+  purpose       String         @default("")
+  reference     String         @default("")
+  sector        String         @default("")
+  currency      String         @default("EUR")
+  budgetStated  String         @default("")
+  lead          String         @default("")
+  createdAt     DateTime       @default(now())
+  events        ProjectEvent[]
+  quotes        Quote[]
+}
+
+model ProjectEvent {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind      String
+  body      String
+  fileId    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
 }
 
 model InboxItem {
@@ -43,6 +63,9 @@ model Client {
   phone       String   @default("")
   address     String   @default("")
   notes       String   @default("")
+  reference   String   @default("")
+  sector      String   @default("")
+  currency    String   @default("")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -78,6 +101,11 @@ model Product {
   unit        String      @default("u")
   description String      @default("")
   source      String      @default("manuel")
+  kind        String      @default("produit")
+  statedPrice String      @default("")
+  currency    String      @default("")
+  vatNote     String      @default("")
+  costStated  String      @default("")
   supplierId  String?
   supplier    Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   createdAt   DateTime    @default(now())
@@ -146,12 +174,23 @@ model Quote {
   supplierName String      @default("")
   versionLabel String      @default("")
   fingerprint  String?     @unique
-  fileId       String?
-  file         StoredFile? @relation(fields: [fileId], references: [id], onDelete: SetNull)
-  createdAt    DateTime    @default(now())
-  lines        QuoteLine[]
+  fileId         String?
+  file           StoredFile? @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  projectId      String?
+  project        Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  clientName     String      @default("")
+  currency       String      @default("")
+  vatZone        String      @default("")
+  vatMention     String      @default("")
+  statedTotalHt  String      @default("")
+  statedVat      String      @default("")
+  statedTotalTtc String      @default("")
+  conditions     String      @default("")
+  createdAt      DateTime    @default(now())
+  lines          QuoteLine[]
 
   @@index([fileId])
+  @@index([projectId])
 }
 
 model KnowledgeChunk {
@@ -175,6 +214,7 @@ model QuoteLine {
   productId   String
   statedPrice String  @default("")
   conditions  String  @default("")
+  quantity    String  @default("")
   quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 

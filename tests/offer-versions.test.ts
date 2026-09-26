@@ -187,3 +187,20 @@ Vis à bois VIS-01 | 0,18 € HT | franco 50 pièces`,
   );
   assert.match(precise?.summary ?? "", /Projet déjà ouvert : Horizon 2/);
 });
+
+test("une fiche de kit n’ouvre ni devis ni projet", () => {
+  const reading = readOfferFile(
+    `Qualcomm QCS6490 Development Kit
+AOM-DK2721
+Part No. AOM-DK2721-FAA1E`,
+    "AOM-DK2721_DS.pdf",
+  );
+  assert.equal(reading.kind, "fiche");
+  assert.equal(reading.offers.length, 0);
+  const proposal = proposeFromReading(reading, "AOM-DK2721_DS.pdf", emptyDirectory, []);
+  assert.equal(proposal?.actions[0]?.type, "create_product");
+  if (proposal?.actions[0]?.type === "create_product") {
+    assert.equal(proposal.actions[0].reference, "AOM-DK2721");
+    assert.match(proposal.actions[0].name, /Kit de développement/);
+  }
+});

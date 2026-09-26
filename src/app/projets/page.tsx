@@ -15,6 +15,10 @@ export const dynamic = "force-dynamic";
 export default async function ProjectsPage() {
   const projects = await prisma.project.findMany({
     orderBy: { createdAt: "desc" },
+    include: {
+      events: { orderBy: { createdAt: "asc" } },
+      quotes: { orderBy: { createdAt: "desc" }, include: { lines: true } },
+    },
   });
 
   return (
@@ -59,12 +63,75 @@ export default async function ProjectsPage() {
                       Client principal · {project.primaryClient}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="flex flex-wrap items-center gap-3">
-                    <Badge variant="secondary">{project.status}</Badge>
-                    <p className="text-sm">{project.nextAction}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Ouvert le {project.createdAt.toLocaleDateString("fr-FR")}
-                    </p>
+                  <CardContent className="grid gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Badge variant="secondary">{project.status}</Badge>
+                      {project.reference ? (
+                        <span className="text-sm text-muted-foreground">{project.reference}</span>
+                      ) : null}
+                      <p className="text-sm">{project.nextAction}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Ouvert le {project.createdAt.toLocaleDateString("fr-FR")}
+                      </p>
+                    </div>
+                    {project.purpose ? (
+                      <p className="text-sm leading-6">Le projet consiste à {project.purpose}.</p>
+                    ) : null}
+                    {project.budgetStated ? (
+                      <p className="text-sm">Budget indiqué {project.budgetStated}, en {project.currency}.</p>
+                    ) : null}
+                    {project.quotes.length > 0 ? (
+                      <div className="grid gap-2">
+                        <p className="text-sm font-medium">Devis de l’affaire</p>
+                        <ul className="grid gap-2">
+                          {project.quotes.map((quote) => (
+                            <li key={quote.id} className="rounded-lg bg-muted px-3 py-2 text-sm leading-6">
+                              <p className="font-medium">{quote.versionLabel || quote.title}</p>
+                              <p>
+                                Devise {quote.currency || "non indiquée"}
+                                {quote.statedTotalHt ? ` · HT indiqué ${quote.statedTotalHt}` : ""}
+                                {quote.statedVat ? ` · TVA indiquée ${quote.statedVat}` : ""}
+                                {quote.statedTotalTtc ? ` · TTC indiqué ${quote.statedTotalTtc}` : ""}
+                              </p>
+                              {quote.vatMention ? <p>{quote.vatMention}</p> : null}
+                              {quote.currency === "USD" ? (
+                                <p>Conversion en euro : taux non indiqué. Le montant reste en dollars.</p>
+                              ) : null}
+                              <p>Marge brute : coût de revient non indiqué.</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    <div className="grid gap-2">
+                      <p className="text-sm font-medium">Actualité</p>
+                      {project.events.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Aucun événement enregistré.</p>
+                      ) : (
+                        <ol className="grid gap-2">
+                          {project.events.map((event) => (
+                            <li key={event.id} className="text-sm leading-6">
+                              <span className="text-muted-foreground">
+                                {event.createdAt.toLocaleString("fr-FR")}
+                                {" · "}
+                              </span>
+                              {event.body}
+                              {event.fileId ? (
+                                <>
+                                  {" "}
+                                  <Link
+                                    href={`/api/pieces/${event.fileId}`}
+                                    className="font-medium underline-offset-4 hover:underline"
+                                  >
+                                    Ouvrir la pièce
+                                  </Link>
+                                </>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </li>

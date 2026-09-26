@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { quoteFromTargetMarkup } from "../src/domain/pricing.ts";
+import { checkAffair, quoteFromTargetMarkup } from "../src/domain/pricing.ts";
 
 test("exemple pédagogique de la spec : 700 €, marque 30 %, remise 10 %", () => {
   const quote = quoteFromTargetMarkup({
@@ -41,5 +41,68 @@ test("refuse un taux de marque ou une remise hors intervalle", () => {
       targetMarkupRate: 0.2,
       discountRate: 1,
     }),
+  );
+});
+
+test("les trois devis d’exemple se contrôlent sans inventer un taux ni un coût", () => {
+  const france = checkAffair({
+    currency: "EUR",
+    zone: "france",
+    eurPerUsd: null,
+    lines: [
+      { amountCents: 9_000_000, discountRate: 0.05, costCents: null },
+      { amountCents: 1_200_000, discountRate: 0, costCents: null },
+      { amountCents: 1_200_000, discountRate: 0, costCents: null },
+    ],
+  });
+  assert.equal(france.netHtCents, 10_950_000);
+  assert.equal(france.vatCents, 2_190_000);
+  assert.equal(france.ttcCents, 13_140_000);
+  assert.equal(france.marginCents, null);
+  assert.equal(france.eurCents, 10_950_000);
+
+  const intracom = checkAffair({
+    currency: "EUR",
+    zone: "intracom",
+    eurPerUsd: null,
+    lines: [
+      { amountCents: 1_850_000, discountRate: 0, costCents: null },
+      { amountCents: 2_400_000, discountRate: 0, costCents: null },
+      { amountCents: 1_425_000, discountRate: 0, costCents: null },
+    ],
+  });
+  assert.equal(intracom.netHtCents, 5_675_000);
+  assert.equal(intracom.vatCents, 0);
+  assert.equal(intracom.ttcCents, 5_675_000);
+
+  const exported = checkAffair({
+    currency: "USD",
+    zone: "export",
+    eurPerUsd: null,
+    lines: [
+      { amountCents: 3_250_000, discountRate: 0, costCents: null },
+      { amountCents: 2_400_000, discountRate: 0, costCents: null },
+    ],
+  });
+  assert.equal(exported.netHtCents, 5_650_000);
+  assert.equal(exported.vatCents, 0);
+  assert.equal(exported.eurCents, null);
+  assert.equal(
+    checkAffair({
+      currency: "USD",
+      zone: "export",
+      eurPerUsd: 0.92,
+      lines: [{ amountCents: 10_000, discountRate: 0, costCents: 4_000 }],
+    }).eurCents,
+    9_200,
+  );
+  assert.equal(
+    checkAffair({
+      currency: "EUR",
+      zone: "france",
+      eurPerUsd: null,
+      lines: [{ amountCents: 10_000, discountRate: 0, costCents: 4_000 }],
+    }).marginCents,
+    6_000,
   );
 });

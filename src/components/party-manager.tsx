@@ -36,6 +36,8 @@ export type PartyRecord = {
   vatNumber?: string;
   contactName?: string;
   contactRole?: string;
+  sector?: string;
+  currency?: string;
 };
 
 export function PartyManager({
@@ -125,6 +127,8 @@ export function PartyManager({
                         {[
                           profile === "client" ? kindText(record.kind) : "",
                           record.country,
+                          record.sector,
+                          record.currency ? `Compte ${record.currency}` : "",
                           record.city,
                           record.email,
                           record.phone,

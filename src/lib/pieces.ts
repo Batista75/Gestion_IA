@@ -95,7 +95,20 @@ export async function saveInboxPieces(
       id,
       originalName: safeDisplayName(entry.file.name),
       reading: entry.reading,
+      text: entry.extracted,
     });
+  }
+
+  const { parseBusinessBrief, planIsEmpty } = await import("@/domain/business-brief");
+  const plan = parseBusinessBrief(note);
+  if (!planIsEmpty(plan)) {
+    const { applyBusinessPlan } = await import("@/lib/business-records");
+    const applied = await applyBusinessPlan(
+      plan,
+      stored.map((file) => ({ id: file.id, originalName: file.originalName, text: file.text })),
+    );
+    const fileNote = files.length === 1 ? "1 fichier enregistré." : `${files.length} fichiers enregistrés.`;
+    return { ok: true, message: `${fileNote} ${applied.summary}` };
   }
 
   const { queueDocumentProposals } = await import("@/lib/document-proposals");

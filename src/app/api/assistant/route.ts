@@ -18,6 +18,8 @@ import {
   asksModelToComputeMoney,
   MONEY_RULE_REPLY,
 } from "@/domain/ollama-endpoint";
+import { parseBusinessBrief, planIsEmpty } from "@/domain/business-brief";
+import { applyBusinessPlan } from "@/lib/business-records";
 import { applyCatalogCommand } from "@/lib/catalog-store";
 import {
   confirmCurrentProposal,
@@ -39,7 +41,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const MAX_MESSAGES = 12;
-const MAX_CHARS = 4_000;
+const MAX_CHARS = 12_000;
 
 type IncomingMessage = { role: "user" | "assistant"; content: string };
 type SourceRef = { label: string; title: string };
@@ -112,6 +114,12 @@ export async function POST(request: Request) {
 }
 
 async function answerDirectly(text: string) {
+  const plan = parseBusinessBrief(text);
+  if (!planIsEmpty(plan)) {
+    const saved = await applyBusinessPlan(plan);
+    return { reply: saved.summary, model: null, source: "action" as const };
+  }
+
   const brief = isNewClientBrief(text) || Boolean(identifyClient(text));
   if (asksModelToComputeMoney(text) && !brief) {
     return { reply: MONEY_RULE_REPLY, model: null, source: "regle-metier" as const };
@@ -372,7 +380,7 @@ function parsePayload(
       return { ok: false, error: "Le message est vide." };
     }
     if (message.content.length > MAX_CHARS) {
-      return { ok: false, error: "Le message dépasse 4 000 caractères." };
+      return { ok: false, error: "Le message dépasse 12 000 caractères." };
     }
     messages.push({ role: message.role, content: message.content.trim() });
   }

@@ -35,6 +35,9 @@ export default async function ProductsPage({
         unit: product.unit,
         description: product.description,
         supplierName: product.supplier?.name ?? "",
+        statedPrice: product.statedPrice,
+        vatNote: product.vatNote,
+        kind: product.kind,
         origin: productOrigin(
           product.source,
           product.lines.map((line) => line.quote.title),

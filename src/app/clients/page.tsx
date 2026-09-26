@@ -50,5 +50,7 @@ function toRecord(client: Awaited<ReturnType<typeof listClients>>[number]) {
     vatNumber: client.vatNumber,
     contactName: client.contactName,
     contactRole: client.contactRole,
+    sector: client.sector,
+    currency: client.currency,
   };
 }
