@@ -2,7 +2,7 @@
 
 Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification).
 
-Dernière mise à jour : 26 septembre 2026. L’accueil reste un seul assistant. Une demande explicite ouvre le projet et son actualité.
+Dernière mise à jour : 26 septembre 2026. Chaque fiche se crée, se modifie et se supprime depuis son écran.
 
 ## Ouvrir l’application
 
@@ -32,6 +32,8 @@ Sans fichier, un message trop court, moins de 3 caractères, n’est pas enregis
 
 **Projets récents** reprend les six derniers dossiers. **Tous les projets** ouvre la liste complète.
 
+**Pièces reçues** garde les notes et les fichiers. **Modifier ou supprimer** change la note, retire un document, ou supprime la note avec ses fichiers. Le fichier quitte cette machine.
+
 ## Répertoire
 
 Le menu **Répertoire** ouvre les trois listes. Chaque liste reste un écran : [Clients](/clients), [Fournisseurs](/fournisseurs), [Produits](/produits).
@@ -42,13 +44,13 @@ La [vue Clients](/clients) distingue un **particulier** et une **entreprise**, e
 
 **Nouveau client** enregistre dès que vous validez le formulaire. Renseignez le type, le nom ou la raison sociale, le pays, l’adresse, un e-mail ou un téléphone. Pour une entreprise française, le SIREN permet de déduire le numéro de TVA. Pour une entreprise étrangère, indiquez l’identifiant fiscal. Le contact et sa fonction servent au dossier commercial.
 
-**Modifier** met à jour la fiche tout de suite. La recherche porte sur le nom, l’e-mail et le SIREN. Un compte déjà présent n’est pas dupliqué.
+**Modifier** met à jour la fiche tout de suite. **Supprimer** retire le client après confirmation. La recherche porte sur le nom, l’e-mail et le SIREN. Un compte déjà présent n’est pas dupliqué.
 
 Créer un projet ne crée plus la fiche client. Le dossier s’ouvre, et la fiche attend une proposition confirmée.
 
 ## Fournisseurs
 
-La [vue Fournisseurs](/fournisseurs) suit le même principe. **Achats** y renvoie. La commande, la réception et la facture fournisseur ne se saisissent pas encore.
+La [vue Fournisseurs](/fournisseurs) suit le même principe : créer, modifier, supprimer. Les produits liés restent au catalogue. **Achats** y renvoie. La commande, la réception et la facture fournisseur ne se saisissent pas encore.
 
 ## Produits
 
@@ -58,11 +60,11 @@ La [vue Produits](/produits) montre tout le catalogue :
 - **Issu d’un devis** : titre du devis et un produit par ligne, ou un fichier confirmé depuis l’accueil. Chaque confirmation de devis ajoute une version : prix indiqué et conditions. Une version ne remplace pas la précédente.
 - **Saisi par l’assistant** : quand vous lui demandez d’ajouter un produit.
 
-Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **Saisie manuelle** limitent la liste. Une fiche peut porter à la fois une saisie et plusieurs devis. La carte **Versions de devis** liste chaque prix et chaque condition, sans les fusionner.
+Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **Saisie manuelle** limitent la liste. Une fiche peut porter à la fois une saisie et plusieurs devis. La carte **Versions de devis** liste chaque prix et chaque condition, sans les fusionner. **Supprimer le produit** retire la fiche et ses lignes. **Supprimer cette version** retire un devis et laisse le produit.
 
 ## Projets
 
-Chaque dossier garde une **actualité** : ouverture, objet, devis enregistré, pièce rattachée. Elle sert à relire ce qui s’est passé. Un devis rattaché affiche la devise, les totaux indiqués et la mention de TVA. La conversion en euro et la marge brute restent absentes tant que le taux ou le coût de revient n’est pas indiqué.
+Chaque dossier garde une **actualité** : ouverture, objet, devis enregistré, pièce rattachée, mise à jour. Elle sert à relire ce qui s’est passé. **Modifier ou supprimer** change le nom, le client, le statut, l’objet et la prochaine action, retire un devis du dossier, ou supprime le projet. Les devis retirés restent au catalogue. Un devis rattaché affiche la devise, les totaux indiqués et la mention de TVA. La conversion en euro et la marge brute restent absentes tant que le taux ou le coût de revient n’est pas indiqué.
 
 **Nouveau dossier** demande :
 

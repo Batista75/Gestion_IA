@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import type { FormState } from "@/app/catalog-actions";
 import { FormMessage } from "@/components/party-manager";
+import { ConfirmDelete } from "@/components/record-actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,6 +21,7 @@ const emptyState: FormState = { message: null, ok: false };
 
 export type ProductVersionView = {
   id: string;
+  quoteId: string;
   quoteTitle: string;
   versionLabel: string;
   issuedOn: string;
@@ -56,6 +58,8 @@ export function ProductManager({
   records,
   createAction,
   updateAction,
+  deleteAction,
+  deleteQuoteAction,
   quoteAction,
 }: {
   query: string;
@@ -63,6 +67,8 @@ export function ProductManager({
   records: ProductRecord[];
   createAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   updateAction: (previous: FormState, formData: FormData) => Promise<FormState>;
+  deleteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
+  deleteQuoteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   quoteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
 }) {
   return (
@@ -193,6 +199,12 @@ export function ProductManager({
                                 : "Prix non indiqué"}
                             </p>
                             {version.conditions ? <p>Conditions : {version.conditions}</p> : null}
+                            <ConfirmDelete
+                              action={deleteQuoteAction}
+                              id={version.quoteId}
+                              label="Supprimer cette version"
+                              confirm="Supprimer cette version de devis ? Le produit reste au catalogue."
+                            />
                           </li>
                         ))}
                       </ul>
@@ -204,6 +216,12 @@ export function ProductManager({
                   <p className="text-xs text-muted-foreground">
                     Mis à jour le {record.updatedLabel}
                   </p>
+                  <ConfirmDelete
+                    action={deleteAction}
+                    id={record.id}
+                    label="Supprimer le produit"
+                    confirm={`Supprimer ${record.name} ? Les lignes de devis de ce produit sont retirées.`}
+                  />
                   <details>
                     <summary className="cursor-pointer text-sm font-medium">
                       Modifier

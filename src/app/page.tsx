@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { deleteFileAction, deleteInboxAction, updateInboxAction } from "@/app/catalog-actions";
 import { AssistantChat } from "@/components/assistant-chat";
+import { ConfirmDelete, NoteEditor } from "@/components/record-actions";
 import { type PendingProposal } from "@/components/proposal-board";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -178,6 +180,27 @@ export default async function HomePage() {
                     <p className="text-xs text-muted-foreground">
                       {item.createdAt.toLocaleString("fr-FR")} · sans projet
                     </p>
+                    <details>
+                      <summary className="cursor-pointer text-sm font-medium">Modifier ou supprimer</summary>
+                      <div className="grid gap-3 pt-3">
+                        <NoteEditor action={updateInboxAction} id={item.id} body={item.body} />
+                        {item.files.map((file) => (
+                          <ConfirmDelete
+                            key={file.id}
+                            action={deleteFileAction}
+                            id={file.id}
+                            label={`Supprimer ${file.originalName}`}
+                            confirm={`Supprimer le document ${file.originalName} ? Le fichier quitte cette machine.`}
+                          />
+                        ))}
+                        <ConfirmDelete
+                          action={deleteInboxAction}
+                          id={item.id}
+                          label="Supprimer la note"
+                          confirm="Supprimer cette note et ses documents ?"
+                        />
+                      </div>
+                    </details>
                   </CardContent>
                 </Card>
               </li>

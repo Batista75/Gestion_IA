@@ -1,5 +1,6 @@
 import {
   createSupplierAction,
+  deleteSupplierAction,
   updateSupplierAction,
 } from "@/app/catalog-actions";
 import { PartyManager } from "@/components/party-manager";
@@ -23,6 +24,7 @@ export default async function SuppliersPage({
       noun="fournisseur"
       createAction={createSupplierAction}
       updateAction={updateSupplierAction}
+      deleteAction={deleteSupplierAction}
       records={suppliers.map((supplier) => ({
         id: supplier.id,
         name: supplier.name,

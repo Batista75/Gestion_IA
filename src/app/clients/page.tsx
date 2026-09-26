@@ -1,5 +1,6 @@
 import {
   createClientAction,
+  deleteClientAction,
   updateClientAction,
 } from "@/app/catalog-actions";
 import { PartyManager } from "@/components/party-manager";
@@ -24,6 +25,7 @@ export default async function ClientsPage({
       profile="client"
       createAction={createClientAction}
       updateAction={updateClientAction}
+      deleteAction={deleteClientAction}
       records={clients.map(toRecord)}
     />
   );

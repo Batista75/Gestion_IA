@@ -1,6 +1,8 @@
 import {
   createProductAction,
   createQuoteAction,
+  deleteProductAction,
+  deleteQuoteAction,
   updateProductAction,
 } from "@/app/catalog-actions";
 import { ProductManager } from "@/components/product-manager";
@@ -27,6 +29,8 @@ export default async function ProductsPage({
       source={source}
       createAction={createProductAction}
       updateAction={updateProductAction}
+      deleteAction={deleteProductAction}
+      deleteQuoteAction={deleteQuoteAction}
       quoteAction={createQuoteAction}
       records={products.map((product) => ({
         id: product.id,
@@ -47,6 +51,7 @@ export default async function ProductsPage({
           .sort((left, right) => right.quote.createdAt.getTime() - left.quote.createdAt.getTime())
           .map((line) => ({
             id: line.id,
+            quoteId: line.quoteId,
             quoteTitle: line.quote.title,
             versionLabel: line.quote.versionLabel,
             issuedOn: line.quote.issuedOn,

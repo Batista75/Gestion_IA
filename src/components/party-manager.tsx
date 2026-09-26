@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { FormState } from "@/app/catalog-actions";
+import { ConfirmDelete } from "@/components/record-actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -50,6 +51,7 @@ export function PartyManager({
   profile,
   createAction,
   updateAction,
+  deleteAction,
 }: {
   title?: string;
   intro: string;
@@ -60,6 +62,7 @@ export function PartyManager({
   profile?: "client";
   createAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   updateAction: (previous: FormState, formData: FormData) => Promise<FormState>;
+  deleteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
 }) {
   return (
     <div className="grid gap-6">
@@ -172,6 +175,12 @@ export function PartyManager({
                       <p className="text-xs text-muted-foreground">
                         Mis à jour le {record.updatedLabel}
                       </p>
+                      <ConfirmDelete
+                        action={deleteAction}
+                        id={record.id}
+                        label="Supprimer"
+                        confirm={`Supprimer ${record.name} ? Cette action retire la fiche.`}
+                      />
                       <details>
                         <summary className="cursor-pointer text-sm font-medium">
                           Modifier

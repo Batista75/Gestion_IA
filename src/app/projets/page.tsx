@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { ProjectForm } from "@/components/project-form";
+import {
+  deleteProjectAction,
+  deleteQuoteAction,
+  updateProjectAction,
+} from "@/app/catalog-actions";
+import { ProjectEditor, ProjectForm } from "@/components/project-form";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -103,6 +108,28 @@ export default async function ProjectsPage() {
                         </ul>
                       </div>
                     ) : null}
+                    <details>
+                      <summary className="cursor-pointer text-sm font-medium">Modifier ou supprimer</summary>
+                      <div className="pt-3">
+                        <ProjectEditor
+                          project={{
+                            id: project.id,
+                            name: project.name,
+                            primaryClient: project.primaryClient,
+                            status: project.status,
+                            purpose: project.purpose,
+                            nextAction: project.nextAction,
+                          }}
+                          quotes={project.quotes.map((quote) => ({
+                            id: quote.id,
+                            label: quote.versionLabel || quote.title,
+                          }))}
+                          updateAction={updateProjectAction}
+                          deleteAction={deleteProjectAction}
+                          deleteQuoteAction={deleteQuoteAction}
+                        />
+                      </div>
+                    </details>
                     <div className="grid gap-2">
                       <p className="text-sm font-medium">Actualité</p>
                       {project.events.length === 0 ? (
