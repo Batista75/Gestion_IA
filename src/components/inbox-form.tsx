@@ -15,7 +15,7 @@ export function InboxForm() {
   );
 
   return (
-    <form action={action} encType="multipart/form-data" className="grid gap-3">
+    <form action={action} className="grid gap-3">
       <div className="grid gap-2">
         <Label htmlFor="body">Nouvelle information</Label>
         <Textarea
