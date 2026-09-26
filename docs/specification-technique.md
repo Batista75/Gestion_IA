@@ -57,6 +57,8 @@ La recherche élargie réunit le tri par les mots, le tri vectoriel et le tri hy
 
 Sans embeddings, la recherche par les mots continue. Le passage envoyé au reranker reprend les lignes qui portent les mots de la question.
 
+Les pièces jointes sont lues par Docling, en local, sur le processeur. Les modèles de mise en page restent dans `data/docling`. Le GPU reste réservé à Ollama. Docling rend un markdown, puis son découpage hybride fournit les passages. Sans ces passages, l’application découpe le texte par titres et garde un tableau entier. Chaque passage est une fiche Pièce, à côté du résumé commercial. Une pièce déjà enregistrée est relue une fois, au fil des recherches, quand Docling est installé. Sans Docling, `pdftotext` et l’extraction Word restent le repli. Le fichier est conservé même si aucun texte n’est lu.
+
 Le contexte donné au modèle est limité à 4 fiches. Une consultation en affiche au plus 5. Le texte d’une fiche client, fournisseur ou produit reprend aussi jusqu’à cinq lignes de modifications, datées, pour qu’une question du type `que sait-on de …` puisse citer la trace.
 
 ## Journal des modifications

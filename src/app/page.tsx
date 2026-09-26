@@ -16,6 +16,7 @@ import { isConversationId, latestConversation, loadConversation } from "@/lib/co
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 function proposalView(payload: unknown): {
   fields: Array<{ label: string; value: string }>;

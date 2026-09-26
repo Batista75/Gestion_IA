@@ -10,7 +10,7 @@ Dans l’application, le même PDF s’ouvre par [Spécification fonctionnelle](
 
 ## Spécification technique
 
-[Spécification technique](specification-technique.md). Elle décrit le socle qui tourne : orchestration de l’assistant, fil conservé, confirmation, recherche dans les fiches, journal des modifications, vue projet, instruction métier, modèles et usage du GPU. Elle ne remplace pas le PDF. Quand ce fonctionnement change, ce fichier est mis à jour dans le même changement.
+[Spécification technique](specification-technique.md). Elle décrit le socle qui tourne : orchestration de l’assistant, fil conservé, confirmation, recherche dans les fiches, lecture des pièces par Docling, journal des modifications, vue projet, instruction métier, modèles et usage du GPU. Elle ne remplace pas le PDF. Quand ce fonctionnement change, ce fichier est mis à jour dans le même changement.
 
 Dans l’application : [Spécification technique](/documentation/technique).
 

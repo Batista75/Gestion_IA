@@ -5,7 +5,9 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { nameKey } from "@/domain/catalog";
+import { composeExtraction, doclingExtension, documentBody } from "@/domain/document-chunks";
 import { readOfferFile, type OfferLine, type OfferVersion } from "@/domain/offer-versions";
+import { convertWithDocling } from "@/lib/docling";
 import { prisma } from "@/lib/db";
 
 const execFileAsync = promisify(execFile);
@@ -51,16 +53,16 @@ export async function saveInboxPieces(
     note.length > 0
       ? note
       : `Pièces jointes : ${files.map((file) => safeDisplayName(file.name)).join(", ")}`;
-  const prepared = [];
-  for (const file of files) {
-    const extracted = await extractText(file);
-    prepared.push({
+  const extractedTexts = await extractIncoming(files);
+  const prepared = files.map((file, index) => {
+    const extracted = extractedTexts[index] ?? "";
+    return {
       file,
       extracted,
-      reading: readOfferFile(extracted, safeDisplayName(file.name)),
+      reading: readOfferFile(documentBody(extracted), safeDisplayName(file.name)),
       hash: createHash("sha256").update(file.bytes).digest("hex"),
-    });
-  }
+    };
+  });
 
   const item = await prisma.inboxItem.create({ data: { body: text } });
   await mkdir(PIECES_DIR, { recursive: true });
@@ -213,16 +215,51 @@ async function ensureSupplier(
   return created.id;
 }
 
-async function extractText(file: IncomingFile): Promise<string> {
-  const name = file.name.toLowerCase();
-  if (/\.(txt|md|csv|json|html?)$/.test(name) || file.type.startsWith("text/")) {
-    return file.bytes.toString("utf8");
+async function extractIncoming(files: IncomingFile[]): Promise<string[]> {
+  const results = files.map(() => "");
+  const pending: Array<{ index: number; file: IncomingFile; extension: string }> = [];
+  files.forEach((file, index) => {
+    const extension = doclingExtension(file.name, file.type);
+    if (extension) {
+      pending.push({ index, file, extension });
+      return;
+    }
+    const name = file.name.toLowerCase();
+    if (/\.(txt|md|csv|json)$/.test(name) || file.type.startsWith("text/")) {
+      results[index] = file.bytes.toString("utf8");
+    }
+  });
+  if (pending.length === 0) return results;
+
+  const converted = await convertWithDocling(
+    pending.map((item) => ({ bytes: item.file.bytes, extension: item.extension })),
+  );
+  for (const [offset, item] of pending.entries()) {
+    if (!converted) {
+      results[item.index] = await fallbackExtract(item.file);
+      continue;
+    }
+    const reading = converted[offset] ?? { markdown: "", chunks: [] };
+    if (reading.markdown.trim() || reading.chunks.length > 0) {
+      results[item.index] = composeExtraction(reading.markdown, reading.chunks, "docling");
+      continue;
+    }
+    const fallback = await fallbackExtract(item.file);
+    results[item.index] = composeExtraction(fallback, [], fallback.trim() ? "repli" : "vide");
   }
+  return results;
+}
+
+export async function fallbackExtract(file: IncomingFile): Promise<string> {
+  const name = file.name.toLowerCase();
   if (name.endsWith(".docx") || file.type.includes("wordprocessingml")) {
     return extractDocx(file.bytes);
   }
   if (name.endsWith(".pdf") || file.type === "application/pdf") {
     return extractPdf(file.bytes);
+  }
+  if (/\.(txt|md|csv|json|html?)$/.test(name) || file.type.startsWith("text/")) {
+    return file.bytes.toString("utf8");
   }
   return "";
 }

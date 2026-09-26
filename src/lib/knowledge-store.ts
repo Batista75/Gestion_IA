@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { deliveryFromRecord, deliverySummary } from "@/domain/delivery";
+import { pieceIdentity, piecePassages } from "@/domain/document-chunks";
 import { workflowKnowledge, type StepRecord } from "@/domain/trade-workflow";
 import {
   rankKnowledge,
@@ -12,6 +13,7 @@ import {
   type SourceType,
 } from "@/domain/knowledge";
 import { prisma } from "@/lib/db";
+import { schedulePieceRefresh } from "@/lib/docling-refresh";
 import { embedWithOllama, getOllamaStatus, rerankWithOllama } from "@/lib/ollama";
 
 const EMBED_BATCH = 20;
@@ -23,10 +25,9 @@ export async function searchKnowledge(
   const docs = await syncKnowledge();
   const focus = recordFocus(query);
   if (mode === "directory" && focus) {
-    return docs
-      .filter((doc) => doc.sourceType === focus)
-      .slice(0, 8)
-      .map((doc) => ({ ...doc, score: 1 }));
+    const pool = docs.filter((doc) => doc.sourceType === focus);
+    const listed = focus === "piece" ? onePieceEach(pool) : pool;
+    return listed.slice(0, 8).map((doc) => ({ ...doc, score: 1 }));
   }
 
   const status = await getOllamaStatus();
@@ -133,7 +134,20 @@ async function syncKnowledge(): Promise<KnowledgeDoc[]> {
       await prisma.knowledgeChunk.delete({ where: { id: row.id } });
     }
   }
+  schedulePieceRefresh();
   return docs;
+}
+
+function onePieceEach(docs: KnowledgeDoc[]): KnowledgeDoc[] {
+  const seen = new Set<string>();
+  const listed: KnowledgeDoc[] = [];
+  for (const doc of docs) {
+    const key = pieceIdentity(doc.sourceId);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    listed.push(doc);
+  }
+  return listed;
 }
 
 async function loadDocs(): Promise<KnowledgeDoc[]> {
@@ -255,14 +269,14 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
         quoteBody(quote),
       );
     }),
-    ...files.map((file) =>
-      doc(
-        "piece",
-        file.id,
-        file.originalName,
-        file.kind,
-        file.enrichment || `Pièce : ${file.originalName}\nFichier conservé.`,
-      ),
+    ...files.flatMap((file) =>
+      piecePassages({
+        id: file.id,
+        originalName: file.originalName,
+        kind: file.kind,
+        enrichment: file.enrichment,
+        extractedText: file.extractedText,
+      }).map((passage) => doc("piece", passage.sourceId, passage.title, passage.summary, passage.body)),
     ),
     ...demands.map((demand) =>
       doc(

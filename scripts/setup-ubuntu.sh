@@ -10,7 +10,7 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl xz-utils postgresql postgresql-contrib poppler-utils
+sudo apt-get install -y ca-certificates curl xz-utils postgresql postgresql-contrib poppler-utils python3-venv python3-pip tesseract-ocr tesseract-ocr-fra
 
 install_node() {
   local arch node_arch line name
@@ -48,4 +48,5 @@ fi
 
 echo "Node $(node -v), npm $(npm -v)"
 npm ci
+bash scripts/install-docling.sh
 exec bash scripts/cloud-agent-start.sh

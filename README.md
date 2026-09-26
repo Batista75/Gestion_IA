@@ -25,6 +25,12 @@ npm run dev -- --hostname 0.0.0.0 --port 3847
 
 `DATABASE_URL` est écrit dans `.env` pour le compte Unix qui lance le script. Le mot de passe `gestion_ia_local` ne sert qu’au PostgreSQL de cette machine. Les pièces jointes déposées à l’accueil restent dans `data/pieces` sur cette machine. Ce dossier n’est pas versionné.
 
+Docling lit les PDF, documents Word, tableurs, présentations et images sur cette machine, puis la recherche indexe les passages. Le script d’installation le prépare, ainsi que Tesseract pour les scans. Les modèles de mise en page sont téléchargés une fois dans `data/docling`. La lecture suivante ne quitte pas la machine, et elle n’utilise pas la carte graphique.
+
+```bash
+bash scripts/install-docling.sh
+```
+
 Pour laisser l’application tourner après la préparation :
 
 ```bash
