@@ -22,7 +22,12 @@ export default function MorePage() {
         <h1 className="text-2xl font-semibold tracking-tight">Plus</h1>
         <p className="text-sm leading-6 text-muted-foreground">
           Le manuel décrit les écrans en service, la spécification décrit le
-          produit visé. Les listes sont dans Répertoire.
+          produit visé. Les listes sont dans Répertoire. Le serveur, les modèles
+          et la clé d’API sont dans{" "}
+          <Link href="/configuration" className="font-medium text-foreground underline-offset-4 hover:underline">
+            Configuration
+          </Link>
+          .
         </p>
       </div>
 

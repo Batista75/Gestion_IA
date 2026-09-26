@@ -1,5 +1,6 @@
 import { GPU_SIZING_NOTE, isOversizedChatModel, pickChatModel, pickEmbedModel } from "@/domain/agent";
 import { resolveOllamaBaseUrl } from "@/domain/ollama-endpoint";
+import { loadTechnicalConfig } from "@/lib/technical-settings";
 
 const STATUS_TIMEOUT_MS = 4_000;
 const CHAT_TIMEOUT_MS = 180_000;
@@ -28,10 +29,33 @@ export function ollamaConfigError(error: unknown): string {
   return error instanceof Error ? error.message : "Adresse Ollama invalide.";
 }
 
+async function inferenceTarget(): Promise<{
+  baseUrl: string;
+  headers: Record<string, string>;
+  chatModel: string;
+  embedModel: string;
+}> {
+  const config = await loadTechnicalConfig();
+  const baseUrl = resolveOllamaBaseUrl(config.serverUrl || undefined);
+  return {
+    baseUrl,
+    headers: config.apiKey ? { authorization: `Bearer ${config.apiKey}` } : {},
+    chatModel: config.chatModel,
+    embedModel: config.embedModel,
+  };
+}
+
 export async function getOllamaStatus(): Promise<OllamaStatus> {
   let baseUrl: string;
+  let headers: Record<string, string> = {};
+  let chatModel = "";
+  let embedModel = "";
   try {
-    baseUrl = resolveOllamaBaseUrl();
+    const target = await inferenceTarget();
+    baseUrl = target.baseUrl;
+    headers = target.headers;
+    chatModel = target.chatModel;
+    embedModel = target.embedModel;
   } catch (error) {
     return {
       ok: false,
@@ -48,6 +72,7 @@ export async function getOllamaStatus(): Promise<OllamaStatus> {
     const response = await fetch(`${baseUrl}/api/tags`, {
       cache: "no-store",
       redirect: "error",
+      headers,
       signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
     });
     if (!response.ok) {
@@ -66,15 +91,15 @@ export async function getOllamaStatus(): Promise<OllamaStatus> {
     const models = (body.models ?? [])
       .map((model) => model.name?.trim() ?? "")
       .filter((name) => name.length > 0);
-    const defaultModel = pickChatModel(models, process.env.OLLAMA_MODEL);
-    const embedModel = pickEmbedModel(models, process.env.OLLAMA_EMBED_MODEL);
+    const defaultModel = pickChatModel(models, chatModel);
+    const chosenEmbed = pickEmbedModel(models, embedModel);
 
     return {
       ok: Boolean(defaultModel),
       baseUrl,
       models,
       defaultModel,
-      embedModel,
+      embedModel: chosenEmbed,
       sizing: GPU_SIZING_NOTE,
       warning: defaultModel && isOversizedChatModel(defaultModel)
         ? "Ce modèle de conversation dépasse le budget de 16 Go. Préférez qwen-dgfip-multisec-2ep ou qwen2.5:7b."
@@ -113,15 +138,15 @@ export async function chatWithOllama(input: {
   messages: OllamaChatMessage[];
   tools?: unknown;
 }): Promise<{ content: string; toolCalls: OllamaToolCall[]; messages: OllamaChatMessage[] }> {
-  const baseUrl = resolveOllamaBaseUrl();
+  const target = await inferenceTarget();
   const messages = input.messages.some((message) => message.role === "system")
     ? input.messages
     : [{ role: "system" as const, content: SYSTEM_PROMPT }, ...input.messages];
-  const response = await fetch(`${baseUrl}/api/chat`, {
+  const response = await fetch(`${target.baseUrl}/api/chat`, {
     method: "POST",
     cache: "no-store",
     redirect: "error",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...target.headers },
     body: JSON.stringify({
       model: input.model,
       stream: false,
@@ -171,13 +196,13 @@ function normalizeToolCalls(raw: unknown): OllamaToolCall[] {
 
 export async function embedWithOllama(model: string, inputs: string[]): Promise<number[][]> {
   if (inputs.length === 0) return [];
-  const baseUrl = resolveOllamaBaseUrl();
+  const target = await inferenceTarget();
   const clipped = inputs.map((input) => input.slice(0, 2_000));
-  const response = await fetch(`${baseUrl}/api/embed`, {
+  const response = await fetch(`${target.baseUrl}/api/embed`, {
     method: "POST",
     cache: "no-store",
     redirect: "error",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...target.headers },
     body: JSON.stringify({ model, input: clipped, keep_alive: 0 }),
     signal: AbortSignal.timeout(60_000),
   });

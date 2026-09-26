@@ -19,6 +19,11 @@ const links = [
   { href: "/achats", label: "Achats", active: (pathname: string) => pathname.startsWith("/achats") },
   { href: "/banque", label: "Banque", active: (pathname: string) => pathname.startsWith("/banque") },
   { href: "/pilotage", label: "Pilotage", active: (pathname: string) => pathname.startsWith("/pilotage") },
+  {
+    href: "/configuration",
+    label: "Configuration",
+    active: (pathname: string) => pathname.startsWith("/configuration"),
+  },
   { href: "/plus", label: "Plus", active: (pathname: string) => pathname.startsWith("/plus") },
 ] as const;
 

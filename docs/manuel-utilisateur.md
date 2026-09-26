@@ -2,13 +2,13 @@
 
 Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification).
 
-Dernière mise à jour : 26 septembre 2026. Chaque fiche se crée, se modifie et se supprime depuis son écran.
+Dernière mise à jour : 26 septembre 2026. Le menu Configuration règle le serveur, les modèles et la clé d’API.
 
 ## Ouvrir l’application
 
 Sur la machine Ubuntu, ouvrez [l’accueil](/). L’adresse locale est `http://127.0.0.1:3847`.
 
-Huit entrées restent en place : Accueil, Répertoire, Projets, Ventes, Achats, Banque, Pilotage et Plus. L’assistant est sur l’accueil. Les listes Clients, Fournisseurs et Produits sont dans Répertoire. Le manuel se trouve dans l’en-tête et dans Plus.
+Neuf entrées restent en place : Accueil, Répertoire, Projets, Ventes, Achats, Banque, Pilotage, Configuration et Plus. L’assistant est sur l’accueil. Les listes Clients, Fournisseurs et Produits sont dans Répertoire. Le manuel se trouve dans l’en-tête et dans Plus.
 
 Les données restent sur cette machine. L’assistant envoie le texte à Ollama sur le PC hôte du réseau local, pas à un service d’IA public.
 
@@ -33,6 +33,14 @@ Sans fichier, un message trop court, moins de 3 caractères, n’est pas enregis
 **Projets récents** reprend les six derniers dossiers. **Tous les projets** ouvre la liste complète.
 
 **Pièces reçues** garde les notes et les fichiers. **Modifier ou supprimer** change la note, retire un document, ou supprime la note avec ses fichiers. Le fichier quitte cette machine.
+
+## Configuration
+
+Le menu **Configuration** est l’administration technique. Il règle l’adresse du serveur d’inférence, le modèle de conversation, le modèle d’index et, si le serveur en demande une, la clé d’API.
+
+L’adresse doit viser une machine du réseau local. Une adresse publique est refusée. La clé reste dans la base de cette machine : l’écran n’en montre que les quatre derniers caractères. La laisser vide conserve la clé déjà enregistrée. **Retirer la clé enregistrée** l’efface.
+
+Un modèle laissé vide est choisi automatiquement : conversation autour de 7 milliards de paramètres, index `nomic-embed-text`. Le bandeau indique si le serveur répond et quel modèle sera utilisé. Le mot de passe de PostgreSQL n’apparaît pas ici.
 
 ## Répertoire
 

@@ -7,6 +7,15 @@ datasource db {
   provider = "postgresql"
 }
 
+model AppSetting {
+  id         String   @id @default("local")
+  serverUrl  String   @default("")
+  apiKey     String   @default("")
+  chatModel  String   @default("")
+  embedModel String   @default("")
+  updatedAt  DateTime @updatedAt
+}
+
 model Project {
   id            String         @id @default(cuid())
   name          String
