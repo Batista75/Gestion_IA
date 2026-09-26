@@ -15,7 +15,10 @@ import {
   cosine,
   mentionedNames,
   rankKnowledge,
+  recallCandidates,
   renderKnowledge,
+  rerankPassage,
+  selectReranked,
   understandIntent,
   uniqueNameMatch,
   type KnowledgeDoc,
@@ -108,6 +111,60 @@ test("la recherche lexicale retrouve la fiche et n’invente pas", () => {
     ],
   );
   assert.equal(reranked[0]?.title, "Holzwerk Müller GmbH");
+  const recalled = recallCandidates(
+    "téléphone Marie",
+    [
+      { ...docs[0], embedding: [1, 0, 0] },
+      { ...docs[1], embedding: [0, 1, 0] },
+      {
+        sourceType: "product",
+        sourceId: "3",
+        title: "Vis",
+        summary: "",
+        body: "Vis à bois",
+        embedding: [0, 0, 1],
+      },
+    ],
+    [1, 0, 0],
+    2,
+  );
+  assert.deepEqual(
+    recalled.map((doc) => doc.title).sort(),
+    ["Holzwerk Müller GmbH", "Marie Dupont"],
+  );
+  const kept = selectReranked(
+    [
+      { ...docs[0], score: 0.4 },
+      { ...docs[1], score: 0.9 },
+    ],
+    [
+      { index: 0, score: 0.04 },
+      { index: 1, score: 0.88 },
+    ],
+    4,
+  );
+  assert.deepEqual(kept?.map((doc) => doc.title), ["Marie Dupont"]);
+  assert.equal(
+    selectReranked(
+      [
+        { ...docs[0], score: 0.4 },
+        { ...docs[1], score: 0.9 },
+      ],
+      [
+        { index: 0, score: 0.01 },
+        { index: 1, score: 0.02 },
+      ],
+      4,
+    )?.length,
+    0,
+  );
+  const passage = rerankPassage("téléphone", {
+    title: "Marie Dupont",
+    summary: "Particulier",
+    body: ["Alpha", "Beta", "Gamma", "Delta", "Téléphone 06 12 34 56 78", "Fin"].join("\n"),
+  });
+  assert.match(passage, /Téléphone 06/);
+  assert.doesNotMatch(passage, /Alpha/);
   assert.ok(cosine([1, 0], [1, 0]) > 0.99);
   assert.match(renderKnowledge([], "lookup"), /Aucune fiche/);
 });

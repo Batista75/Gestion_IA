@@ -40,7 +40,7 @@ Le menu **Configuration** est l’administration technique. Il règle l’adress
 
 L’adresse doit viser une machine du réseau local. Une adresse publique est refusée. La clé reste dans la base de cette machine : l’écran n’en montre que les quatre derniers caractères. La laisser vide conserve la clé déjà enregistrée. **Retirer la clé enregistrée** l’efface.
 
-Trois listes reprennent les modèles annoncés par le serveur : **Modèle conversationnel**, **Modèle d’embeddings** et **Reranker**. **Automatique** choisit, s’ils sont installés, Qwen2.5-14B-Instruct quantifié Q4_K_M (souvent `qwen2.5:14b`), `bge-m3` et `bge-reranker-v2-m3`. Le bandeau indique si le serveur répond et quel modèle de chaque type sera utilisé. Sans reranker, le tri des fiches reste lexical et vectoriel. Le mot de passe de PostgreSQL n’apparaît pas ici.
+Trois listes reprennent les modèles annoncés par le serveur : **Modèle conversationnel**, **Modèle d’embeddings** et **Reranker**. **Automatique** choisit, s’ils sont installés, Qwen2.5-14B-Instruct quantifié Q4_K_M (souvent `qwen2.5:14b`), `bge-m3` et `bge-reranker-v2-m3`. Le bandeau indique si le serveur répond et quel modèle de chaque type sera utilisé. Le reranker relit les fiches candidates et ne garde que celles qui répondent à la question. Sans lui, le tri reste lexical et vectoriel. Le mot de passe de PostgreSQL n’apparaît pas ici.
 
 ## Répertoire
 
@@ -123,7 +123,7 @@ Les autres phrases sont exécutées sans passer par le modèle :
 
 `créer client Atelier Nord, email contact@atelier.fr` et `mettre à jour le client Atelier Nord, adresse 12 rue des Lilas, Paris` ouvrent une proposition, ils n’enregistrent pas tout seuls.
 
-Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches, y compris les pièces jointes, l’actualité des projets et chaque version de devis. Le modèle peut relancer une recherche. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. `que sait-on de Vis à bois` reprend toutes les versions enregistrées, avec le prix indiqué et les conditions de chacune. Une pièce reçue seule reste hors projet. Elle entre dans l’actualité du dossier si le même envoi demande explicitement de créer le projet.
+Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches, y compris les pièces jointes, l’actualité des projets et chaque version de devis. La recherche prend d’abord un lot large, par les mots et par les embeddings. Le reranker, s’il est installé, reclasse ce lot et écarte les fiches hors sujet avant de les donner au modèle de conversation. Le modèle peut relancer une recherche. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. `que sait-on de Vis à bois` reprend toutes les versions enregistrées, avec le prix indiqué et les conditions de chacune. Une pièce reçue seule reste hors projet. Elle entre dans l’actualité du dossier si le même envoi demande explicitement de créer le projet.
 
 L’état du serveur, l’adresse et les trois modèles sont dans **Configuration**, pas sur l’accueil. Le budget prévu est un utilisateur, 16 Go de mémoire graphique et 32 Go de RAM. Les embeddings, puis le reranker, se chargent et se déchargent. Ensuite seulement le modèle de conversation, limité à 4 096 jetons. Sans `bge-m3`, l’index utilise `nomic-embed-text` s’il est là, sinon la recherche continue par les mots, même si Ollama ne répond pas.
 

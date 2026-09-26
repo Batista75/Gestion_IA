@@ -87,7 +87,7 @@ export function ConfigurationForm({
       <ModelSelect
         id="rerankModel"
         label="Reranker"
-        hint="Liste limitée aux rerankers du serveur. Automatique : bge-reranker-v2-m3, s’il est installé. Sans lui, le tri reste lexical et vectoriel."
+        hint="Liste limitée aux rerankers du serveur. Automatique : bge-reranker-v2-m3, s’il est installé. Il relit les fiches candidates et écarte celles qui ne répondent pas. Sans lui, le tri reste lexical et vectoriel."
         value={rerankModel}
         options={rerankModels}
       />

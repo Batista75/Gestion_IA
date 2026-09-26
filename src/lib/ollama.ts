@@ -215,36 +215,79 @@ export async function rerankWithOllama(
   query: string,
   documents: string[],
 ): Promise<Array<{ index: number; score: number }> | null> {
-  if (!model || documents.length < 2) return null;
+  if (!model || documents.length === 0) return null;
   try {
     const target = await inferenceTarget();
-    const response = await fetch(`${target.baseUrl}/api/rerank`, {
-      method: "POST",
-      cache: "no-store",
-      redirect: "error",
-      headers: { "content-type": "application/json", ...target.headers },
-      body: JSON.stringify({
-        model,
-        query: query.slice(0, 2_000),
-        documents: documents.map((document) => document.slice(0, 1_500)),
-        top_n: documents.length,
-        keep_alive: 0,
-      }),
-      signal: AbortSignal.timeout(20_000),
-    });
-    const body = (await response.json().catch(() => null)) as {
-      results?: Array<{ index?: number; relevance_score?: number; score?: number }>;
-    } | null;
-    if (!response.ok || !body?.results) return null;
-    const scores = body.results.flatMap((item) => {
-      const index = item.index;
-      const score = item.relevance_score ?? item.score;
-      return typeof index === "number" && typeof score === "number" ? [{ index, score }] : [];
-    });
-    return scores.length > 0 ? scores : null;
+    const clipped = documents.map((document) => document.slice(0, 700));
+    const question = query.slice(0, 2_000);
+    const attempts: Array<{ path: string; documents: unknown }> = [
+      { path: "/api/rerank", documents: clipped },
+      { path: "/v1/rerank", documents: clipped },
+      { path: "/api/rerank", documents: clipped.map((text) => ({ text })) },
+      { path: "/v1/rerank", documents: clipped.map((text) => ({ text })) },
+    ];
+    for (const attempt of attempts) {
+      let response: Response;
+      try {
+        response = await fetch(`${target.baseUrl}${attempt.path}`, {
+          method: "POST",
+          cache: "no-store",
+          redirect: "error",
+          headers: { "content-type": "application/json", ...target.headers },
+          body: JSON.stringify({
+            model,
+            query: question,
+            documents: attempt.documents,
+            top_n: clipped.length,
+            keep_alive: 0,
+          }),
+          signal: AbortSignal.timeout(60_000),
+        });
+      } catch {
+        return null;
+      }
+      if (response.status === 404 || response.status === 400 || response.status === 405) {
+        await response.body?.cancel();
+        continue;
+      }
+      const body = (await response.json().catch(() => null)) as {
+        results?: Array<{
+          index?: number;
+          relevance_score?: number;
+          score?: number;
+          document?: string | { text?: string };
+        }>;
+      } | null;
+      if (!response.ok || !body?.results) return null;
+      const scores = readRerankScores(body.results, clipped);
+      return scores.length > 0 ? scores : null;
+    }
+    return null;
   } catch {
     return null;
   }
+}
+
+function readRerankScores(
+  results: Array<{
+    index?: number;
+    relevance_score?: number;
+    score?: number;
+    document?: string | { text?: string };
+  }>,
+  documents: string[],
+): Array<{ index: number; score: number }> {
+  return results.flatMap((item) => {
+    const score = item.relevance_score ?? item.score;
+    if (typeof score !== "number" || !Number.isFinite(score)) return [];
+    if (typeof item.index === "number" && item.index >= 0 && item.index < documents.length) {
+      return [{ index: item.index, score }];
+    }
+    const text = typeof item.document === "string" ? item.document : item.document?.text;
+    if (!text) return [];
+    const index = documents.findIndex((document) => document === text || document.startsWith(text));
+    return index >= 0 ? [{ index, score }] : [];
+  });
 }
 
 export async function embedWithOllama(model: string, inputs: string[]): Promise<number[][]> {

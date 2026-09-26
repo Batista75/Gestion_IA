@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import {
-  applyRerank,
   rankKnowledge,
+  recallCandidates,
   recordFocus,
+  rerankPassage,
+  selectReranked,
   type KnowledgeDoc,
   type RankedDoc,
   type SourceType,
@@ -30,25 +32,29 @@ export async function searchKnowledge(
     ? await embedQuery(status.embedModel, query, docs)
     : null;
   const pool = focus ? docs.filter((doc) => doc.sourceType === focus) : docs;
-  const candidates = rankKnowledge(query, pool.length > 0 ? pool : docs, queryVector, 8);
+  const source = pool.length > 0 ? pool : docs;
+  const limit = mode === "context" ? 4 : 5;
+  const wide = recallCandidates(query, source, queryVector, 12);
   const reranked = status.rerankModel
-    ? await orderByReranker(status.rerankModel, query, candidates)
+    ? await orderByReranker(status.rerankModel, query, wide, limit)
     : null;
-  const ranked = reranked ?? candidates;
-  return mode === "context" ? ranked.slice(0, 4) : ranked.slice(0, 5);
+  if (reranked !== null) return reranked;
+  return rankKnowledge(query, source, queryVector, limit);
 }
 
 async function orderByReranker(
   model: string,
   query: string,
   docs: RankedDoc[],
+  limit: number,
 ): Promise<RankedDoc[] | null> {
   const scores = await rerankWithOllama(
     model,
     query,
-    docs.map((doc) => `${doc.title}\n${doc.body}`),
+    docs.map((doc) => rerankPassage(query, doc)),
   );
-  return scores ? applyRerank(docs, scores) : null;
+  if (!scores) return null;
+  return selectReranked(docs, scores, limit);
 }
 
 async function embedQuery(

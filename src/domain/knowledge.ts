@@ -191,6 +191,75 @@ export function rankKnowledge(
     .slice(0, limit);
 }
 
+export function recallCandidates(
+  query: string,
+  docs: KnowledgeDoc[],
+  queryVector: number[] | null,
+  limit = 12,
+): RankedDoc[] {
+  const scored = docs.map((doc) => {
+    const lexical = lexicalScore(query, doc);
+    const vector =
+      queryVector && doc.embedding && doc.embedding.length > 0
+        ? Math.max(cosine(queryVector, doc.embedding), 0)
+        : 0;
+    const score = vector > 0 ? 0.7 * vector + 0.3 * lexical : lexical;
+    return { doc, lexical, vector, score };
+  });
+  const byHybrid = [...scored].filter((item) => item.score > 0).sort((a, b) => b.score - a.score);
+  const byLexical = [...scored].filter((item) => item.lexical > 0).sort((a, b) => b.lexical - a.lexical);
+  const byVector = [...scored].filter((item) => item.vector > 0).sort((a, b) => b.vector - a.vector);
+  const seen = new Set<string>();
+  const merged: RankedDoc[] = [];
+  for (const item of [...byHybrid.slice(0, 8), ...byLexical.slice(0, 8), ...byVector.slice(0, 8)]) {
+    const key = `${item.doc.sourceType}:${item.doc.sourceId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push({ ...item.doc, score: item.score });
+    if (merged.length >= limit) break;
+  }
+  return merged;
+}
+
+export function rerankPassage(
+  query: string,
+  doc: Pick<KnowledgeDoc, "title" | "summary" | "body">,
+): string {
+  const excerpt = focusExcerpt(query, doc.body, 480);
+  const head = [doc.title, doc.summary].filter(Boolean).join(" — ");
+  return `${head}\n${excerpt}`.trim().slice(0, 700);
+}
+
+export function selectReranked(
+  docs: RankedDoc[],
+  scores: Array<{ index: number; score: number }>,
+  limit: number,
+): RankedDoc[] | null {
+  const byIndex = new Map<number, number>();
+  for (const item of scores) {
+    if (!Number.isInteger(item.index) || item.index < 0 || item.index >= docs.length) continue;
+    if (!Number.isFinite(item.score)) continue;
+    byIndex.set(item.index, item.score);
+  }
+  if (byIndex.size === 0) return null;
+  const values = [...byIndex.values()];
+  const distinct = new Set(values.map((value) => value.toFixed(4))).size;
+  if (docs.length > 1 && distinct < 2) return null;
+  const ranked = [...byIndex.entries()]
+    .map(([index, score]) => ({ doc: docs[index], score }))
+    .filter((item): item is { doc: RankedDoc; score: number } => Boolean(item.doc))
+    .sort((left, right) => right.score - left.score);
+  const best = ranked[0]?.score;
+  if (best === undefined) return null;
+  const probabilistic = values.every((value) => value >= 0 && value <= 1);
+  if (probabilistic && best < 0.05) return [];
+  const lowest = Math.min(...values);
+  const floor = probabilistic ? Math.max(0.15, best * 0.35) : best - Math.max(0.5, (best - lowest) * 0.5);
+  const kept = ranked.filter((item) => item.score >= floor);
+  const chosen = (kept.length > 0 ? kept : ranked.slice(0, 1)).slice(0, limit);
+  return chosen.map((item) => ({ ...item.doc, score: item.score }));
+}
+
 export function applyRerank(
   docs: RankedDoc[],
   scores: Array<{ index: number; score: number }>,
@@ -241,6 +310,32 @@ export function retrievalContext(
     .join("\n\n");
   if (text.length > 1_600) text = `${text.slice(0, 1_600)}…`;
   return `Extraits des fiches enregistrées :\n${text}`;
+}
+
+function focusExcerpt(query: string, body: string, max: number): string {
+  const lines = body
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return "";
+  const wanted = new Set(focusTokens(query));
+  let bestIndex = 0;
+  let bestHits = 0;
+  lines.forEach((line, index) => {
+    const hits = focusTokens(line).filter((token) => wanted.has(token)).length;
+    if (hits > bestHits) {
+      bestHits = hits;
+      bestIndex = index;
+    }
+  });
+  const start = bestHits > 0 ? Math.max(0, bestIndex - 1) : 0;
+  return lines.slice(start, start + 4).join("\n").slice(0, max);
+}
+
+function focusTokens(value: string): string[] {
+  return foldText(value)
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 4);
 }
 
 function tokens(value: string): string[] {
