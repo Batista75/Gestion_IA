@@ -111,17 +111,26 @@ async function syncKnowledge(): Promise<KnowledgeDoc[]> {
 }
 
 async function loadDocs(): Promise<KnowledgeDoc[]> {
-  const [clients, suppliers, products, projects, quotes, notes] = await Promise.all([
+  const [clients, suppliers, products, projects, quotes, notes, files] = await Promise.all([
     prisma.client.findMany({ take: 500, orderBy: { name: "asc" } }),
     prisma.supplier.findMany({ take: 500, orderBy: { name: "asc" } }),
-    prisma.product.findMany({ take: 500, include: { supplier: true }, orderBy: { name: "asc" } }),
+    prisma.product.findMany({
+      take: 500,
+      include: { supplier: true, lines: { include: { quote: true } } },
+      orderBy: { name: "asc" },
+    }),
     prisma.project.findMany({ take: 500, orderBy: { createdAt: "desc" } }),
     prisma.quote.findMany({
       take: 200,
       orderBy: { createdAt: "desc" },
       include: { lines: { include: { product: true } } },
     }),
-    prisma.inboxItem.findMany({ take: 100, orderBy: { createdAt: "desc" } }),
+    prisma.inboxItem.findMany({
+      take: 100,
+      orderBy: { createdAt: "desc" },
+      include: { files: true },
+    }),
+    prisma.storedFile.findMany({ take: 200, orderBy: { createdAt: "desc" } }),
   ]);
 
   return [
@@ -152,15 +161,7 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
         product.id,
         product.name,
         [product.reference, product.supplier?.name].filter(Boolean).join(", "),
-        [
-          `Produit ${product.name}`,
-          product.reference ? `Référence ${product.reference}` : "",
-          product.unit ? `Unité ${product.unit}` : "",
-          product.supplier ? `Fournisseur ${product.supplier.name}` : "",
-          product.description,
-        ]
-          .filter(Boolean)
-          .join("\n"),
+        productBody(product),
       ),
     ),
     ...projects.map((project) =>
@@ -181,20 +182,117 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
     ),
     ...quotes.map((quote) => {
       const names = quote.lines.map((line) => line.product.name);
+      const label = quote.versionLabel || quote.title;
       return doc(
         "quote",
         quote.id,
         quote.title,
-        names.join(", "),
-        [`Devis ${quote.title}`, names.length ? `Produits ${names.join(", ")}` : ""]
-          .filter(Boolean)
-          .join("\n"),
+        [label, names.join(", ")].filter(Boolean).join(" · "),
+        quoteBody(quote),
       );
     }),
+    ...files.map((file) =>
+      doc(
+        "piece",
+        file.id,
+        file.originalName,
+        file.kind,
+        file.enrichment || `Pièce : ${file.originalName}\nFichier conservé.`,
+      ),
+    ),
     ...notes.map((note) =>
-      doc("inbox", note.id, "Note à classer", clip(note.body, 120), `À classer\n${clip(note.body, 800)}`),
+      doc(
+        "inbox",
+        note.id,
+        "Note à classer",
+        clip(note.body, 120),
+        [
+          "À classer",
+          clip(note.body, 800),
+          note.files.length
+            ? `Fichiers : ${note.files.map((file) => file.originalName).join(", ")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      ),
     ),
   ];
+}
+
+function productBody(product: {
+  name: string;
+  reference: string;
+  unit: string;
+  description: string;
+  supplier: { name: string } | null;
+  lines: Array<{
+    statedPrice: string;
+    conditions: string;
+    quote: {
+      title: string;
+      versionLabel: string;
+      issuedOn: string;
+      supplierName: string;
+      createdAt: Date;
+    };
+  }>;
+}): string {
+  const versions = [...product.lines]
+    .sort((left, right) => right.quote.createdAt.getTime() - left.quote.createdAt.getTime())
+    .map((line) => versionSentence(line));
+  return [
+    `Produit ${product.name}`,
+    product.reference ? `Référence ${product.reference}` : "",
+    product.unit ? `Unité ${product.unit}` : "",
+    product.supplier ? `Fournisseur ${product.supplier.name}` : "",
+    product.description,
+    versions.length
+      ? "Versions de devis conservées à part, sans fusion des prix ni des conditions :"
+      : "",
+    ...versions,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function quoteBody(quote: {
+  title: string;
+  versionLabel: string;
+  issuedOn: string;
+  supplierName: string;
+  lines: Array<{ statedPrice: string; conditions: string; product: { name: string; reference: string } }>;
+}): string {
+  const lines = quote.lines.map((line) => versionSentence({ ...line, quote }));
+  return [
+    `Devis ${quote.title}`,
+    quote.versionLabel ? `Version ${quote.versionLabel}` : "",
+    quote.issuedOn ? `Date ${quote.issuedOn}` : "",
+    quote.supplierName ? `Fournisseur ${quote.supplierName}` : "",
+    "Cette version est conservée à part. Elle ne remplace pas un autre devis du même produit.",
+    ...lines,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function versionSentence(line: {
+  statedPrice: string;
+  conditions: string;
+  quote: { title: string; versionLabel: string; supplierName: string };
+  product?: { name: string; reference: string };
+}): string {
+  const label = line.quote.versionLabel || line.quote.title;
+  const product = line.product
+    ? `${line.product.name}${line.product.reference ? ` (${line.product.reference})` : ""}`
+    : "";
+  const price = line.statedPrice
+    ? `prix indiqué ${line.statedPrice}`
+    : "prix non indiqué sur cette version";
+  return ["-", product, label, line.quote.supplierName, price, line.conditions ? `conditions : ${line.conditions}` : ""]
+    .filter(Boolean)
+    .join(" — ")
+    .replace(/^- — /, "- ");
 }
 
 function clientLine(client: {

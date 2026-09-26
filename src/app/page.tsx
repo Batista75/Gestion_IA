@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { kindLabel } from "@/domain/offer-versions";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export default async function HomePage() {
     prisma.inboxItem.findMany({
       orderBy: { createdAt: "desc" },
       take: 8,
+      include: { files: { orderBy: { createdAt: "asc" } } },
     }),
   ]);
 
@@ -29,9 +31,9 @@ export default async function HomePage() {
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Déposez une information ou ouvrez un dossier. Une note de l’accueil
-          ne crée pas de projet. L’assistant peut créer un compte, un
-          fournisseur, un produit ou un projet si vous le lui demandez.
+          Déposez un texte ou des fichiers. Une note de l’accueil ne crée pas
+          de projet. L’assistant peut créer un compte, un fournisseur, un
+          produit ou un projet si vous le lui demandez.
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
           <Link href="/clients" className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 text-sm font-medium">
@@ -51,8 +53,8 @@ export default async function HomePage() {
           <CardHeader>
             <CardTitle>Nouvelle information</CardTitle>
             <CardDescription>
-              Texte libre. Le classement assisté viendra ensuite ; pour
-              l’instant la pièce reste visible et non affectée.
+              Le texte et les fichiers sont enregistrés. Un devis important est
+              enrichi pour la recherche. Rien n’est rattaché à un projet.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -129,8 +131,30 @@ export default async function HomePage() {
             {inbox.map((item) => (
               <li key={item.id}>
                 <Card size="sm">
-                  <CardContent className="grid gap-1">
-                    <p className="text-sm leading-6">{item.body}</p>
+                  <CardContent className="grid gap-2">
+                    <p className="text-sm leading-6 break-words">{item.body}</p>
+                    {item.files.length > 0 ? (
+                      <ul className="grid gap-2">
+                        {item.files.map((file) => (
+                          <li key={file.id} className="rounded-lg bg-muted px-3 py-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <a
+                                href={`/api/pieces/${file.id}`}
+                                className="text-sm font-medium break-all underline-offset-4 hover:underline"
+                              >
+                                {file.originalName}
+                              </a>
+                              <Badge variant="secondary">{kindLabel(file.kind)}</Badge>
+                            </div>
+                            {file.enrichment ? (
+                              <p className="mt-1 line-clamp-4 text-xs leading-5 break-words whitespace-pre-wrap text-muted-foreground">
+                                {file.enrichment}
+                              </p>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                     <p className="text-xs text-muted-foreground">
                       {item.createdAt.toLocaleString("fr-FR")} · sans projet
                     </p>

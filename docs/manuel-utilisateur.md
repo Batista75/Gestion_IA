@@ -2,7 +2,7 @@
 
 Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification).
 
-Dernière mise à jour : 26 septembre 2026, avec l’assistant qui reconnaît l’intention et répond à partir des fiches déjà enregistrées.
+Dernière mise à jour : 26 septembre 2026, avec l’enregistrement des pièces jointes et des versions de devis.
 
 ## Ouvrir l’application
 
@@ -14,9 +14,13 @@ Les données restent sur cette machine. L’assistant envoie le texte à Ollama 
 
 ## Accueil
 
-**Nouvelle information** sert à déposer un texte : une instruction, une description de pièce, un besoin. Le bouton **Enregistrer dans À classer** ajoute la note à la liste « À classer ». Le message de confirmation est : « Enregistré dans « À classer ». Aucun projet n’a été créé. »
+**Nouvelle information** sert à déposer un texte, des fichiers, ou les deux. Le commentaire est facultatif dès qu’un fichier est joint. Le bouton **Enregistrer dans À classer** ajoute la note à la liste « À classer ».
 
-Une information trop courte, moins de 3 caractères, n’est pas enregistrée.
+Tous les fichiers sont conservés, jusqu’à 8 fichiers de 20 Mo. Un texte, un tableau, un document Word ou un PDF dont le texte peut être lu est indexé pour l’assistant. Si le texte ne peut pas être extrait, le fichier est quand même enregistré et le message le précise dans l’enrichissement. Le téléchargement se fait depuis le nom du fichier.
+
+Un devis, une offre ou un tarif est enrichi : chaque version garde son numéro, sa date, son fournisseur, le prix indiqué et les conditions. Une facture ou un contrat est indexé comme document, sans devenir une version de devis. Un même produit peut donc apparaître avec plusieurs prix. Ces prix sont ceux écrits dans la pièce. L’application ne les calcule pas et ne les additionne pas.
+
+Sans fichier, une information trop courte, moins de 3 caractères, n’est pas enregistrée. Avec des fichiers, le message indique combien ont été enregistrés, combien de versions de devis ont été indexées, et rappelle qu’aucun projet n’a été créé. Une version déjà connue n’est pas dupliquée, mais le nouveau fichier reste conservé.
 
 **À valider** est vide. Les propositions de prix, de tiers ou de rapprochement n’apparaissent pas encore.
 
@@ -41,10 +45,10 @@ La [vue Fournisseurs](/fournisseurs) suit le même principe. **Achats** y renvoi
 La [vue Produits](/produits) montre tout le catalogue :
 
 - **Saisie manuelle** : nom, référence, unité, fournisseur, description. Un fournisseur inconnu est créé.
-- **Issu d’un devis** : titre du devis et un produit par ligne. Les produits entrent au catalogue et restent rattachés à ce devis.
+- **Issu d’un devis** : titre du devis et un produit par ligne, ou un fichier déposé à l’accueil. Les produits entrent au catalogue. Chaque fichier de devis ajoute une version : prix indiqué et conditions. Une version ne remplace pas la précédente.
 - **Saisi par l’assistant** : quand vous lui demandez d’ajouter un produit.
 
-Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **Saisie manuelle** limitent la liste. Une fiche peut porter à la fois une saisie et un devis.
+Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **Saisie manuelle** limitent la liste. Une fiche peut porter à la fois une saisie et plusieurs devis. La carte **Versions de devis** liste chaque prix et chaque condition, sans les fusionner.
 
 ## Projets
 
@@ -103,7 +107,7 @@ Les autres phrases sont exécutées sans passer par le modèle :
 
 `créer client Atelier Nord, email contact@atelier.fr` et `mettre à jour le client Atelier Nord, adresse 12 rue des Lilas, Paris` ouvrent une proposition, ils n’enregistrent pas tout seuls.
 
-Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches. Le modèle peut relancer une recherche. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. Une note de l’accueil reste « À classer » : elle ne devient un projet que si vous le demandez.
+Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches, y compris les pièces jointes et chaque version de devis. Le modèle peut relancer une recherche. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. `que sait-on de Vis à bois` reprend toutes les versions enregistrées, avec le prix indiqué et les conditions de chacune. Une note de l’accueil reste « À classer » : elle ne devient un projet que si vous le demandez.
 
 Le bandeau **Inférence sur le PC hôte** indique si Ollama répond et l’adresse utilisée, par défaut `http://192.168.1.5:11434`. Le budget prévu est un utilisateur, 16 Go de mémoire graphique et 32 Go de RAM. L’index `nomic-embed-text` se charge, puis se décharge. Ensuite seulement le modèle de conversation, limité à 4 096 jetons. `qwen-dgfip-multisec-2ep:latest` ou `qwen2.5:7b` conviennent. Un modèle 14B, Mixtral ou `bge-m3` ne doit pas rester chargé en même temps. Sans `nomic-embed-text`, la recherche dans les fiches continue par les mots, et elle fonctionne même si Ollama ne répond pas.
 
@@ -121,7 +125,7 @@ Ces trois écrans décrivent le comportement prévu. Ils ne saisissent pas encor
 
 ## Plus
 
-**Plus** ouvre les vues Clients, Fournisseurs et Produits, ce manuel et la spécification. L’historique daté des prix, les exports, la sauvegarde et le connecteur de facturation électronique ne sont pas encore disponibles.
+**Plus** ouvre les vues Clients, Fournisseurs et Produits, ce manuel et la spécification. Les versions de devis d’un produit, avec le prix indiqué et les conditions, sont sur la vue Produits. L’historique des prix de vente calculés, les exports, la sauvegarde et le connecteur de facturation électronique ne sont pas encore disponibles.
 
 ## Ce que vous ne pouvez pas faire ici
 

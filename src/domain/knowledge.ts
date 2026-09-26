@@ -1,4 +1,11 @@
-export type SourceType = "client" | "supplier" | "product" | "project" | "quote" | "inbox";
+export type SourceType =
+  | "client"
+  | "supplier"
+  | "product"
+  | "project"
+  | "quote"
+  | "piece"
+  | "inbox";
 
 export type KnowledgeDoc = {
   sourceType: SourceType;
@@ -45,6 +52,8 @@ export function sourceLabel(type: SourceType): string {
       return "Projet";
     case "quote":
       return "Devis";
+    case "piece":
+      return "Pièce";
     case "inbox":
       return "À classer";
   }
@@ -57,6 +66,7 @@ const DIRECTORY_STOP = new Set([
   "nos", "mes", "montre", "cherche", "clients", "client", "fournisseurs", "fournisseur",
   "produits", "produit", "projets", "projet", "devis", "notes", "note", "classer", "dossiers",
   "dossier", "articles", "article", "particuliers", "particulier", "entreprises", "entreprise",
+  "pieces", "piece", "fichiers", "fichier", "jointes", "jointe",
 ]);
 
 export function understandIntent(text: string): AgentIntent {
@@ -99,6 +109,7 @@ export function recordFocus(text: string): SourceType | null {
   if (/\b(produits?|articles?)\b/.test(folded)) return "product";
   if (/\b(projets?|dossiers?)\b/.test(folded)) return "project";
   if (/\bdevis\b/.test(folded)) return "quote";
+  if (/\b(pieces?|fichiers?)\b/.test(folded)) return "piece";
   if (/\b(classer|notes?)\b/.test(folded)) return "inbox";
   return null;
 }

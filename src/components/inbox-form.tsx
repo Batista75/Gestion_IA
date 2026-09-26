@@ -15,21 +15,30 @@ export function InboxForm() {
   );
 
   return (
-    <form action={action} className="grid gap-3">
+    <form action={action} encType="multipart/form-data" className="grid gap-3">
       <div className="grid gap-2">
         <Label htmlFor="body">Nouvelle information</Label>
         <Textarea
           id="body"
           name="body"
-          required
-          minLength={3}
           rows={4}
-          placeholder="Collez une instruction ou décrivez une pièce reçue. Exemple : devis fournisseur à ranger dans le projet Atlas."
+          placeholder="Commentaire facultatif. Exemple : devis Durand à conserver, sans l’attacher à un projet."
+        />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="files">Fichiers</Label>
+        <input
+          id="files"
+          name="files"
+          type="file"
+          multiple
+          className="block w-full min-h-11 text-sm file:mr-3 file:min-h-9 file:rounded-md file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium"
         />
       </div>
       <p className="text-sm text-muted-foreground">
-        L’enregistrement reste dans « À classer ». Rien n’est rattaché à un
-        projet tant que vous ne le confirmez pas.
+        Tous les fichiers sont conservés, jusqu’à 8 fichiers de 20 Mo. Un devis,
+        une offre ou un tarif est enrichi pour la recherche. Plusieurs versions
+        du même produit restent séparées. Rien n’est rattaché à un projet.
       </p>
       {state.message ? (
         <p role="status" className="text-sm text-foreground">

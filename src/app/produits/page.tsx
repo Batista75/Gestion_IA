@@ -40,6 +40,17 @@ export default async function ProductsPage({
           product.lines.map((line) => line.quote.title),
         ),
         updatedLabel: product.updatedAt.toLocaleString("fr-FR"),
+        versions: [...product.lines]
+          .sort((left, right) => right.quote.createdAt.getTime() - left.quote.createdAt.getTime())
+          .map((line) => ({
+            id: line.id,
+            quoteTitle: line.quote.title,
+            versionLabel: line.quote.versionLabel,
+            issuedOn: line.quote.issuedOn,
+            supplierName: line.quote.supplierName,
+            statedPrice: line.statedPrice,
+            conditions: line.conditions,
+          })),
       }))}
     />
   );

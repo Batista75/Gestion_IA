@@ -18,6 +18,16 @@ import { Textarea } from "@/components/ui/textarea";
 
 const emptyState: FormState = { message: null, ok: false };
 
+export type ProductVersionView = {
+  id: string;
+  quoteTitle: string;
+  versionLabel: string;
+  issuedOn: string;
+  supplierName: string;
+  statedPrice: string;
+  conditions: string;
+};
+
 export type ProductRecord = {
   id: string;
   name: string;
@@ -27,6 +37,7 @@ export type ProductRecord = {
   supplierName: string;
   origin: string;
   updatedLabel: string;
+  versions: ProductVersionView[];
 };
 
 const filters = [
@@ -57,7 +68,8 @@ export function ProductManager({
         <h1 className="text-2xl font-semibold tracking-tight">Produits</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
           Le catalogue réunit les saisies manuelles, les produits cités dans un
-          devis et ceux ajoutés par l’assistant.
+          devis et ceux ajoutés par l’assistant. Un même produit peut porter
+          plusieurs devis : chaque prix et chaque condition restent une version.
         </p>
       </div>
 
@@ -119,7 +131,8 @@ export function ProductManager({
             <CardTitle>Issu d’un devis</CardTitle>
             <CardDescription>
               Un produit par ligne. Le devis est conservé et les produits
-              entrent au catalogue.
+              entrent au catalogue. Un nouveau devis du même produit ajoute une
+              version, il ne remplace pas le prix déjà indiqué.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -154,6 +167,30 @@ export function ProductManager({
                     <p className="text-sm leading-6">{record.description}</p>
                   ) : null}
                   <p className="text-sm">{record.origin}</p>
+                  {record.versions.length > 0 ? (
+                    <div className="grid gap-2">
+                      <p className="text-sm font-medium">Versions de devis</p>
+                      <ul className="grid gap-2">
+                        {record.versions.map((version) => (
+                          <li key={version.id} className="rounded-lg bg-muted px-3 py-2 text-sm leading-6">
+                            <p className="font-medium break-words">
+                              {version.versionLabel || version.quoteTitle}
+                            </p>
+                            {version.supplierName ? <p>{version.supplierName}</p> : null}
+                            <p>
+                              {version.statedPrice
+                                ? `Prix indiqué ${version.statedPrice}`
+                                : "Prix non indiqué"}
+                            </p>
+                            {version.conditions ? <p>Conditions : {version.conditions}</p> : null}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-xs text-muted-foreground">
+                        Chaque devis reste une version. Les prix et les conditions ne sont pas fusionnés.
+                      </p>
+                    </div>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">
                     Mis à jour le {record.updatedLabel}
                   </p>

@@ -17,9 +17,10 @@ model Project {
 }
 
 model InboxItem {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   body      String
-  createdAt DateTime @default(now())
+  createdAt DateTime     @default(now())
+  files     StoredFile[]
 }
 
 model Client {
@@ -86,11 +87,38 @@ model Product {
   @@index([source])
 }
 
+model StoredFile {
+  id            String     @id @default(cuid())
+  inboxItemId   String?
+  inboxItem     InboxItem? @relation(fields: [inboxItemId], references: [id], onDelete: Cascade)
+  originalName  String
+  mimeType      String     @default("")
+  sizeBytes     Int
+  storagePath   String
+  extractedText String     @default("")
+  kind          String     @default("autre")
+  enrichment    String     @default("")
+  contentHash   String     @default("")
+  createdAt     DateTime   @default(now())
+  quotes        Quote[]
+
+  @@index([inboxItemId])
+  @@index([contentHash])
+}
+
 model Quote {
-  id        String      @id @default(cuid())
-  title     String
-  createdAt DateTime    @default(now())
-  lines     QuoteLine[]
+  id           String      @id @default(cuid())
+  title        String
+  issuedOn     String      @default("")
+  supplierName String      @default("")
+  versionLabel String      @default("")
+  fingerprint  String?     @unique
+  fileId       String?
+  file         StoredFile? @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+  lines        QuoteLine[]
+
+  @@index([fileId])
 }
 
 model KnowledgeChunk {
@@ -109,11 +137,13 @@ model KnowledgeChunk {
 }
 
 model QuoteLine {
-  id        String  @id @default(cuid())
-  quoteId   String
-  productId String
-  quote     Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id          String  @id @default(cuid())
+  quoteId     String
+  productId   String
+  statedPrice String  @default("")
+  conditions  String  @default("")
+  quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([quoteId])
   @@index([productId])

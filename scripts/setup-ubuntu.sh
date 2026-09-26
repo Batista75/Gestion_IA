@@ -10,7 +10,7 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl xz-utils postgresql postgresql-contrib
+sudo apt-get install -y ca-certificates curl xz-utils postgresql postgresql-contrib poppler-utils
 
 install_node() {
   local arch node_arch line name

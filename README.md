@@ -23,7 +23,7 @@ bash scripts/cloud-agent-start.sh --prepare
 npm run dev -- --hostname 0.0.0.0 --port 3847
 ```
 
-`DATABASE_URL` est écrit dans `.env` pour le compte Unix qui lance le script. Le mot de passe `gestion_ia_local` ne sert qu’au PostgreSQL de cette machine.
+`DATABASE_URL` est écrit dans `.env` pour le compte Unix qui lance le script. Le mot de passe `gestion_ia_local` ne sert qu’au PostgreSQL de cette machine. Les pièces jointes déposées à l’accueil restent dans `data/pieces` sur cette machine. Ce dossier n’est pas versionné.
 
 Pour laisser l’application tourner après la préparation :
 

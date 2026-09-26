@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { saveInboxPieces } from "@/lib/pieces";
 
 export type ActionState = {
   message: string | null;
@@ -37,16 +38,21 @@ export async function createInboxItemAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const body = String(formData.get("body") ?? "").trim();
-  if (body.length < 3) {
-    return {
-      message: "Décrivez l’information en quelques mots avant de l’enregistrer.",
-    };
-  }
-
-  await prisma.inboxItem.create({ data: { body } });
+  const body = String(formData.get("body") ?? "");
+  const uploads = formData
+    .getAll("files")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+  const files = await Promise.all(
+    uploads.map(async (file) => ({
+      name: file.name,
+      type: file.type,
+      bytes: Buffer.from(await file.arrayBuffer()),
+    })),
+  );
+  const result = await saveInboxPieces(body, files);
+  if (!result.ok) return { message: result.message };
   revalidatePath("/");
-  return {
-    message: "Enregistré dans « À classer ». Aucun projet n’a été créé.",
-  };
+  revalidatePath("/produits");
+  revalidatePath("/fournisseurs");
+  return { message: result.message };
 }
