@@ -20,6 +20,7 @@ export function CommercialSheet({
   lines,
   totalLabel,
   notes,
+  deliveryLines = [],
 }: {
   heading: string;
   title: string;
@@ -32,6 +33,7 @@ export function CommercialSheet({
   lines: SheetLine[];
   totalLabel: string;
   notes: string[];
+  deliveryLines?: string[];
 }) {
   const identity = [
     company.address,
@@ -69,6 +71,14 @@ export function CommercialSheet({
         {partyLines.map((line) => (
           <p key={line}>{line}</p>
         ))}
+      </section>
+      <section className="grid gap-1 text-sm">
+        <p className="font-medium">Livraison</p>
+        {deliveryLines.length === 0 ? (
+          <p>Non précisée sur le dossier.</p>
+        ) : (
+          deliveryLines.map((line) => <p key={line}>{line}</p>)
+        )}
       </section>
       {lines.length === 0 ? (
         <p className="text-sm">Aucune ligne sur ce document.</p>

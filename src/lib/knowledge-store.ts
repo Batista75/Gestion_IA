@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { deliveryFromRecord, deliverySummary } from "@/domain/delivery";
 import { workflowKnowledge, type StepRecord } from "@/domain/trade-workflow";
 import {
   rankKnowledge,
@@ -231,6 +232,10 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
           project.purpose ? `Le projet consiste à ${project.purpose}` : "",
           project.budgetStated ? `Budget indiqué ${project.budgetStated}` : "",
           project.nextAction ? `Prochaine action ${project.nextAction}` : "",
+          (() => {
+            const lines = deliverySummary(deliveryFromRecord(project));
+            return lines.length ? `Livraison ${lines.join(", ")}` : "";
+          })(),
           workflowKnowledge(stepsByProject.get(project.id) ?? []),
           project.events.length ? "Actualité :" : "",
           ...project.events.map((event) => event.body),

@@ -45,8 +45,18 @@ model Project {
   currency      String         @default("EUR")
   budgetStated  String         @default("")
   lead          String         @default("")
-  tradeKey      String         @default("achat-revente-technologies")
-  createdAt     DateTime       @default(now())
+  tradeKey             String         @default("achat-revente-technologies")
+  deliveryRecipient    String         @default("")
+  deliveryAddress      String         @default("")
+  deliveryPostalCode   String         @default("")
+  deliveryCity         String         @default("")
+  deliveryCountry      String         @default("")
+  deliveryContact      String         @default("")
+  deliveryPhone        String         @default("")
+  deliverySlot         String         @default("")
+  deliveryMode         String         @default("")
+  deliveryNote         String         @default("")
+  createdAt            DateTime       @default(now())
   events        ProjectEvent[]
   quotes        Quote[]
   conversations Conversation[]

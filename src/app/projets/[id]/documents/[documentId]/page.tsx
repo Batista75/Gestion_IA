@@ -4,6 +4,7 @@ import { CommercialSheet } from "@/components/commercial-sheet";
 import { PrintButton } from "@/components/print-button";
 import { buttonVariants } from "@/components/ui/button";
 import { sheetBuys, sheetHeading } from "@/domain/company";
+import { deliveryFromRecord, deliverySummary } from "@/domain/delivery";
 import { formatCents, saleLineFigures, saleOperationTotals } from "@/domain/pricing";
 import { loadCompany } from "@/lib/company-store";
 import { prisma } from "@/lib/db";
@@ -81,6 +82,7 @@ export default async function SaleDocumentPage({
           amountLabel: formatCents(buys ? figures[index]?.lineCostCents ?? null : figures[index]?.lineNetCents ?? null),
         }))}
         totalLabel={`Total HT ${formatCents(buys ? (totals.missing > 0 ? null : totals.costCents) : totals.missing > 0 ? null : totals.netCents)}`}
+        deliveryLines={deliverySummary(deliveryFromRecord(document.project))}
         notes={[
           "Montants hors taxes. La TVA n’est pas appliquée sur cette présentation.",
           buys

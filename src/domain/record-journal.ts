@@ -42,6 +42,16 @@ export const PROJECT_FIELD_LABELS: Record<string, string> = {
   status: "Statut",
   purpose: "Objet",
   nextAction: "Prochaine action",
+  deliveryRecipient: "Destinataire livraison",
+  deliveryAddress: "Adresse de livraison",
+  deliveryPostalCode: "Code postal livraison",
+  deliveryCity: "Ville de livraison",
+  deliveryCountry: "Pays de livraison",
+  deliveryContact: "Contact livraison",
+  deliveryPhone: "Téléphone livraison",
+  deliverySlot: "Créneau de livraison",
+  deliveryMode: "Mode de livraison",
+  deliveryNote: "Consignes de livraison",
 };
 
 export function fieldChangeSummary(

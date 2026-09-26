@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DeliveryForm } from "@/components/delivery-form";
 import { ProjectOperation } from "@/components/project-operation";
 import { ProjectWorkflow } from "@/components/project-workflow";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { deliveryFromRecord, deliverySummary } from "@/domain/delivery";
 import { TRADE_STEPS, readStepStatus } from "@/domain/trade-workflow";
 import { prisma } from "@/lib/db";
 import { cn } from "@/lib/utils";
@@ -40,6 +42,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       include: { supplier: true },
     }),
   ]);
+  const delivery = deliveryFromRecord(project);
+  const deliveryLines = deliverySummary(delivery);
 
   return (
     <div className="grid gap-6">
@@ -56,6 +60,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       <nav className="flex flex-wrap gap-2 text-sm" aria-label="Sections du dossier">
         {[
           ["#parcours", "Parcours"],
+          ["#livraison", "Livraison"],
           ["#produits", "Produits et services"],
           ["#devis", "Devis"],
           ["#commandes-client", "Commandes client"],
@@ -111,11 +116,24 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             </div>
             <p>{project.purpose ? `Le projet consiste à ${project.purpose}.` : "L’objet n’est pas encore rédigé."}</p>
             <p>Prochaine action : {project.nextAction}</p>
+            <p>{deliveryLines.length > 0 ? `Livraison : ${deliveryLines.join(", ")}.` : "Livraison non précisée."}</p>
             {project.lead ? <p>Responsable : {project.lead}</p> : null}
             <p className="text-muted-foreground">Ouvert le {project.createdAt.toLocaleDateString("fr-FR")}</p>
           </CardContent>
         </Card>
       </div>
+
+      <Card id="livraison" className="scroll-mt-6">
+        <CardHeader>
+          <CardTitle>Livraison</CardTitle>
+          <CardDescription>
+            Destinataire, adresse, contact et créneau. Cette adresse peut différer de celle du client facturé. Elle est reprise sur les documents.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DeliveryForm projectId={project.id} delivery={delivery} />
+        </CardContent>
+      </Card>
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="order-2 grid min-w-0 gap-6 lg:order-1">
