@@ -4,27 +4,26 @@ Application locale de gestion pour une petite entreprise : dossiers projet, info
 
 Ce socle couvre l’accueil, la création d’un projet, le simulateur de taux de marque et l’assistant. L’assistant envoie le texte à Ollama sur le PC hôte. Les achats, la banque et le pilotage chiffré restent décrits dans l’interface, sans données inventées.
 
-## Prérequis
+## Lancer l’application sur Ubuntu
 
-- Ubuntu avec Node.js 22
-- PostgreSQL 16
-
-```bash
-sudo apt-get update
-sudo apt-get install -y postgresql postgresql-contrib
-```
-
-## Lancer l’application
+Le script installe Node.js 22 et PostgreSQL s’ils manquent, crée la base pour le compte Unix courant, puis démarre l’interface.
 
 ```bash
-npm ci
-bash scripts/cloud-agent-start.sh --prepare
-npm run dev -- --hostname 0.0.0.0 --port 3847
+cd ~/Gestion_IA
+git pull origin main
+bash scripts/setup-ubuntu.sh
 ```
 
 Ouvrez [http://127.0.0.1:3847](http://127.0.0.1:3847).
 
-`DATABASE_URL` est recopié depuis `.env.example` s’il manque. Le mot de passe `gestion_ia_local` ne sert qu’au PostgreSQL de cette machine.
+Sans réinstaller les paquets :
+
+```bash
+bash scripts/cloud-agent-start.sh --prepare
+npm run dev -- --hostname 0.0.0.0 --port 3847
+```
+
+`DATABASE_URL` est écrit dans `.env` pour le compte Unix qui lance le script. Le mot de passe `gestion_ia_local` ne sert qu’au PostgreSQL de cette machine.
 
 Pour laisser l’application tourner après la préparation :
 
