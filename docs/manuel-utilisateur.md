@@ -2,33 +2,41 @@
 
 Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification).
 
-Dernière mise à jour : 26 septembre 2026, avec l’enregistrement des pièces jointes et des versions de devis.
+Dernière mise à jour : 26 septembre 2026, avec l’assistant sur l’accueil et les propositions de pièces.
 
 ## Ouvrir l’application
 
 Sur la machine Ubuntu, ouvrez [l’accueil](/). L’adresse locale est `http://127.0.0.1:3847`.
 
-Huit entrées restent en place : Accueil, Assistant, Projets, Ventes, Achats, Banque, Pilotage et Plus. Le manuel se trouve dans l’en-tête et dans Plus.
+Huit entrées restent en place : Accueil, Répertoire, Projets, Ventes, Achats, Banque, Pilotage et Plus. L’assistant est sur l’accueil. Les listes Clients, Fournisseurs et Produits sont dans Répertoire. Le manuel se trouve dans l’en-tête et dans Plus.
 
 Les données restent sur cette machine. L’assistant envoie le texte à Ollama sur le PC hôte du réseau local, pas à un service d’IA public.
 
 ## Accueil
 
-**Nouvelle information** sert à déposer un texte, des fichiers, ou les deux. Le commentaire est facultatif dès qu’un fichier est joint. Le bouton **Enregistrer dans À classer** ajoute la note à la liste « À classer ».
+**Nouvelle information** sert à déposer un texte, des fichiers, ou les deux. Le commentaire est facultatif dès qu’un fichier est joint. Le bouton **Déposer pour analyse** conserve la pièce et prépare une proposition.
 
-Tous les fichiers sont conservés, jusqu’à 8 fichiers de 20 Mo. Un texte, un tableau, un document Word ou un PDF dont le texte peut être lu est indexé pour l’assistant. Si le texte ne peut pas être extrait, le fichier est quand même enregistré et le message le précise dans l’enrichissement. Le téléchargement se fait depuis le nom du fichier.
+Tous les fichiers sont conservés, jusqu’à 8 fichiers de 20 Mo. Un texte, un tableau, un document Word ou un PDF dont le texte peut être lu est indexé. Si le texte ne peut pas être extrait, le fichier est quand même enregistré. Le téléchargement se fait depuis le nom du fichier.
 
-Un devis, une offre ou un tarif est enrichi : chaque version garde son numéro, sa date, son fournisseur, le prix indiqué et les conditions. Une facture ou un contrat est indexé comme document, sans devenir une version de devis. Un même produit peut donc apparaître avec plusieurs prix. Ces prix sont ceux écrits dans la pièce. L’application ne les calcule pas et ne les additionne pas.
+L’assistant reconnaît le type sur la première ligne ou le nom du fichier : demande de prix (RFQ), devis, commande, facture, tarif, avoir, bon de livraison, contrat. Il relève le client, le fournisseur et les produits, puis les compare aux fiches déjà enregistrées. **À valider** montre la proposition : créer un client, un fournisseur ou un produit, ouvrir une demande, ajouter une version de devis, ou marquer une demande comme offre reçue.
 
-Sans fichier, une information trop courte, moins de 3 caractères, n’est pas enregistrée. Avec des fichiers, le message indique combien ont été enregistrés, combien de versions de devis ont été indexées, et rappelle qu’aucun projet n’a été créé. Une version déjà connue n’est pas dupliquée, mais le nouveau fichier reste conservé.
+**Confirmer** écrit ces fiches. **Écarter** laisse le fichier dans À classer. Rien n’est écrit avant confirmation, et aucun projet n’est créé.
 
-**À valider** est vide. Les propositions de prix, de tiers ou de rapprochement n’apparaissent pas encore.
+Un devis ou un tarif confirmé ajoute une version : numéro, date, fournisseur, prix indiqué et conditions. Une version déjà enregistrée n’est pas dupliquée. Une facture, une commande ou un avoir peut créer une fiche manquante, sans devenir une version de devis. Les prix restent ceux écrits dans la pièce. Ils ne sont pas calculés et ils ne sont pas additionnés.
+
+Sans fichier, une information trop courte, moins de 3 caractères, n’est pas enregistrée.
+
+L’**Assistant**, plus bas sur le même écran, reprend la conversation : questions sur les fiches, exemples de clients, confirmation d’une fiche décrite en phrase. Le bandeau Ollama est dans ce bloc.
 
 **Projets récents** reprend les six derniers dossiers. **Tous les projets** ouvre la liste complète.
 
+## Répertoire
+
+Le menu **Répertoire** ouvre les trois listes. Chaque liste reste un écran : [Clients](/clients), [Fournisseurs](/fournisseurs), [Produits](/produits).
+
 ## Clients
 
-La [vue Clients](/clients) distingue un **particulier** et une **entreprise**, en **France** ou à l’**international**. Une fiche sans type affiche **Non qualifié**.
+La [vue Clients](/clients) distingue un **particulier** et une **entreprise**, en **France** ou à l’**international**. Une fiche sans type affiche **Non qualifié**. Une fiche créée depuis une pièce confirmée porte le nom relevé et une note « à compléter ».
 
 **Nouveau client** enregistre dès que vous validez le formulaire. Renseignez le type, le nom ou la raison sociale, le pays, l’adresse, un e-mail ou un téléphone. Pour une entreprise française, le SIREN permet de déduire le numéro de TVA. Pour une entreprise étrangère, indiquez l’identifiant fiscal. Le contact et sa fonction servent au dossier commercial.
 
@@ -45,7 +53,7 @@ La [vue Fournisseurs](/fournisseurs) suit le même principe. **Achats** y renvoi
 La [vue Produits](/produits) montre tout le catalogue :
 
 - **Saisie manuelle** : nom, référence, unité, fournisseur, description. Un fournisseur inconnu est créé.
-- **Issu d’un devis** : titre du devis et un produit par ligne, ou un fichier déposé à l’accueil. Les produits entrent au catalogue. Chaque fichier de devis ajoute une version : prix indiqué et conditions. Une version ne remplace pas la précédente.
+- **Issu d’un devis** : titre du devis et un produit par ligne, ou un fichier confirmé depuis l’accueil. Chaque confirmation de devis ajoute une version : prix indiqué et conditions. Une version ne remplace pas la précédente.
 - **Saisi par l’assistant** : quand vous lui demandez d’ajouter un produit.
 
 Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **Saisie manuelle** limitent la liste. Une fiche peut porter à la fois une saisie et plusieurs devis. La carte **Versions de devis** liste chaque prix et chaque condition, sans les fusionner.
@@ -75,7 +83,7 @@ Exemple de la spécification : coût `700`, marque `30`, remise `10`. Le prix af
 
 ## Assistant
 
-L’assistant reconnaît l’intention, relit les fiches déjà enregistrées, puis agit. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
+L’assistant est sur [l’accueil](/#assistant). Il reconnaît l’intention, relit les fiches déjà enregistrées, puis agit. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
 
 Il distingue quatre demandes :
 
@@ -91,7 +99,7 @@ Pour un client, il commence par l’analyse de l’action demandée (création o
 - Un commentaire, par exemple `le téléphone est le 06 98 76 54 32`, produit une nouvelle proposition.
 - Un nouveau texte commençant par `Nouveau client` remplace la proposition en cours.
 
-Quatre exemples sont proposés sur l’écran Assistant :
+Quatre exemples sont proposés dans le bloc Assistant de l’accueil :
 
 - Particulier en France : Mme Marie Dupont, 14 rue des Lilas, 75011 Paris.
 - Particulier à l’international : M. John Miller, Londres, Royaume-Uni.

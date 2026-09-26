@@ -5,14 +5,21 @@ import { usePathname } from "next/navigation";
 import { cn } from "cn";
 
 const links = [
-  { href: "/", label: "Accueil" },
-  { href: "/assistant", label: "Assistant" },
-  { href: "/projets", label: "Projets" },
-  { href: "/ventes", label: "Ventes" },
-  { href: "/achats", label: "Achats" },
-  { href: "/banque", label: "Banque" },
-  { href: "/pilotage", label: "Pilotage" },
-  { href: "/plus", label: "Plus" },
+  { href: "/", label: "Accueil", active: (pathname: string) => pathname === "/" },
+  {
+    href: "/repertoire",
+    label: "Répertoire",
+    active: (pathname: string) =>
+      ["/repertoire", "/clients", "/fournisseurs", "/produits"].some(
+        (href) => pathname === href || pathname.startsWith(`${href}/`),
+      ),
+  },
+  { href: "/projets", label: "Projets", active: (pathname: string) => pathname.startsWith("/projets") },
+  { href: "/ventes", label: "Ventes", active: (pathname: string) => pathname.startsWith("/ventes") },
+  { href: "/achats", label: "Achats", active: (pathname: string) => pathname.startsWith("/achats") },
+  { href: "/banque", label: "Banque", active: (pathname: string) => pathname.startsWith("/banque") },
+  { href: "/pilotage", label: "Pilotage", active: (pathname: string) => pathname.startsWith("/pilotage") },
+  { href: "/plus", label: "Plus", active: (pathname: string) => pathname.startsWith("/plus") },
 ] as const;
 
 export function SiteNav() {
@@ -46,10 +53,7 @@ export function SiteNav() {
         <nav aria-label="Domaines" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <ul className="flex min-w-max gap-1">
             {links.map((link) => {
-              const active =
-                link.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(link.href);
+              const active = link.active(pathname);
               return (
                 <li key={link.href}>
                   <Link

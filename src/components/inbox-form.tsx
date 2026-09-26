@@ -22,7 +22,7 @@ export function InboxForm() {
           id="body"
           name="body"
           rows={4}
-          placeholder="Commentaire facultatif. Exemple : devis Durand à conserver, sans l’attacher à un projet."
+          placeholder="Commentaire facultatif. Exemple : facture Helios à relire, sans l’attacher à un projet."
         />
       </div>
       <div className="grid gap-2">
@@ -36,9 +36,10 @@ export function InboxForm() {
         />
       </div>
       <p className="text-sm text-muted-foreground">
-        Tous les fichiers sont conservés, jusqu’à 8 fichiers de 20 Mo. Un devis,
-        une offre ou un tarif est enrichi pour la recherche. Plusieurs versions
-        du même produit restent séparées. Rien n’est rattaché à un projet.
+        Tous les fichiers sont conservés, jusqu’à 8 fichiers de 20 Mo. L’assistant
+        reconnaît une demande de prix, un devis, une commande ou une facture,
+        puis propose les fiches. Rien n’est écrit ni rattaché à un projet avant
+        confirmation.
       </p>
       {state.message ? (
         <p role="status" className="text-sm text-foreground">
@@ -46,7 +47,7 @@ export function InboxForm() {
         </p>
       ) : null}
       <Button type="submit" disabled={pending} className="min-h-11 w-fit px-4">
-        {pending ? "Enregistrement…" : "Enregistrer dans À classer"}
+        {pending ? "Lecture…" : "Déposer pour analyse"}
       </Button>
     </form>
   );

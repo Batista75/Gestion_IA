@@ -111,7 +111,7 @@ async function syncKnowledge(): Promise<KnowledgeDoc[]> {
 }
 
 async function loadDocs(): Promise<KnowledgeDoc[]> {
-  const [clients, suppliers, products, projects, quotes, notes, files] = await Promise.all([
+  const [clients, suppliers, products, projects, quotes, notes, files, demands] = await Promise.all([
     prisma.client.findMany({ take: 500, orderBy: { name: "asc" } }),
     prisma.supplier.findMany({ take: 500, orderBy: { name: "asc" } }),
     prisma.product.findMany({
@@ -131,6 +131,7 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
       include: { files: true },
     }),
     prisma.storedFile.findMany({ take: 200, orderBy: { createdAt: "desc" } }),
+    prisma.demand.findMany({ take: 200, orderBy: { updatedAt: "desc" } }),
   ]);
 
   return [
@@ -198,6 +199,23 @@ async function loadDocs(): Promise<KnowledgeDoc[]> {
         file.originalName,
         file.kind,
         file.enrichment || `Pièce : ${file.originalName}\nFichier conservé.`,
+      ),
+    ),
+    ...demands.map((demand) =>
+      doc(
+        "demand",
+        demand.id,
+        demand.title,
+        [demand.status, demand.supplierName, demand.clientName].filter(Boolean).join(", "),
+        [
+          `Demande ${demand.title}`,
+          demand.reference ? `Référence ${demand.reference}` : "",
+          demand.clientName ? `Client ${demand.clientName}` : "",
+          demand.supplierName ? `Fournisseur ${demand.supplierName}` : "",
+          `Statut ${demand.status}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
       ),
     ),
     ...notes.map((note) =>

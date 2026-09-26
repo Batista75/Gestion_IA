@@ -16,38 +16,97 @@ export type OfferVersion = {
   lines: OfferLine[];
 };
 
+export type DocumentKind =
+  | "rfq"
+  | "devis"
+  | "commande"
+  | "facture"
+  | "tarif"
+  | "avoir"
+  | "livraison"
+  | "contrat"
+  | "document"
+  | "autre";
+
+export type DocumentParties = {
+  clientName: string;
+  supplierName: string;
+};
+
 export type DocumentReading = {
-  kind: "devis" | "tarif" | "document" | "autre";
+  kind: DocumentKind;
+  heading: string;
   enrichment: string;
   offers: OfferVersion[];
+  pricedLines: OfferLine[];
+  parties: DocumentParties;
 };
 
 const PRICE =
   /(\d{1,6}(?:[ \u00a0]\d{3})*(?:[,.]\d{1,4})?)\s*(?:€|eur)\s*(ht|ttc)?/i;
 
 export function readOfferFile(text: string, filename: string): DocumentReading {
-  const parsed = splitDocuments(text)
-    .map((part) => parseOffer(part, filename))
-    .filter((offer): offer is OfferVersion => offer !== null);
-  const kind = documentKind(text, filename, parsed.length > 0);
-  const offers = keepsCommercialVersion(kind) ? parsed : [];
+  const parts = splitDocuments(text);
+  const readings = (parts.length > 0 ? parts : [text]).map((part) => readSingle(part, filename));
+  if (readings.length === 1) return readings[0] ?? readSingle("", filename);
   return {
-    kind,
-    offers,
-    enrichment: enrichmentOf(filename, kind, text, offers),
+    kind: readings[0]?.kind ?? "document",
+    heading: readings[0]?.heading ?? filename,
+    offers: readings.flatMap((reading) => reading.offers),
+    pricedLines: readings.flatMap((reading) => reading.pricedLines),
+    parties: {
+      clientName: readings.map((reading) => reading.parties.clientName).find(Boolean) ?? "",
+      supplierName: readings.map((reading) => reading.parties.supplierName).find(Boolean) ?? "",
+    },
+    enrichment: readings.map((reading) => reading.enrichment).join("\n\n"),
   };
 }
 
-export function keepsCommercialVersion(kind: DocumentReading["kind"]): boolean {
+function readSingle(text: string, filename: string): DocumentReading {
+  const parties = partiesOf(text);
+  const parsed = [text]
+    .map((part) => parseOffer(part, filename))
+    .filter((offer): offer is OfferVersion => offer !== null)
+    .map((offer) => ({
+      ...offer,
+      supplierName: offer.supplierName || parties.supplierName,
+    }));
+  const kind = documentKind(text, filename);
+  const offers = keepsCommercialVersion(kind) ? parsed : [];
+  const pricedLines = parsed.flatMap((offer) => offer.lines);
+  const heading = clean(text.split(/\n/).map((line) => line.trim()).find(Boolean) || filename).slice(0, 180);
+  return {
+    kind,
+    heading,
+    offers,
+    pricedLines,
+    parties,
+    enrichment: enrichmentOf(filename, kind, text, offers, pricedLines, parties),
+  };
+}
+
+export function keepsCommercialVersion(kind: DocumentKind): boolean {
   return kind === "devis" || kind === "tarif";
 }
 
 export function kindLabel(kind: string): string {
   switch (kind) {
+    case "rfq":
+      return "Demande de prix";
     case "devis":
       return "Devis";
+    case "commande":
+      return "Commande";
+    case "facture":
+      return "Facture";
     case "tarif":
       return "Tarif";
+    case "avoir":
+      return "Avoir";
+    case "livraison":
+      return "Bon de livraison";
+    case "contrat":
+      return "Contrat";
     case "document":
       return "Document";
     default:
@@ -57,7 +116,9 @@ export function kindLabel(kind: string): string {
 
 export function splitDocuments(text: string): string[] {
   const parts = text
-    .split(/\n(?=\s*(?:devis|offre|quotation|tarif)\b)/i)
+    .split(
+      /\n(?=\s*(?:facture|invoice|avoir|bon de livraison|bon de commande|purchase order|commande|rfq|demande[\s-]+de[\s-]+prix|devis|offre|quotation|tarif)\b)/i,
+    )
     .map((part) => part.trim())
     .filter(Boolean);
   return parts.length > 0 ? parts : [text.trim()].filter(Boolean);
@@ -133,8 +194,10 @@ function parseOfferLine(line: string): OfferLine | null {
 function headerOf(text: string, filename: string): Omit<OfferVersion, "fingerprint" | "lines"> {
   const number = text.match(/\bn[°o]\s*[:.]?\s*([A-Z0-9][A-Z0-9./-]{2,})/i);
   const date = text.match(/\b(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})\b/);
-  const supplier = text.match(/(?:fournisseur|[ée]metteur|vendeur)\s*[:]\s*([^\n]+)/i);
-  const titleLine = text.split(/\n/).find((line) => /\b(devis|offre|tarif)\b/i.test(line));
+  const supplier = text.match(/(?:fournisseur|[ée]metteur|vendeur|supplier)\s*[:]\s*([^\n]+)/i);
+  const titleLine = text.split(/\n/).find((line) =>
+    /\b(devis|offre|tarif|facture|commande|rfq|demande de prix|avoir|livraison)\b/i.test(line),
+  );
   const title = clean(titleLine || filename.replace(/\.[^.]+$/, "")).slice(0, 140);
   const versionLabel = [number?.[1], date?.[1]].filter(Boolean).join(" · ") || filename;
   return {
@@ -145,33 +208,66 @@ function headerOf(text: string, filename: string): Omit<OfferVersion, "fingerpri
   };
 }
 
-function documentKind(
-  text: string,
-  filename: string,
-  hasOffer: boolean,
-): DocumentReading["kind"] {
-  const hay = `${filename}\n${text}`;
-  if (hasOffer && /\b(devis|offre|quotation)\b/i.test(hay)) return "devis";
-  if (hasOffer && /\btarif\b/i.test(hay)) return "tarif";
-  if (/\b(contrat|facture|conditions g[ée]n[ée]rales|cgv)\b/i.test(hay)) return "document";
-  if (text.trim().length > 0) return "document";
-  return "autre";
+const KIND_RULES: Array<{ kind: DocumentKind; pattern: RegExp }> = [
+  { kind: "facture", pattern: /\b(factures?|invoices?)\b/i },
+  { kind: "avoir", pattern: /\b(avoirs?|credit note|note de cr[ée]dit)\b/i },
+  { kind: "livraison", pattern: /\b(bon de livraison|delivery note|bordereau de livraison)\b/i },
+  { kind: "commande", pattern: /\b(bon de commande|purchase order|commandes?)\b/i },
+  {
+    kind: "rfq",
+    pattern:
+      /\b(rfq|rfp|demande[\s-]+de[\s-]+prix|request[\s-]+for[\s-]+quotation|appel d['’\s-]*offres|consultations?)\b/i,
+  },
+  { kind: "devis", pattern: /\b(devis|offres?|quotations?)\b/i },
+  { kind: "tarif", pattern: /\btarifs?\b/i },
+  { kind: "contrat", pattern: /\b(contrat|conditions g[ée]n[ée]rales|cgv)\b/i },
+];
+
+function documentKind(text: string, filename: string): DocumentKind {
+  const first = text.split(/\n/).map((line) => line.trim()).filter(Boolean)[0] ?? "";
+  return (
+    matchKind(`${filename}\n${first}`) ??
+    matchKind(text) ??
+    (text.trim() ? "document" : "autre")
+  );
+}
+
+function matchKind(value: string): DocumentKind | null {
+  for (const rule of KIND_RULES) {
+    if (rule.pattern.test(value)) return rule.kind;
+  }
+  return null;
+}
+
+function partiesOf(text: string): DocumentParties {
+  return {
+    clientName: labeled(text, "client|destinataire|acheteur|customer|bill to"),
+    supplierName: labeled(text, "fournisseur|[ée]metteur|vendeur|supplier"),
+  };
+}
+
+function labeled(text: string, labels: string): string {
+  const match = text.match(new RegExp(`(?:${labels})\\s*[:\\-]\\s*([^\\n]+)`, "i"));
+  return clean(match?.[1] ?? "").slice(0, 160);
 }
 
 function enrichmentOf(
   filename: string,
-  kind: DocumentReading["kind"],
+  kind: DocumentKind,
   text: string,
   offers: OfferVersion[],
+  pricedLines: OfferLine[],
+  parties: DocumentParties,
 ): string {
+  const head = [
+    `Pièce : ${filename}`,
+    `Type : ${kindLabel(kind)}`,
+    parties.clientName ? `Client : ${parties.clientName}` : "",
+    parties.supplierName ? `Fournisseur : ${parties.supplierName}` : "",
+  ].filter(Boolean);
   if (offers.length > 0) {
     const blocks = offers.map((offer) => {
-      const lines = offer.lines.map(
-        (line) =>
-          `- ${line.product}${line.reference ? ` (${line.reference})` : ""} — prix indiqué ${line.statedPrice}${
-            line.conditions ? ` — conditions : ${line.conditions}` : ""
-          }`,
-      );
+      const lines = offer.lines.map((line) => linePhrase(line));
       return [
         `Version ${offer.versionLabel}`,
         offer.supplierName ? `Fournisseur : ${offer.supplierName}` : "",
@@ -181,13 +277,26 @@ function enrichmentOf(
         .filter(Boolean)
         .join("\n");
     });
-    return [`Pièce : ${filename}`, `Type : ${kind}`, ...blocks].join("\n\n");
+    return [...head, ...blocks].join("\n\n");
+  }
+  if (pricedLines.length > 0) {
+    return [
+      ...head,
+      "Montants indiqués dans la pièce. Ils ne deviennent pas une version de devis.",
+      ...pricedLines.map((line) => linePhrase(line)),
+    ].join("\n");
   }
   const excerpt = text.trim().replace(/\s+/g, " ").slice(0, 900);
   if (!excerpt) {
-    return `Pièce : ${filename}\nType : ${kind}\nFichier conservé. Le texte n’a pas pu être extrait.`;
+    return [...head, "Fichier conservé. Le texte n’a pas pu être extrait."].join("\n");
   }
-  return [`Pièce : ${filename}`, `Type : ${kind}`, `Extrait : ${excerpt}`].join("\n");
+  return [...head, `Extrait : ${excerpt}`].join("\n");
+}
+
+function linePhrase(line: OfferLine): string {
+  return `- ${line.product}${line.reference ? ` (${line.reference})` : ""} — prix indiqué ${line.statedPrice}${
+    line.conditions ? ` — conditions : ${line.conditions}` : ""
+  }`;
 }
 
 function pricePhrase(line: string): string {
@@ -199,4 +308,309 @@ function pricePhrase(line: string): string {
 
 function clean(value: string): string {
   return value.replace(/\s+/g, " ").trim();
+}
+
+export type DirectoryQuote = {
+  title: string;
+  versionLabel: string;
+  supplierName: string;
+  fingerprint: string;
+  lines: Array<{ product: string; statedPrice: string; conditions: string }>;
+};
+
+export type DirectoryDemand = {
+  title: string;
+  supplierName: string;
+  clientName: string;
+  status: string;
+};
+
+export type DirectorySnapshot = {
+  clients: string[];
+  suppliers: string[];
+  products: Array<{ name: string; reference: string }>;
+  quotes: DirectoryQuote[];
+  demands: DirectoryDemand[];
+};
+
+export type ProposedAction =
+  | { type: "create_client"; name: string }
+  | { type: "create_supplier"; name: string }
+  | { type: "create_product"; name: string; reference: string; supplierName: string; source: string }
+  | { type: "add_quote_version"; offer: OfferVersion }
+  | { type: "record_demand"; title: string; reference: string; clientName: string; supplierName: string }
+  | { type: "mark_demand"; title: string; status: "offre reçue" };
+
+export type ProposalField = { label: string; value: string };
+export type ProposalSource = { label: string; title: string };
+
+export type DocumentProposalDraft = {
+  kind: DocumentKind;
+  title: string;
+  summary: string;
+  fields: ProposalField[];
+  actions: ProposedAction[];
+  sources: ProposalSource[];
+};
+
+export function proposeFromReading(
+  reading: DocumentReading,
+  filename: string,
+  directory: DirectorySnapshot,
+  ragHits: ProposalSource[],
+): DocumentProposalDraft | null {
+  if (reading.kind === "autre") return null;
+  if (
+    reading.kind === "document" &&
+    !reading.parties.clientName &&
+    !reading.parties.supplierName &&
+    reading.pricedLines.length === 0
+  ) {
+    return null;
+  }
+
+  const clientName = reading.parties.clientName;
+  const supplierName = reading.parties.supplierName;
+  const knownClient = knownParty(clientName, directory.clients);
+  const knownSupplier = knownParty(supplierName, directory.suppliers);
+  const actions: ProposedAction[] = [];
+  const title = (reading.offers[0]?.title || reading.heading || filename).slice(0, 180);
+  const reference = reading.offers[0]?.versionLabel || "";
+
+  if (clientName && !knownClient) actions.push({ type: "create_client", name: clientName });
+  if (supplierName && !knownSupplier) actions.push({ type: "create_supplier", name: supplierName });
+
+  if (reading.kind === "devis" || reading.kind === "tarif") {
+    for (const offer of reading.offers) {
+      const already = directory.quotes.some((quote) => quote.fingerprint === offer.fingerprint);
+      if (!already) actions.push({ type: "add_quote_version", offer });
+    }
+    const demand = directory.demands.find(
+      (item) => item.status !== "offre reçue" && sameText(item.supplierName, supplierName),
+    );
+    if (demand) actions.push({ type: "mark_demand", title: demand.title, status: "offre reçue" });
+  } else if (reading.kind === "rfq") {
+    const same = directory.demands.find(
+      (item) => sameText(item.title, title) && sameText(item.supplierName, supplierName),
+    );
+    if (!same) {
+      actions.push({
+        type: "record_demand",
+        title,
+        reference: reference.slice(0, 80),
+        clientName,
+        supplierName,
+      });
+    }
+  } else {
+    for (const line of reading.pricedLines) {
+      if (!matchProduct(line, directory.products)) {
+        actions.push({
+          type: "create_product",
+          name: line.product,
+          reference: line.reference,
+          supplierName,
+          source: reading.kind,
+        });
+      }
+    }
+  }
+
+  return {
+    kind: reading.kind,
+    title,
+    summary: summaryOf(reading, filename, knownClient, knownSupplier, directory, actions, ragHits),
+    fields: fieldsOf(reading, clientName, supplierName, knownClient, knownSupplier, actions),
+    actions,
+    sources: sourcesOf(knownClient, knownSupplier, reading, directory, ragHits),
+  };
+}
+
+export function actionLabel(action: ProposedAction): string {
+  switch (action.type) {
+    case "create_client":
+      return `Créer le client ${action.name}`;
+    case "create_supplier":
+      return `Créer le fournisseur ${action.name}`;
+    case "create_product":
+      return `Créer le produit ${action.name}`;
+    case "add_quote_version":
+      return `Ajouter la version ${action.offer.versionLabel}`;
+    case "record_demand":
+      return `Ouvrir la demande ${action.title}`;
+    case "mark_demand":
+      return `Mettre à jour la demande ${action.title} : offre reçue`;
+  }
+}
+
+function fieldsOf(
+  reading: DocumentReading,
+  clientName: string,
+  supplierName: string,
+  knownClient: string | null,
+  knownSupplier: string | null,
+  actions: ProposedAction[],
+): ProposalField[] {
+  const products = reading.pricedLines.map((line) => {
+    const price = line.statedPrice ? ` — ${line.statedPrice}` : "";
+    const conditions = line.conditions ? ` — ${line.conditions}` : "";
+    return `${line.product}${price}${conditions}`;
+  });
+  return [
+    { label: "Type", value: kindLabel(reading.kind) },
+    {
+      label: "Client",
+      value: clientName
+        ? knownClient
+          ? `${knownClient} · déjà au répertoire`
+          : `${clientName} · à créer`
+        : "Non identifié",
+    },
+    {
+      label: "Fournisseur",
+      value: supplierName
+        ? knownSupplier
+          ? `${knownSupplier} · déjà au répertoire`
+          : `${supplierName} · à créer`
+        : "Non identifié",
+    },
+    { label: "Produits", value: products.join("\n") || "Aucun produit chiffré" },
+    {
+      label: "Suite",
+      value:
+        actions.length > 0
+          ? actions.map((action) => actionLabel(action)).join("\n")
+          : "Conserver la pièce, sans nouvelle fiche",
+    },
+  ];
+}
+
+function summaryOf(
+  reading: DocumentReading,
+  filename: string,
+  knownClient: string | null,
+  knownSupplier: string | null,
+  directory: DirectorySnapshot,
+  actions: ProposedAction[],
+  ragHits: ProposalSource[],
+): string {
+  const clientName = reading.parties.clientName;
+  const supplierName = reading.parties.supplierName;
+  const lines = [`Type reconnu : ${kindLabel(reading.kind)}.`, `Pièce : ${filename}.`];
+  lines.push(
+    clientName
+      ? knownClient
+        ? `Client déjà au répertoire : ${knownClient}.`
+        : `Client à créer : ${clientName}. La fiche restera à compléter.`
+      : "Aucun client identifié sur la pièce.",
+  );
+  lines.push(
+    supplierName
+      ? knownSupplier
+        ? `Fournisseur déjà au répertoire : ${knownSupplier}.`
+        : `Fournisseur à créer : ${supplierName}.`
+      : "Aucun fournisseur identifié sur la pièce.",
+  );
+  for (const line of reading.pricedLines) {
+    const known = matchProduct(line, directory.products);
+    lines.push(
+      known
+        ? `Produit déjà au catalogue : ${known.name}${line.statedPrice ? `, prix indiqué ${line.statedPrice}` : ""}.`
+        : `Produit à créer : ${line.product}${line.statedPrice ? `, prix indiqué ${line.statedPrice}` : ""}.`,
+    );
+    const earlier = earlierVersion(line, reading, directory);
+    const oldPrice = earlier?.lines.find((item) => sameText(item.product, line.product))?.statedPrice;
+    if (earlier && line.statedPrice && oldPrice && oldPrice !== line.statedPrice) {
+      lines.push(
+        `Une version existe déjà${earlier.versionLabel ? ` (${earlier.versionLabel})` : ""}, prix indiqué ${oldPrice}. Le prix indiqué ${line.statedPrice} est proposé à part, avec ses conditions.`,
+      );
+    }
+  }
+  if (reading.kind === "facture" || reading.kind === "commande" || reading.kind === "avoir") {
+    lines.push("Les montants restent ceux de la pièce. Aucune version de devis n’est créée.");
+  }
+  if ((reading.kind === "devis" || reading.kind === "tarif") && reading.offers.length > 0) {
+    const fresh = actions.some((action) => action.type === "add_quote_version");
+    if (!fresh) {
+      lines.push("Cette version est déjà enregistrée. Le fichier est conservé, le devis n’est pas dupliqué.");
+    }
+  }
+  if (ragHits.length > 0) {
+    lines.push(`Fiches proches : ${ragHits.slice(0, 4).map((hit) => `${hit.label} ${hit.title}`).join(", ")}.`);
+  }
+  lines.push("Aucun projet n’est créé. Rien n’est écrit tant que la proposition n’est pas confirmée.");
+  return lines.join("\n");
+}
+
+function sourcesOf(
+  knownClient: string | null,
+  knownSupplier: string | null,
+  reading: DocumentReading,
+  directory: DirectorySnapshot,
+  ragHits: ProposalSource[],
+): ProposalSource[] {
+  const sources: ProposalSource[] = [];
+  if (knownClient) sources.push({ label: "Client", title: knownClient });
+  if (knownSupplier) sources.push({ label: "Fournisseur", title: knownSupplier });
+  for (const line of reading.pricedLines) {
+    const known = matchProduct(line, directory.products);
+    if (known) sources.push({ label: "Produit", title: known.name });
+  }
+  sources.push(...ragHits);
+  const seen = new Set<string>();
+  return sources.filter((source) => {
+    const key = `${fold(source.label)}:${fold(source.title)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function earlierVersion(
+  line: OfferLine,
+  reading: DocumentReading,
+  directory: DirectorySnapshot,
+): DirectoryQuote | null {
+  const current = reading.offers.find((offer) => offer.lines.some((item) => sameText(item.product, line.product)));
+  return (
+    directory.quotes.find((quote) => {
+      if (current && quote.fingerprint === current.fingerprint) return false;
+      return quote.lines.some((item) => sameText(item.product, line.product) && item.statedPrice && item.statedPrice !== line.statedPrice);
+    }) ?? null
+  );
+}
+
+function matchProduct(
+  line: OfferLine,
+  products: Array<{ name: string; reference: string }>,
+): { name: string; reference: string } | null {
+  if (line.reference) {
+    const byRef = products.find((product) => product.reference && fold(product.reference) === fold(line.reference));
+    if (byRef) return byRef;
+  }
+  const name = knownParty(line.product, products.map((product) => product.name));
+  return name ? products.find((product) => product.name === name) ?? null : null;
+}
+
+function knownParty(name: string, names: string[]): string | null {
+  const wanted = fold(name);
+  if (wanted.length < 2) return null;
+  const exact = names.find((item) => fold(item) === wanted);
+  if (exact) return exact;
+  const contained = names.filter((item) => {
+    const folded = fold(item);
+    return folded.length >= 3 && wanted.includes(folded);
+  });
+  return contained.length === 1 ? contained[0] ?? null : null;
+}
+
+function sameText(left: string, right: string): boolean {
+  return Boolean(left) && Boolean(right) && fold(left) === fold(right);
+}
+
+function fold(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }

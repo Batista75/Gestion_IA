@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { AssistantChat } from "@/components/assistant-chat";
 import { InboxForm } from "@/components/inbox-form";
+import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -13,6 +15,29 @@ import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+function proposalView(payload: unknown): {
+  fields: Array<{ label: string; value: string }>;
+  sources: Array<{ label: string; title: string }>;
+} {
+  if (!payload || typeof payload !== "object") return { fields: [], sources: [] };
+  const value = payload as { fields?: unknown; sources?: unknown };
+  return {
+    fields: rows(value.fields),
+    sources: rows(value.sources).map((source) => ({ label: source.label, title: source.value })),
+  };
+}
+
+function rows(value: unknown): Array<{ label: string; value: string }> {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as { label?: unknown; value?: unknown; title?: unknown };
+    const label = typeof row.label === "string" ? row.label : "";
+    const text = typeof row.value === "string" ? row.value : typeof row.title === "string" ? row.title : "";
+    return label && text ? [{ label, value: text }] : [];
+  });
+}
+
 function previewEnrichment(value: string): string {
   const lines = value
     .split(/\n/)
@@ -24,7 +49,7 @@ function previewEnrichment(value: string): string {
 }
 
 export default async function HomePage() {
-  const [projects, inbox] = await Promise.all([
+  const [projects, inbox, proposals] = await Promise.all([
     prisma.project.findMany({
       orderBy: { createdAt: "desc" },
       take: 6,
@@ -34,28 +59,36 @@ export default async function HomePage() {
       take: 8,
       include: { files: { orderBy: { createdAt: "asc" } } },
     }),
+    prisma.documentProposal.findMany({
+      where: { status: "en_attente" },
+      orderBy: { createdAt: "desc" },
+      take: 12,
+      include: { file: true },
+    }),
   ]);
+  const pending: PendingProposal[] = proposals.map((proposal) => {
+    const view = proposalView(proposal.payload);
+    return {
+      id: proposal.id,
+      kind: proposal.kind,
+      title: proposal.title,
+      summary: proposal.summary,
+      fileName: proposal.file?.originalName ?? proposal.title,
+      fileId: proposal.fileId ?? "",
+      fields: view.fields,
+      sources: view.sources,
+    };
+  });
 
   return (
     <div className="grid gap-6">
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Déposez un texte ou des fichiers. Une note de l’accueil ne crée pas
-          de projet. L’assistant peut créer un compte, un fournisseur, un
-          produit ou un projet si vous le lui demandez.
+          Déposez une pièce ou posez une question. L’assistant reconnaît le
+          type, relit le répertoire, et propose une fiche avant de l’écrire.
+          Une pièce ne crée pas de projet.
         </p>
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Link href="/clients" className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 text-sm font-medium">
-            Clients
-          </Link>
-          <Link href="/fournisseurs" className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 text-sm font-medium">
-            Fournisseurs
-          </Link>
-          <Link href="/produits" className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 text-sm font-medium">
-            Produits
-          </Link>
-        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
@@ -63,8 +96,8 @@ export default async function HomePage() {
           <CardHeader>
             <CardTitle>Nouvelle information</CardTitle>
             <CardDescription>
-              Le texte et les fichiers sont enregistrés. Un devis important est
-              enrichi pour la recherche. Rien n’est rattaché à un projet.
+              Le fichier est conservé. La lecture du type, du client et du
+              fournisseur arrive dans À valider.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -76,17 +109,28 @@ export default async function HomePage() {
           <CardHeader>
             <CardTitle>À valider</CardTitle>
             <CardDescription>
-              Les propositions de prix, de tiers ou de rapprochement
-              apparaîtront ici, avec leur source, avant toute confirmation.
+              Client, fournisseur, produit, demande ou version de devis :
+              confirmez pour écrire, ou écartez. Les prix indiqués restent
+              séparés.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Aucune proposition en attente.
-            </p>
+            <ProposalBoard proposals={pending} />
           </CardContent>
         </Card>
       </div>
+
+      <section id="assistant" className="grid gap-3">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold">Assistant</h2>
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+            La conversation est ici, à côté des pièces. Elle relit les mêmes
+            fiches. Un client décrit en phrase reste une proposition à
+            confirmer dans le fil. Il ne calcule pas les prix.
+          </p>
+        </div>
+        <AssistantChat />
+      </section>
 
       <section className="grid gap-3">
         <div className="flex items-center justify-between gap-3">

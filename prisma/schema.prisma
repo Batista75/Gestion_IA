@@ -101,9 +101,42 @@ model StoredFile {
   contentHash   String     @default("")
   createdAt     DateTime   @default(now())
   quotes        Quote[]
+  proposals     DocumentProposal[]
+  demands       Demand[]
 
   @@index([inboxItemId])
   @@index([contentHash])
+}
+
+model Demand {
+  id           String      @id @default(cuid())
+  title        String
+  reference    String      @default("")
+  clientName   String      @default("")
+  supplierName String      @default("")
+  status       String      @default("ouverte")
+  fileId       String?
+  file         StoredFile? @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([fileId])
+  @@index([status])
+}
+
+model DocumentProposal {
+  id        String      @id @default(cuid())
+  status    String      @default("en_attente")
+  fileId    String?
+  file      StoredFile? @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  kind      String
+  title     String
+  summary   String
+  payload   Json
+  createdAt DateTime    @default(now())
+
+  @@index([status])
+  @@index([fileId])
 }
 
 model Quote {

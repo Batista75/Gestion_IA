@@ -46,6 +46,9 @@ export function productOrigin(source: string, quotes: string[]): string {
   }
   if (source === "assistant") return "Saisi par l’assistant";
   if (source === "devis") return "Issu d’un devis";
+  if (source === "facture") return "Issu d’une facture";
+  if (source === "commande") return "Issu d’une commande";
+  if (source === "rfq") return "Issu d’une demande de prix";
   return "Saisie manuelle";
 }
 

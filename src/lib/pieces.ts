@@ -5,12 +5,7 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { nameKey } from "@/domain/catalog";
-import {
-  keepsCommercialVersion,
-  readOfferFile,
-  type OfferLine,
-  type OfferVersion,
-} from "@/domain/offer-versions";
+import { readOfferFile, type OfferLine, type OfferVersion } from "@/domain/offer-versions";
 import { prisma } from "@/lib/db";
 
 const execFileAsync = promisify(execFile);
@@ -70,8 +65,7 @@ export async function saveInboxPieces(
   const item = await prisma.inboxItem.create({ data: { body: text } });
   await mkdir(PIECES_DIR, { recursive: true });
 
-  let versions = 0;
-  let known = 0;
+  const stored = [];
   for (const entry of prepared) {
     const id = randomUUID();
     const storagePath = `${id}-${safeFileName(entry.file.name)}`;
@@ -97,15 +91,16 @@ export async function saveInboxPieces(
       throw error;
     }
 
-    if (!keepsCommercialVersion(entry.reading.kind)) continue;
-    for (const offer of entry.reading.offers) {
-      const inserted = await insertOfferVersion(offer, id);
-      if (inserted) versions += 1;
-      else known += 1;
-    }
+    stored.push({
+      id,
+      originalName: safeDisplayName(entry.file.name),
+      reading: entry.reading,
+    });
   }
 
-  return { ok: true, message: intakeMessage(files.length, versions, known) };
+  const { queueDocumentProposals } = await import("@/lib/document-proposals");
+  const proposals = await queueDocumentProposals(stored);
+  return { ok: true, message: intakeMessage(files.length, proposals) };
 }
 
 export function resolveStoredPath(storagePath: string): string | null {
@@ -116,7 +111,7 @@ export function resolveStoredPath(storagePath: string): string | null {
   return target;
 }
 
-async function insertOfferVersion(offer: OfferVersion, fileId: string): Promise<boolean> {
+export async function recordOfferVersion(offer: OfferVersion, fileId: string | null): Promise<boolean> {
   const existing = await prisma.quote.findUnique({
     where: { fingerprint: offer.fingerprint },
   });
@@ -130,7 +125,7 @@ async function insertOfferVersion(offer: OfferVersion, fileId: string): Promise<
           supplierName: offer.supplierName.slice(0, 160),
           versionLabel: offer.versionLabel.slice(0, 160),
           fingerprint: offer.fingerprint,
-          fileId,
+          fileId: fileId ?? undefined,
         },
       });
       for (const line of offer.lines) {
@@ -252,26 +247,21 @@ async function withTempFile(
   }
 }
 
-function intakeMessage(files: number, versions: number, known: number): string {
+function intakeMessage(files: number, proposals: number): string {
   if (files === 0) {
     return "Enregistré dans « À classer ». Aucun projet n’a été créé.";
   }
   const parts = [
     files === 1 ? "1 fichier enregistré." : `${files} fichiers enregistrés.`,
   ];
-  if (versions > 0) {
+  if (proposals > 0) {
     parts.push(
-      versions === 1
-        ? "1 version de devis indexée, conservée à part."
-        : `${versions} versions de devis indexées, chacune conservée à part.`,
+      proposals === 1
+        ? "1 proposition est à confirmer dans À valider."
+        : `${proposals} propositions sont à confirmer dans À valider.`,
     );
-  }
-  if (known > 0) {
-    parts.push(
-      known === 1
-        ? "1 version déjà connue : le fichier est conservé, le devis n’est pas dupliqué."
-        : `${known} versions déjà connues : les fichiers sont conservés, les devis ne sont pas dupliqués.`,
-    );
+  } else {
+    parts.push("Aucune fiche à créer n’a été reconnue.");
   }
   parts.push("Aucun projet n’a été créé.");
   return parts.join(" ");
