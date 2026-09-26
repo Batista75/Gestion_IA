@@ -152,7 +152,8 @@ export function AssistantChat({ proposals = [] }: { proposals?: PendingProposal[
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void send(draft, files);
+    const selected = [...(fileRef.current?.files ?? [])];
+    void send(draft, selected.length > 0 ? selected : files);
   }
 
   return (

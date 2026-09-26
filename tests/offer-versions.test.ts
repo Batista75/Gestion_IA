@@ -168,8 +168,22 @@ Vis à bois VIS-01 | 0,18 € HT | franco 50 pièces`,
   assert.equal(duplicate?.actions.some((action) => action.type === "add_quote_version"), false);
   assert.match(duplicate?.summary ?? "", /déjà enregistrée/);
 
-  const linked = proposeFromReading(rfq, "rfq.txt", { ...emptyDirectory, projects: ["Atlas"] }, [], "pour le projet Atlas");
+  const linked = proposeFromReading(
+    rfq,
+    "rfq.txt",
+    { ...emptyDirectory, projects: ["Atlas", "Atlas", "Horizon", "Horizon 2"] },
+    [],
+    "pour le projet Atlas",
+  );
   assert.match(linked?.summary ?? "", /Demande de devis reçue/);
   assert.match(linked?.summary ?? "", /Projet déjà ouvert : Atlas/);
   assert.equal(linked?.fields.find((field) => field.label === "Projet")?.value, "Atlas · déjà ouvert, pièce non rattachée");
+  const precise = proposeFromReading(
+    rfq,
+    "rfq.txt",
+    { ...emptyDirectory, projects: ["Horizon", "Horizon 2"] },
+    [],
+    "dossier Horizon 2",
+  );
+  assert.match(precise?.summary ?? "", /Projet déjà ouvert : Horizon 2/);
 });

@@ -589,11 +589,17 @@ export function cycleSentence(kind: DocumentKind): string {
 
 function mentionedProject(context: string, names: string[]): string | null {
   const hay = fold(context);
-  const hits = names.filter((name) => {
+  const unique = [...new Map(names.map((name) => [fold(name), name])).values()];
+  const hits = unique.filter((name) => {
     const folded = fold(name);
     return folded.length >= 3 && hay.includes(folded);
   });
-  return hits.length === 1 ? hits[0] ?? null : null;
+  if (hits.length === 0) return null;
+  hits.sort((left, right) => fold(right).length - fold(left).length);
+  const best = hits[0];
+  if (!best) return null;
+  const sameLength = hits.filter((name) => fold(name).length === fold(best).length);
+  return sameLength.length === 1 ? best : null;
 }
 
 function sourcesOf(
