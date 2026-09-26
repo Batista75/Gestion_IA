@@ -136,6 +136,11 @@ export function ProjectOperation({
         projectId={projectId}
         documents={supplierOrders}
       />
+      <p className="text-sm">
+        <Link href={`/projets/${projectId}/facture`} className="font-medium underline-offset-4 hover:underline">
+          Voir la facture client
+        </Link>
+      </p>
       <p className="text-sm text-muted-foreground">
         Les pièces déjà enregistrées sur le dossier restent dans l’actualité. Le{" "}
         <Link href="/ventes" className="font-medium text-foreground underline-offset-4 hover:underline">
@@ -355,6 +360,12 @@ function DocumentCard({ projectId, document }: { projectId: string; document: Op
         <Badge variant="secondary">{saleKindLabel(document.kind)}</Badge>
         <Badge variant="outline">{saleStatusLabel(document.status)}</Badge>
         <span className="text-xs text-muted-foreground">{document.createdLabel}</span>
+        <Link
+          href={`/projets/${projectId}/documents/${document.id}`}
+          className="text-sm font-medium underline-offset-4 hover:underline"
+        >
+          Voir le document
+        </Link>
       </div>
       {document.supplierName ? <p className="text-sm">Fournisseur {document.supplierName}</p> : null}
       <ul className="grid gap-2">

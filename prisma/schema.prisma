@@ -17,6 +17,22 @@ model AppSetting {
   updatedAt   DateTime @updatedAt
 }
 
+model CompanyProfile {
+  id         String   @id @default("local")
+  legalName  String   @default("")
+  address    String   @default("")
+  postalCode String   @default("")
+  city       String   @default("")
+  country    String   @default("")
+  email      String   @default("")
+  phone      String   @default("")
+  siren      String   @default("")
+  vatNumber  String   @default("")
+  logoPath   String   @default("")
+  logoMime   String   @default("")
+  updatedAt  DateTime @updatedAt
+}
+
 model Project {
   id            String         @id @default(cuid())
   name          String

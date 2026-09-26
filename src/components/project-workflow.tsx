@@ -122,7 +122,11 @@ function StepForm({
       {warning ? <p className="text-sm leading-6">{warning}</p> : null}
       {step.key === "facturation" ? (
         <p className="text-sm leading-6">
-          L’application n’émet pas la facture et ne lui donne pas de numéro. Indiquez la référence déjà portée sur la pièce.
+          L’application n’émet pas la facture et ne lui donne pas de numéro. Indiquez la référence déjà portée sur la pièce.{" "}
+          <Link href={`/projets/${projectId}/facture`} className="font-medium underline-offset-4 hover:underline">
+            Voir la facture client
+          </Link>
+          .
         </p>
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2">

@@ -1,5 +1,6 @@
 import { GPU_SIZING_NOTE, modelsForRole } from "@/domain/agent";
 import { maskSecret } from "@/domain/technical-settings";
+import { CompanyForm } from "@/components/company-form";
 import { ConfigurationForm } from "@/components/configuration-form";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,13 +10,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { loadCompany } from "@/lib/company-store";
 import { getOllamaStatus } from "@/lib/ollama";
 import { loadTechnicalConfig } from "@/lib/technical-settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function ConfigurationPage() {
-  const [config, status] = await Promise.all([loadTechnicalConfig(), getOllamaStatus()]);
+  const [config, status, company] = await Promise.all([loadTechnicalConfig(), getOllamaStatus(), loadCompany()]);
   const chatModels = modelsForRole(status.models, "chat");
   const embedModels = modelsForRole(status.models, "embed");
   const rerankModels = modelsForRole(status.models, "rerank");
@@ -24,9 +26,21 @@ export default async function ConfigurationPage() {
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Configuration</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Administration technique. Le serveur d’inférence, le type de modèle et la clé d’API se règlent ici. Les fiches métier restent dans les autres menus.
+          L’identité de l’entreprise et son logo figurent sur les documents. Le serveur d’inférence, le type de modèle et la clé d’API se règlent ensuite.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Entreprise</CardTitle>
+          <CardDescription>
+            Raison sociale, coordonnées et logo. Ils s’impriment en tête du devis, de la commande et de la facture.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CompanyForm company={company} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

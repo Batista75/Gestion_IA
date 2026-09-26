@@ -31,7 +31,7 @@ export function SiteNav() {
   const pathname = usePathname();
 
   return (
-    <header className="border-b border-border bg-card">
+    <header className="border-b border-border bg-card print:hidden">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:px-6">
         <div className="flex items-baseline justify-between gap-4">
           <Link href="/" className="text-base font-semibold tracking-tight">

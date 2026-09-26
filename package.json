@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/ollama-endpoint.test.ts tests/manual-markdown.test.ts tests/catalog-command.test.ts tests/client-file.test.ts tests/agent.test.ts tests/offer-versions.test.ts tests/business-brief.test.ts tests/technical-settings.test.ts tests/dialogue.test.ts tests/record-journal.test.ts tests/sale-line.test.ts tests/trade-workflow.test.ts",
+    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/ollama-endpoint.test.ts tests/manual-markdown.test.ts tests/catalog-command.test.ts tests/client-file.test.ts tests/agent.test.ts tests/offer-versions.test.ts tests/business-brief.test.ts tests/technical-settings.test.ts tests/dialogue.test.ts tests/record-journal.test.ts tests/sale-line.test.ts tests/trade-workflow.test.ts tests/company.test.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
