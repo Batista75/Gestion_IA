@@ -67,6 +67,112 @@ test("un tarif avec prix est une version commerciale", () => {
   assert.equal(reading.offers[0]?.lines[0]?.conditions, "par 1000");
 });
 
+const lauterbach = `Lauterbach SARL, 6 rue Nicolas Ledoux, 94000 Créteil, France
+NTECHNOLOGIES Réseaux
+Mohamed Badi
+10, Avenue de la cour de France
+91260 Juvisy Sur Orge
+Nous vous remercions pour votre demande du 03-04-2023. Nous vous offrons:
+Date        03-04-2023
+N° d´offre 230249
+MIPS32
+1       1 pcs LA-7760         JTAG Debugger for MIPS32 (ICD)                                         EUR     2.170,00        2.170,00
+                              supports MIPS32 4Kp
+2       1 pcs LA-7960X        License for Multicore Debugging                                        EUR        920,00        920,00
+3       1 pcs LA-3506         PowerDebug X50                                                         EUR     3.010,00        3.010,00
+MIPS64
+4      1 pcs LA-7761          JTAG Debugger for MIPS64 (ICD)                                         EUR     2.480,00      2.480,00
+5      1 pcs LA-7960X         License for Multicore Debugging                                        EUR        920,00      920,00
+6      1 pcs LA-3506          PowerDebug X50                                                         EUR     3.010,00      3.010,00
+ARMv8
+7      1 pcs LA-3255          Debugger for Armv8/Armv9 IDC20A (PACK)                                 EUR     2.170,00      2.170,00
+8      1 pcs LA-3506          PowerDebug X50                                                         EUR     3.010,00      3.010,00
+9      1 pcs LA-3253          Debugger Cortex-A/R (Armv7) IDC20A (PACK)                              EUR     2.170,00      2.170,00
+10     1 pcs LA-7960X         License for Multicore Debugging                                        EUR        920,00      920,00
+11     1 pcs LA-3506          PowerDebug X50                                                         EUR     3.010,00      3.010,00
+Prix Hors Taxes         EUR                 23.790,00
+TVA en Supplément uniquement en France.
+Nous n’acceptons pas de commande via des distributeurs.`;
+
+const serversimply = `NTECH-LOG SAS                                                   Price offer 2300017
+Mohamed Badi                                                                           01.03.2023
+ Description                                                      Quantity Price for you         Sum
+Server 1                                                             17       21 109.75    358 865.81
+Storage SuperServer SSG-640P-E1CR36H - 4U - Dual Intel Xeon
+Scalable Processors - up to 4TB memory - 36x SATA/SAS - Broadcom     17
+32GB DDR4-3200 2Rx4 ECC Registered DIMM                             136
+.
+Server 2                                                              9       10 038.59     90 347.32
+Twin SuperServer SYS-120TP-DTTR - 1U - 2 nodes                        9
+.
+Server 3                                                            4         7 826.96           31 307.84
+Storage SuperServer SSG-640P-E1CR24L - 4U                             4
+.
+All prices are EXW Tallinn, Estonia
+Offer will be active until 10.03.2023 and it will cancel all other offers with same products.
+Serversimply OÜ
+Total EUR      480 520.97
+VAT 0% EUR              0.00
+Total with VAT EUR       480 520.97`;
+
+test("un devis Lauterbach reprend chaque référence et le prix écrit", () => {
+  const reading = readOfferFile(lauterbach, "230249_N.pdf");
+  assert.equal(reading.kind, "devis");
+  assert.equal(reading.parties.supplierName, "Lauterbach SARL");
+  assert.equal(reading.parties.clientName, "NTECHNOLOGIES Réseaux");
+  assert.equal(reading.offers[0]?.versionLabel, "230249 · 03-04-2023");
+  const expected = [
+    ["LA-7760", "2.170,00 EUR"],
+    ["LA-7960X", "920,00 EUR"],
+    ["LA-3506", "3.010,00 EUR"],
+    ["LA-7761", "2.480,00 EUR"],
+    ["LA-7960X", "920,00 EUR"],
+    ["LA-3506", "3.010,00 EUR"],
+    ["LA-3255", "2.170,00 EUR"],
+    ["LA-3506", "3.010,00 EUR"],
+    ["LA-3253", "2.170,00 EUR"],
+    ["LA-7960X", "920,00 EUR"],
+    ["LA-3506", "3.010,00 EUR"],
+  ];
+  const lines = reading.offers[0]?.lines ?? [];
+  assert.equal(lines.length, expected.length);
+  expected.forEach(([reference, price], index) => {
+    assert.equal(lines[index]?.reference, reference);
+    assert.equal(lines[index]?.statedPrice, price);
+  });
+  assert.match(lines[0]?.product ?? "", /JTAG Debugger for MIPS32/);
+  assert.match(lines[0]?.conditions ?? "", /famille MIPS32/);
+  assert.match(lines[3]?.conditions ?? "", /famille MIPS64/);
+  assert.match(reading.enrichment, /Total HT indiqué 23\.790,00 EUR/);
+  assert.match(reading.enrichment, /TVA en Supplément uniquement en France/);
+  assert.equal(reading.pricedLines.some((line) => /23\.790,00/.test(line.statedPrice)), false);
+});
+
+test("une offre groupée garde les trois prix écrits et ignore les composants", () => {
+  const reading = readOfferFile(serversimply, "Quotation_NO_2300017.pdf");
+  assert.equal(reading.kind, "devis");
+  assert.equal(reading.parties.clientName, "NTECH-LOG SAS");
+  assert.equal(reading.parties.supplierName, "Serversimply OÜ");
+  assert.equal(reading.offers[0]?.versionLabel, "2300017 · 01.03.2023");
+  const lines = reading.offers[0]?.lines ?? [];
+  assert.deepEqual(
+    lines.map((line) => [line.product, line.statedPrice, line.reference]),
+    [
+      ["Server 1", "21 109.75 EUR", "SSG-640P-E1CR36H"],
+      ["Server 2", "10 038.59 EUR", "SYS-120TP-DTTR"],
+      ["Server 3", "7 826.96 EUR", "SSG-640P-E1CR24L"],
+    ],
+  );
+  assert.equal(lines.some((line) => /32GB DDR4/.test(line.product)), false);
+  assert.match(lines[0]?.conditions ?? "", /quantité 17/);
+  assert.match(lines[0]?.conditions ?? "", /total indiqué 358 865\.81 EUR/);
+  assert.match(reading.enrichment, /Total HT indiqué 480 520\.97 EUR/);
+  assert.match(reading.enrichment, /TVA indiquée 0 %/);
+  assert.match(reading.enrichment, /Total TTC indiqué 480 520\.97 EUR/);
+  assert.match(reading.enrichment, /10\.03\.2023/);
+  assert.match(reading.enrichment, /EXW Tallinn/);
+});
+
 test("un fichier sans texte reste conservé", () => {
   const reading = readOfferFile("", "scan.pdf");
   assert.equal(reading.kind, "autre");

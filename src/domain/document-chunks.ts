@@ -1,6 +1,6 @@
 const PASSAGE_CHARS = 1_600;
 const PASSAGE_LIMIT = 48;
-const READING_MARKER = /^<!-- lecture:(docling|repli|vide) -->\n?/;
+const READING_MARKER = /^<!-- lecture:(docling|repli|vide|texte) -->\n?/;
 const PASSAGES_MARKER = "<!-- gestion-ia-passages -->";
 const PASSAGE_SPLIT = "<!-- gestion-ia-passage -->";
 
@@ -65,7 +65,7 @@ export function documentBody(extracted: string): string {
 export function composeExtraction(
   markdown: string,
   chunks: string[],
-  engine: "docling" | "repli" | "vide",
+  engine: "docling" | "repli" | "vide" | "texte",
 ): string {
   const body = markdown.trim();
   const passages = chunks.map((chunk) => chunk.trim()).filter(Boolean).slice(0, PASSAGE_LIMIT);

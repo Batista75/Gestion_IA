@@ -136,7 +136,7 @@ export function kindLabel(kind: string): string {
 export function splitDocuments(text: string): string[] {
   const parts = text
     .split(
-      /\n(?=\s*(?:facture|invoice|avoir|bon de livraison|bon de commande|purchase order|commande|rfq|demande[\s-]+de[\s-]+prix|devis|offre|quotation|tarif)\b)/i,
+      /\n(?=\s*(?:facture|invoice|avoir|bon de livraison|bon de commande|purchase order|commande|rfq|demande[\s-]+de[\s-]+prix|devis|quotation|price offer|tarif)\b)/i,
     )
     .map((part) => part.trim())
     .filter(Boolean);
@@ -163,15 +163,170 @@ function parseOffer(text: string, filename: string): OfferVersion | null {
 }
 
 function parseLines(text: string): OfferLine[] {
+  const structured = parseStructuredRows(text);
+  if (structured.length > 0) return structured;
   const lines: OfferLine[] = [];
   for (const raw of text.split(/\n/)) {
     const line = raw.trim();
     if (!line || !PRICE.test(line)) continue;
-    if (/^(?:total|sous-total|tva|montant|net [àa] payer)\b/i.test(line)) continue;
+    if (/^(?:total|sous-total|tva|vat|montant|net [àa] payer|prix hors taxes)\b/i.test(line)) continue;
     const parsed = parseOfferLine(line);
     if (parsed) lines.push(parsed);
   }
   return lines;
+}
+
+const EUROPEAN_AMOUNT = /\d{1,3}(?:\.\d{3})*,\d{2}/;
+const GROUPED_AMOUNT = /\d{1,3}(?: \d{3})+\.\d{2}/;
+const POSITION_ROW =
+  /^(\d+)\s+(\d+)\s+pcs\s+([A-Z]{1,8}-[A-Z0-9]+)\s+(.+?)\s+EUR\s+(\d{1,3}(?:\.\d{3})*,\d{2})\s+(\d{1,3}(?:\.\d{3})*,\d{2})\s*$/i;
+const BUNDLE_ROW =
+  /^(.+?[A-Za-z].*?)\s+(\d{1,4})\s+(\d{1,3}(?: \d{3})+\.\d{2})\s+(\d{1,3}(?: \d{3})+\.\d{2})\s*$/;
+
+type DraftRow = {
+  product: string;
+  reference: string;
+  unit: string;
+  total: string;
+  quantity: string;
+  family: string;
+  notes: string[];
+  components: string[];
+};
+
+function parseStructuredRows(text: string): OfferLine[] {
+  const fromLayout = layoutRows(text);
+  if (fromLayout.length > 0) return fromLayout;
+  return markdownRows(text);
+}
+
+function layoutRows(text: string): OfferLine[] {
+  const drafts: DraftRow[] = [];
+  let current: DraftRow | null = null;
+  let family = "";
+  const flush = () => {
+    if (current) drafts.push(current);
+    current = null;
+  };
+  for (const raw of text.split(/\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const position = line.match(POSITION_ROW);
+    if (position) {
+      flush();
+      current = {
+        product: clean(position[4] ?? ""),
+        reference: position[3] ?? "",
+        unit: position[5] ?? "",
+        total: position[6] ?? "",
+        quantity: `${position[2] ?? ""} pcs`.trim(),
+        family,
+        notes: [],
+        components: [],
+      };
+      continue;
+    }
+    const bundle = line.match(BUNDLE_ROW);
+    if (bundle && !/^(total|vat|tva|prix)\b/i.test(bundle[1] ?? "")) {
+      flush();
+      current = {
+        product: clean(bundle[1] ?? ""),
+        reference: "",
+        unit: bundle[3] ?? "",
+        total: bundle[4] ?? "",
+        quantity: bundle[2] ?? "",
+        family,
+        notes: [],
+        components: [],
+      };
+      continue;
+    }
+    const section = line.match(/^(MIPS\d+|ARMv\d+)\s*$/i);
+    if (section) {
+      family = section[1] ?? family;
+      continue;
+    }
+    if (!current || isNoise(line)) continue;
+    const component = line.match(/^(.+?[A-Za-z].{2,}?)\s+(\d{1,4})\s*$/);
+    if (component) {
+      const name = clean(component[1] ?? "");
+      if (name.length >= 3) current.components.push(name);
+      continue;
+    }
+    if (current.notes.length < 4) current.notes.push(clean(line));
+  }
+  flush();
+  return drafts.map(draftToLine).filter((line): line is OfferLine => line !== null);
+}
+
+function markdownRows(text: string): OfferLine[] {
+  if (!text.includes("|")) return [];
+  const lines: OfferLine[] = [];
+  for (const raw of text.split(/\n/)) {
+    const line = raw.trim();
+    if (!line.startsWith("|") || /^\|\s*:?-{3,}/.test(line)) continue;
+    const cells = line.split("|").map((cell) => cell.trim()).filter(Boolean);
+    const amounts = cells.flatMap((cell) =>
+      [...cell.matchAll(new RegExp(`${EUROPEAN_AMOUNT.source}|${GROUPED_AMOUNT.source}`, "g"))].map(
+        (match) => match[0],
+      ),
+    );
+    if (amounts.length === 0) continue;
+    const reference = cells.join(" ").match(/\b([A-Z]{1,8}-[A-Z0-9]+)\b/)?.[1] ?? "";
+    const productCell = cells
+      .map((cell) => cell.replace(/\b(Description|Quantity|Price for you|Sum)\b\s*-?\s*/gi, ""))
+      .map((cell) => cell.replace(EUROPEAN_AMOUNT, "").replace(GROUPED_AMOUNT, "").trim())
+      .filter((cell) => cell.length >= 3 && !/^(EUR|USD|pcs)$/i.test(cell))
+      .sort((left, right) => right.length - left.length)[0];
+    const product = clean(productCell ?? "").replace(reference, "").trim();
+    const draft: DraftRow = {
+      product,
+      reference,
+      unit: amounts[0] ?? "",
+      total: amounts[1] ?? "",
+      quantity: "",
+      family: "",
+      notes: [],
+      components: [],
+    };
+    const parsed = draftToLine(draft);
+    if (parsed) lines.push(parsed);
+  }
+  return lines;
+}
+
+function draftToLine(draft: DraftRow): OfferLine | null {
+  const product = draft.product.replace(/\s+/g, " ").trim();
+  if (product.length < 2 || /^(total|prix hors taxes|vat|tva)\b/i.test(product)) return null;
+  const model = [...draft.components, ...draft.notes].join(" ").match(/\b((?:SSG|SYS)-[A-Z0-9-]+)\b/i)?.[1] ?? "";
+  const reference = draft.reference || model;
+  const conditions = [
+    draft.quantity ? `quantité ${draft.quantity}` : "",
+    draft.total ? `total indiqué ${draft.total} EUR` : "",
+    draft.family ? `famille ${draft.family}` : "",
+    draft.components.length > 0
+      ? `postes : ${draft.components.slice(0, 6).join(" ; ")}`
+      : "",
+    draft.notes.join(" "),
+  ]
+    .filter(Boolean)
+    .join(", ")
+    .slice(0, 500);
+  return {
+    product: product.slice(0, 120),
+    reference: reference.slice(0, 60),
+    statedPrice: `${draft.unit} EUR`,
+    conditions,
+  };
+}
+
+function isNoise(line: string): boolean {
+  return (
+    /^(page\b|tel\.?|fax\b|ref\.:|pos\.|description\b|prix\b)/i.test(line) ||
+    /\b(siret|iban|www\.|societe generale|code naf|gérant)\b/i.test(line) ||
+    /\blauterbach sarl\b/i.test(line) ||
+    line === "."
+  );
 }
 
 function parseOfferLine(line: string): OfferLine | null {
@@ -211,20 +366,43 @@ function parseOfferLine(line: string): OfferLine | null {
 }
 
 function headerOf(text: string, filename: string): Omit<OfferVersion, "fingerprint" | "lines"> {
-  const number = text.match(/\bn[°o]\s*[:.]?\s*([A-Z0-9][A-Z0-9./-]{2,})/i);
-  const date = text.match(/\b(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})\b/);
+  const number = offerNumber(text, filename);
+  const date = offerDate(text);
   const supplier = text.match(/(?:fournisseur|[ée]metteur|vendeur|supplier)\s*[:]\s*([^\n]+)/i);
   const titleLine = text.split(/\n/).find((line) =>
-    /\b(devis|offre|tarif|facture|commande|rfq|demande de prix|avoir|livraison)\b/i.test(line),
+    /\b(devis|offre|offer|quotation|tarif|facture|commande|rfq|demande de prix|avoir|livraison)\b/i.test(line),
   );
   const title = clean(titleLine || filename.replace(/\.[^.]+$/, "")).slice(0, 140);
-  const versionLabel = [number?.[1], date?.[1]].filter(Boolean).join(" · ") || filename;
+  const versionLabel = [number, date].filter(Boolean).join(" · ") || filename;
   return {
     title: title || filename,
-    issuedOn: date?.[1] ?? "",
+    issuedOn: date,
     supplierName: clean(supplier?.[1] ?? ""),
     versionLabel,
   };
+}
+
+function offerNumber(text: string, filename: string): string {
+  const patterns = [
+    /n[°o]\s*d[´'`’']?\s*offre\s+([A-Z0-9][A-Z0-9./-]{2,})/i,
+    /\bprice\s+offer\s+([A-Z0-9][A-Z0-9./-]{2,})/i,
+    /\bref\.\s*:\s*([A-Z0-9][A-Z0-9./-]{2,})/i,
+    /\bn[°o]\s*[:.]?\s*([A-Z0-9][A-Z0-9./-]{2,})/i,
+  ];
+  for (const pattern of patterns) {
+    const found = text.match(pattern)?.[1];
+    if (found) return found;
+  }
+  return filename.match(/(?:quotation|devis|offre)[_\s-]*(?:no|n[°o])?[_\s-]*(\d{4,})/i)?.[1] ?? "";
+}
+
+function offerDate(text: string): string {
+  const labeled = text.match(/\bDate\s+(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})/i)?.[1];
+  if (labeled) return labeled;
+  const dotted = text.match(/\b(\d{2}\.\d{2}\.\d{4})\b/)?.[1];
+  if (dotted) return dotted;
+  const classic = text.match(/\b(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})\b/)?.[1] ?? "";
+  return /^\d{4}/.test(classic) ? "" : classic;
 }
 
 const KIND_RULES: Array<{ kind: DocumentKind; pattern: RegExp }> = [
@@ -237,19 +415,34 @@ const KIND_RULES: Array<{ kind: DocumentKind; pattern: RegExp }> = [
     pattern:
       /\b(rfq|rfp|demande[\s-]+de[\s-]+prix|request[\s-]+for[\s-]+quotation|appel d['’\s-]*offres|consultations?)\b/i,
   },
-  { kind: "devis", pattern: /\b(devis|offres?|quotations?)\b/i },
+  { kind: "devis", pattern: /\b(devis|offres?|offers?|quotations?|price\s+offer)\b/i },
   { kind: "tarif", pattern: /\btarifs?\b/i },
   { kind: "contrat", pattern: /\b(contrat|conditions g[ée]n[ée]rales|cgv)\b/i },
   { kind: "fiche", pattern: /\b(development kit|fiche technique|datasheet|data sheet)\b/i },
 ];
 
 function documentKind(text: string, filename: string): DocumentKind {
-  const first = text.split(/\n/).map((line) => line.trim()).filter(Boolean)[0] ?? "";
+  const lines = text.split(/\n/).map((line) => line.trim()).filter(Boolean);
+  const first = lines[0] ?? "";
+  const head = lines.slice(0, 40).join("\n");
   return (
+    titleKind(`${filename}\n${head}`) ??
     matchKind(`${filename}\n${first}`) ??
+    matchKind(head) ??
     matchKind(text) ??
     (text.trim() ? "document" : "autre")
   );
+}
+
+function titleKind(head: string): DocumentKind | null {
+  if (/^(?:.*\n)?\s*(facture|invoice)\b/i.test(head)) return "facture";
+  if (/\b(bon de commande|purchase order)\b/i.test(head)) return "commande";
+  if (/\b(bon de livraison|delivery note)\b/i.test(head)) return "livraison";
+  if (/\b(avoir|credit note|note de cr[ée]dit)\b/i.test(head)) return "avoir";
+  if (/\b(rfq|demande[\s-]+de[\s-]+prix)\b/i.test(head)) return "rfq";
+  if (/\b(devis|n[°o]\s*d[´'`’']?\s*offre|price\s+offer|nous vous offrons|quotations?)\b/i.test(head)) return "devis";
+  if (/\btarifs?\b/i.test(head)) return "tarif";
+  return null;
 }
 
 function matchKind(value: string): DocumentKind | null {
@@ -260,10 +453,70 @@ function matchKind(value: string): DocumentKind | null {
 }
 
 function partiesOf(text: string): DocumentParties {
-  return {
-    clientName: labeled(text, "client|destinataire|acheteur|customer|bill to"),
-    supplierName: labeled(text, "fournisseur|[ée]metteur|vendeur|supplier"),
-  };
+  const clientName = labeled(text, "client|destinataire|acheteur|customer|bill to");
+  const supplierName = labeled(text, "fournisseur|[ée]metteur|vendeur|supplier");
+  if (clientName || supplierName) return { clientName, supplierName };
+  const legal = legalEntities(text);
+  if (/nous vous offrons|nous vous remercions/i.test(text) && legal[0]) {
+    return { supplierName: legal[0], clientName: addresseeName(text, legal[0]) };
+  }
+  if (/price offer|quotation/i.test(text) && legal.length > 0) {
+    return {
+      clientName: legal[0] ?? "",
+      supplierName: legal.length > 1 ? (legal[legal.length - 1] ?? "") : "",
+    };
+  }
+  return { clientName: "", supplierName: legal[0] ?? "" };
+}
+
+function legalEntities(text: string): string[] {
+  const found: string[] = [];
+  const pattern =
+    /([A-Z0-9][\p{L}0-9&'’-]+(?:[^\S\n]+[\p{L}0-9&'’-]+){0,3})[^\S\n]+(SARL|SAS|SASU|SA|GmbH|Ltd|LLC|OÜ|OY|Inc\.?|BV|AG)(?![\p{L}\p{N}])/giu;
+  for (const match of text.matchAll(pattern)) {
+    const name = clean(`${match[1] ?? ""} ${match[2] ?? ""}`);
+    if (name.length < 4) continue;
+    if (!found.some((item) => item.toLowerCase() === name.toLowerCase())) found.push(name);
+  }
+  return found;
+}
+
+function addresseeName(text: string, supplier: string): string {
+  const supplierKey = supplier.split(/\s+/)[0]?.toLowerCase() ?? "";
+  for (const raw of text.split(/\n/)) {
+    const line = raw.trim();
+    if (!line || (supplierKey && line.toLowerCase().includes(supplierKey))) continue;
+    if (isStreet(line) || isNoise(line) || line.length > 80) continue;
+    if (!/\p{L}/u.test(line)) continue;
+    if (/\b(EUR|page|tel|fax|date|ref)\b/i.test(line)) continue;
+    return clean(line).slice(0, 160);
+  }
+  return "";
+}
+
+function isStreet(line: string): boolean {
+  return /\b(rue|avenue|boulevard|chemin|impasse|place|cedex)\b/i.test(line) || /^\d{1,5}[,\s]/.test(line);
+}
+
+function statedCommercialNotes(text: string): string[] {
+  const notes: string[] = [];
+  const horsTaxes = text.match(
+    /Prix\s+Hors\s+Taxes[\s\S]{0,80}?EUR\s*(\d{1,3}(?:\.\d{3})*,\d{2})/i,
+  )?.[1];
+  if (horsTaxes) notes.push(`Total HT indiqué ${horsTaxes} EUR`);
+  const total = text.match(/\bTotal\s+EUR\s+(\d{1,3}(?: \d{3})+\.\d{2})/i)?.[1];
+  if (total) notes.push(`Total HT indiqué ${total} EUR`);
+  const vatRate = text.match(/\bVAT\s+(\d+(?:[.,]\d+)?)\s*%/i)?.[1];
+  if (vatRate) notes.push(`TVA indiquée ${vatRate} %`);
+  const withVat = text.match(/Total\s+with\s+VAT\s+EUR\s+(\d{1,3}(?: \d{3})+\.\d{2})/i)?.[1];
+  if (withVat) notes.push(`Total TTC indiqué ${withVat} EUR`);
+  const until = text.match(/\b(?:active until|valable jusqu['’]au)\s+(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})/i)?.[1];
+  if (until) notes.push(`Offre valable jusqu’au ${until}`);
+  const incoterm = text.match(/\b(EXW\s+[^\n.]+)/i)?.[1];
+  if (incoterm) notes.push(`Conditions indiquées : ${clean(incoterm)}`);
+  const vatNote = text.match(/TVA en Supplément[^\n]+/i)?.[0];
+  if (vatNote) notes.push(clean(vatNote));
+  return notes;
 }
 
 function labeled(text: string, labels: string): string {
@@ -284,6 +537,7 @@ function enrichmentOf(
     `Type : ${kindLabel(kind)}`,
     parties.clientName ? `Client : ${parties.clientName}` : "",
     parties.supplierName ? `Fournisseur : ${parties.supplierName}` : "",
+    ...statedCommercialNotes(text),
   ].filter(Boolean);
   if (offers.length > 0) {
     const blocks = offers.map((offer) => {

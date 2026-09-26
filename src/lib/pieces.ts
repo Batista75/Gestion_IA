@@ -218,17 +218,24 @@ async function ensureSupplier(
 async function extractIncoming(files: IncomingFile[]): Promise<string[]> {
   const results = files.map(() => "");
   const pending: Array<{ index: number; file: IncomingFile; extension: string }> = [];
-  files.forEach((file, index) => {
+  for (const [index, file] of files.entries()) {
     const extension = doclingExtension(file.name, file.type);
-    if (extension) {
-      pending.push({ index, file, extension });
-      return;
+    if (!extension) {
+      const name = file.name.toLowerCase();
+      if (/\.(txt|md|csv|json)$/.test(name) || file.type.startsWith("text/")) {
+        results[index] = file.bytes.toString("utf8");
+      }
+      continue;
     }
-    const name = file.name.toLowerCase();
-    if (/\.(txt|md|csv|json)$/.test(name) || file.type.startsWith("text/")) {
-      results[index] = file.bytes.toString("utf8");
+    if (extension === "pdf") {
+      const plain = await extractPdf(file.bytes);
+      if (plain.trim().length >= 400) {
+        results[index] = composeExtraction(plain, [], "texte");
+        continue;
+      }
     }
-  });
+    pending.push({ index, file, extension });
+  }
   if (pending.length === 0) return results;
 
   const converted = await convertWithDocling(

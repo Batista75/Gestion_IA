@@ -21,12 +21,19 @@ async function refreshOne(): Promise<void> {
     where: { NOT: { extractedText: { contains: "<!-- lecture:" } } },
     orderBy: { createdAt: "desc" },
     take: 30,
-    select: { id: true, originalName: true, mimeType: true, storagePath: true },
+    select: { id: true, originalName: true, mimeType: true, storagePath: true, extractedText: true },
   });
   const row = rows.find((item) => doclingExtension(item.originalName, item.mimeType));
   if (!row) return;
-  const absolute = resolveStoredPath(row.storagePath);
   const extension = doclingExtension(row.originalName, row.mimeType);
+  if (extension === "pdf" && row.extractedText.trim().length >= 400) {
+    await prisma.storedFile.update({
+      where: { id: row.id },
+      data: { extractedText: composeExtraction(row.extractedText, [], "texte").slice(0, 200_000) },
+    });
+    return;
+  }
+  const absolute = resolveStoredPath(row.storagePath);
   if (!absolute || !extension) return;
   const bytes = await readFile(absolute);
   const file = { name: row.originalName, type: row.mimeType, bytes };
