@@ -21,8 +21,9 @@ export default function MorePage() {
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Plus</h1>
         <p className="text-sm leading-6 text-muted-foreground">
-          Le manuel décrit les écrans en service, la spécification décrit le
-          produit visé. Les listes sont dans Répertoire. Le serveur, les modèles
+          Le manuel décrit les écrans en service. La spécification fonctionnelle
+          décrit le produit visé, la spécification technique décrit le socle
+          livré. Les listes sont dans Répertoire. Le serveur, les modèles
           et la clé d’API sont dans{" "}
           <Link href="/configuration" className="font-medium text-foreground underline-offset-4 hover:underline">
             Configuration
@@ -35,10 +36,10 @@ export default function MorePage() {
         <CardHeader>
           <CardTitle>Documentation</CardTitle>
           <CardDescription>
-            Les deux documents sont aussi dans le dossier docs du dépôt.
+            Les trois documents sont aussi dans le dossier docs du dépôt.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 sm:flex-row">
+        <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Link
             href="/manuel"
             className={cn(buttonVariants(), "min-h-11 px-4")}
@@ -49,8 +50,14 @@ export default function MorePage() {
             href="/documentation/specification"
             className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
           >
-            Lire la spécification
+            Spécification fonctionnelle
           </a>
+          <Link
+            href="/documentation/technique"
+            className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
+          >
+            Spécification technique
+          </Link>
         </CardContent>
       </Card>
 

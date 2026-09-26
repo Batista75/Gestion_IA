@@ -32,6 +32,7 @@ model Project {
   createdAt     DateTime       @default(now())
   events        ProjectEvent[]
   quotes        Quote[]
+  conversations Conversation[]
 }
 
 model ProjectEvent {
@@ -78,6 +79,42 @@ model Client {
   currency    String   @default("")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Conversation {
+  id        String                @id @default(cuid())
+  title     String                @default("")
+  projectId String?
+  project   Project?              @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  messages  ConversationMessage[]
+
+  @@index([projectId])
+}
+
+model ConversationMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  source         String       @default("")
+  steps          Json?
+  proposal       Json?
+  sources        Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+model CatalogProposal {
+  id        String   @id @default(cuid())
+  status    String   @default("en_attente")
+  payload   Json
+  createdAt DateTime @default(now())
+
+  @@index([status])
 }
 
 model ClientProposal {

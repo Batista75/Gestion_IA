@@ -1,11 +1,5 @@
-import { SEARCH_TOOL, isEmbedOnlyModel, isRerankModel } from "@/domain/agent";
-import {
-  CATALOG_TOOLS,
-  commandFromTool,
-  commandsFromText,
-  parseCatalogCommand,
-  type CatalogCommand,
-} from "@/domain/catalog";
+import { isEmbedOnlyModel, isRerankModel } from "@/domain/agent";
+import { parseCatalogCommand, type CatalogCommand } from "@/domain/catalog";
 import {
   identifyClient,
   isNewClientBrief,
@@ -13,40 +7,42 @@ import {
   readConfirmation,
   reviseDraft,
 } from "@/domain/client-file";
-import { renderKnowledge, retrievalContext, sourceLabel, understandIntent } from "@/domain/knowledge";
+import { bareNameQuestion, renderKnowledge, sourceLabel, understandIntent } from "@/domain/knowledge";
 import {
   asksModelToComputeMoney,
   MONEY_RULE_REPLY,
 } from "@/domain/ollama-endpoint";
 import { parseBusinessBrief, planIsEmpty } from "@/domain/business-brief";
 import { applyBusinessPlan } from "@/lib/business-records";
-import { applyCatalogCommand } from "@/lib/catalog-store";
+import { confirmLatestWrite, openCatalogProposal, rejectLatestWrite } from "@/lib/catalog-proposals";
 import {
-  confirmCurrentProposal,
   currentProposal,
   openClientProposal,
   proposeChangeFromMessage,
   proposeFromParty,
   type ProposalView,
 } from "@/lib/client-proposals";
+import { streamDirect, streamModel } from "@/lib/assistant-stream";
+import { conversationIdOrNew, rememberTurn } from "@/lib/conversations";
+import type { UIMessage } from "ai";
 import { withGpuLane } from "@/lib/gpu-lane";
 import { searchKnowledge } from "@/lib/knowledge-store";
-import {
-  chatWithOllama,
-  getOllamaStatus,
-  SYSTEM_PROMPT,
-  type OllamaChatMessage,
-} from "@/lib/ollama";
+import { getOllamaStatus } from "@/lib/ollama";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-const MAX_MESSAGES = 12;
+const MAX_MESSAGES = 40;
 const MAX_CHARS = 12_000;
 
-type IncomingMessage = { role: "user" | "assistant"; content: string };
 type SourceRef = { label: string; title: string };
-
-const AGENT_TOOLS = [...CATALOG_TOOLS, SEARCH_TOOL];
+type DirectReply = {
+  reply: string;
+  model: null;
+  source: "ollama" | "regle-metier" | "action" | "proposition" | "dossier";
+  proposal?: ProposalView["proposal"];
+  sources?: SourceRef[];
+};
 
 export async function POST(request: Request) {
   let payload: unknown;
@@ -60,60 +56,64 @@ export async function POST(request: Request) {
   if (!parsed.ok) {
     return Response.json({ error: parsed.error }, { status: 400 });
   }
+  const conversationId = conversationIdOrNew(
+    payload && typeof payload === "object" && "id" in payload ? payload.id : "",
+  );
+  await rememberTurn({
+    conversationId,
+    role: "user",
+    content: parsed.text,
+    linkText: parsed.text,
+  });
 
-  const lastUser = [...parsed.messages]
-    .reverse()
-    .find((message) => message.role === "user");
-  if (lastUser) {
-    const direct = await answerDirectly(lastUser.content);
-    if (direct) return Response.json(direct);
+  const direct = await answerDirectly(parsed.text);
+  if (direct) {
+    return streamDirect({
+      conversationId,
+      reply: direct.reply,
+      source: direct.source,
+      step: stepFor(direct.source),
+      proposal: direct.proposal,
+      sources: direct.sources,
+    });
   }
 
   const status = await getOllamaStatus();
   if (!status.ok || !status.defaultModel) {
-    return Response.json(
-      {
-        error: `${status.error ?? "Ollama est indisponible."} Une recherche dans les fiches, par exemple « que sait-on de Marie Dupont », fonctionne sans le modèle.`,
-      },
-      { status: 503 },
-    );
+    return streamDirect({
+      conversationId,
+      reply: `${status.error ?? "Ollama est indisponible."} Une recherche dans les fiches, par exemple « que sait-on de Marie Dupont », fonctionne sans le modèle.`,
+      source: "dossier",
+      step: "Serveur injoignable",
+    });
   }
-
   const model = parsed.model ?? status.defaultModel;
-  if (!status.models.includes(model)) {
-    return Response.json(
-      { error: "Ce modèle n’est pas installé sur le PC hôte." },
-      { status: 400 },
-    );
+  if (!status.models.includes(model) || isEmbedOnlyModel(model) || isRerankModel(model)) {
+    return streamDirect({
+      conversationId,
+      reply: "Ce modèle ne sert pas à la conversation. Choisissez-le dans Configuration.",
+      source: "dossier",
+      step: "Modèle inadapté",
+    });
   }
 
-  if (isEmbedOnlyModel(model) || isRerankModel(model)) {
-    return Response.json(
-      { error: "Ce modèle sert à l’index ou au reranker, pas à la conversation." },
-      { status: 400 },
-    );
-  }
-
-  try {
-    const reply = await withGpuLane(async () => {
-      const docs = await searchKnowledge(lastUser?.content ?? "", "context");
-      return runAssistant(model, parsed.messages, docs);
-    });
-    return Response.json({
-      reply: reply.text,
-      model: reply.source === "proposition" || reply.source === "dossier" ? null : model,
-      source: reply.source,
-      proposal: reply.proposal,
-      sources: reply.sources,
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "L’inférence a échoué.";
-    return Response.json({ error: message }, { status: 502 });
-  }
+  return streamModel({
+    conversationId,
+    text: parsed.text,
+    messages: parsed.uiMessages,
+    model,
+  });
 }
 
-async function answerDirectly(text: string) {
+function stepFor(source: DirectReply["source"]): string {
+  if (source === "dossier") return "Lecture des fiches";
+  if (source === "regle-metier") return "Règle métier";
+  if (source === "proposition") return "Proposition à confirmer";
+  if (source === "action") return "Enregistrement";
+  return "Réponse";
+}
+
+async function answerDirectly(text: string): Promise<DirectReply | null> {
   const plan = parseBusinessBrief(text);
   if (!planIsEmpty(plan)) {
     const saved = await applyBusinessPlan(plan);
@@ -128,20 +128,20 @@ async function answerDirectly(text: string) {
   const verdict = readConfirmation(text);
   const pending = await currentProposal();
   if (verdict === "confirm") {
-    const saved = await confirmCurrentProposal();
+    const saved = await confirmLatestWrite();
     return {
       reply: saved.summary,
       model: null,
       source: saved.ok ? ("action" as const) : ("proposition" as const),
     };
   }
-  if (pending && verdict === "reject") {
+  if (verdict === "reject") {
+    const rejected = await rejectLatestWrite();
     return {
-      reply:
-        "La fiche n’est pas enregistrée. Indiquez ce qu’il faut changer, par exemple le téléphone, le pays ou la forme juridique.",
+      reply: rejected?.reply ?? "Il n’y a pas de fiche en attente.",
       model: null,
       source: "proposition" as const,
-      proposal: { fields: proposalFields(pending) },
+      proposal: rejected?.proposal,
     };
   }
 
@@ -165,8 +165,17 @@ async function answerDirectly(text: string) {
     if (identified) return proposalResponse(await openClientProposal(identified));
   }
   if (command) {
-    const applied = await applyCatalogCommand(command);
-    return { reply: applied.summary, model: null, source: "action" as const };
+    const opened = await openCatalogProposal(command);
+    if ("clarify" in opened) {
+      return { reply: opened.clarify, model: null, source: "dossier" as const };
+    }
+    return proposalResponse(opened);
+  }
+
+  const names = await directoryNames();
+  const question = bareNameQuestion(text, names);
+  if (question) {
+    return { reply: question, model: null, source: "dossier" as const };
   }
 
   if (pending && !isNewClientBrief(text)) {
@@ -227,130 +236,20 @@ function proposalResponse(opened: ProposalView) {
   };
 }
 
-async function runAssistant(
-  model: string,
-  incoming: IncomingMessage[],
-  docs: Awaited<ReturnType<typeof searchKnowledge>>,
-): Promise<{
-  text: string;
-  source: "ollama" | "action" | "proposition" | "dossier";
-  proposal?: ProposalView["proposal"];
-  sources?: SourceRef[];
-}> {
-  const sources = docs.map((doc) => ({ label: sourceLabel(doc.sourceType), title: doc.title }));
-  let transcript: OllamaChatMessage[] = [
-    {
-      role: "system",
-      content: `${SYSTEM_PROMPT}\n\n${retrievalContext(docs)}\nUne note À classer n’est pas un projet.`,
-    },
-    ...incoming.map((message) => ({
-      role: message.role,
-      content: message.content,
-    })),
-  ];
-  const summaries: string[] = [];
-
-  for (let round = 0; round < 2; round += 1) {
-    const result = await chatWithOllama({
-      model,
-      messages: transcript,
-      tools: AGENT_TOOLS,
-    });
-    const searches = result.toolCalls.filter((call) => call.function.name === "search_records");
-    const commands = uniqueCommands([
-      ...result.toolCalls.map((call) =>
-        commandFromTool(call.function.name, parseArguments(call.function.arguments)),
-      ),
-      ...commandsFromText(result.content),
-    ]);
-    if (commands.length === 0 && searches.length === 0) {
-      return {
-        text: joinReply(result.content, summaries),
-        source: summaries.length > 0 ? "action" : "ollama",
-        sources,
-      };
-    }
-
-    transcript = [
-      ...result.messages,
-      {
-        role: "assistant",
-        content: result.content,
-        tool_calls: result.toolCalls,
-      },
-    ];
-    for (const call of searches) {
-      const args = parseArguments(call.function.arguments);
-      const query =
-        args && typeof args === "object" && "query" in args && typeof args.query === "string"
-          ? args.query
-          : incoming.at(-1)?.content ?? "";
-      const found = await searchKnowledge(query, "lookup");
-      const rendered = renderKnowledge(found, "lookup");
-      summaries.push(rendered);
-      for (const doc of found) {
-        sources.push({ label: sourceLabel(doc.sourceType), title: doc.title });
-      }
-      transcript.push({ role: "tool", content: rendered, tool_name: "search_records" });
-    }
-    for (const command of commands) {
-      if (command.type === "create_client" || command.type === "update_client") {
-        const opened = await proposeFromParty(command);
-        if ("clarify" in opened) {
-          return { text: opened.clarify, source: "dossier", sources };
-        }
-        return {
-          text: joinReply(opened.reply, summaries),
-          source: "proposition",
-          proposal: opened.proposal,
-          sources,
-        };
-      }
-      const applied = await applyCatalogCommand(command);
-      summaries.push(applied.summary);
-      transcript.push({
-        role: "tool",
-        content: applied.summary,
-        tool_name: command.type,
-      });
-    }
-    if (searches.length === 0) break;
-  }
-
-  return { text: joinReply("", summaries), source: "action", sources };
-}
-
-function parseArguments(raw: unknown): unknown {
-  if (typeof raw !== "string") return raw;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
-}
-
-function uniqueCommands(commands: Array<CatalogCommand | null>): CatalogCommand[] {
-  const seen = new Set<string>();
-  const unique: CatalogCommand[] = [];
-  for (const command of commands) {
-    if (!command) continue;
-    const key = JSON.stringify(command);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(command);
-  }
-  return unique;
-}
-
-function joinReply(content: string, summaries: string[]): string {
-  const extra = summaries.filter((summary) => !content.includes(summary));
-  return [content.trim(), ...extra].filter(Boolean).join("\n\n");
+async function directoryNames(): Promise<string[]> {
+  const [clients, suppliers, products, projects] = await Promise.all([
+    prisma.client.findMany({ select: { name: true }, take: 500 }),
+    prisma.supplier.findMany({ select: { name: true }, take: 500 }),
+    prisma.product.findMany({ select: { name: true }, take: 500 }),
+    prisma.project.findMany({ select: { name: true }, take: 500 }),
+  ]);
+  return [...clients, ...suppliers, ...products, ...projects].map((row) => row.name);
 }
 
 function parsePayload(
   payload: unknown,
 ):
-  | { ok: true; messages: IncomingMessage[]; model: string | null }
+  | { ok: true; text: string; uiMessages: UIMessage[]; model: string | null }
   | { ok: false; error: string } {
   if (!payload || typeof payload !== "object") {
     return { ok: false, error: "Message illisible." };
@@ -363,29 +262,35 @@ function parsePayload(
   if (body.messages.length > MAX_MESSAGES) {
     return {
       ok: false,
-      error: "La conversation est trop longue. Effacez-la et recommencez.",
+      error: "La conversation est trop longue. Ouvrez un nouveau fil.",
     };
   }
 
-  const messages: IncomingMessage[] = [];
+  const messages: UIMessage[] = [];
   for (const item of body.messages) {
     if (!item || typeof item !== "object") {
       return { ok: false, error: "Message illisible." };
     }
-    const message = item as { role?: unknown; content?: unknown };
+    const message = item as { id?: unknown; role?: unknown; content?: unknown; parts?: unknown };
     if (message.role !== "user" && message.role !== "assistant") {
       return { ok: false, error: "Message illisible." };
     }
-    if (typeof message.content !== "string" || !message.content.trim()) {
+    const content = messageText(message);
+    if (!content) {
       return { ok: false, error: "Le message est vide." };
     }
-    if (message.content.length > MAX_CHARS) {
+    if (content.length > MAX_CHARS) {
       return { ok: false, error: "Le message dépasse 12 000 caractères." };
     }
-    messages.push({ role: message.role, content: message.content.trim() });
+    messages.push({
+      id: typeof message.id === "string" && message.id.trim() ? message.id : crypto.randomUUID(),
+      role: message.role,
+      parts: [{ type: "text", text: content }],
+    });
   }
 
-  if (messages.at(-1)?.role !== "user") {
+  const text = messageText(messages.at(-1) ?? {});
+  if (messages.at(-1)?.role !== "user" || !text) {
     return { ok: false, error: "Le dernier message doit venir de vous." };
   }
 
@@ -397,5 +302,20 @@ function parsePayload(
     return { ok: false, error: "Nom de modèle invalide." };
   }
 
-  return { ok: true, messages, model };
+  return { ok: true, text, uiMessages: messages, model };
+}
+
+function messageText(message: { content?: unknown; parts?: unknown }): string {
+  if (typeof message.content === "string" && message.content.trim()) {
+    return message.content.trim();
+  }
+  if (!Array.isArray(message.parts)) return "";
+  return message.parts
+    .flatMap((part) => {
+      if (!part || typeof part !== "object") return [];
+      const row = part as { type?: unknown; text?: unknown };
+      return row.type === "text" && typeof row.text === "string" ? [row.text] : [];
+    })
+    .join("\n")
+    .trim();
 }

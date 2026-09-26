@@ -5,9 +5,9 @@ import { parseManual } from "@/lib/manual-markdown";
 
 export const dynamic = "force-dynamic";
 
-export default async function ManualPage() {
+export default async function TechnicalSpecPage() {
   const markdown = await readFile(
-    path.join(process.cwd(), "docs/manuel-utilisateur.md"),
+    path.join(process.cwd(), "docs/specification-technique.md"),
     "utf8",
   );
   return <MarkdownArticle blocks={parseManual(markdown)} />;

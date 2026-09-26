@@ -7,13 +7,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/ollama-endpoint.test.ts tests/manual-markdown.test.ts tests/catalog-command.test.ts tests/client-file.test.ts tests/agent.test.ts tests/offer-versions.test.ts tests/business-brief.test.ts tests/technical-settings.test.ts",
+    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/ollama-endpoint.test.ts tests/manual-markdown.test.ts tests/catalog-command.test.ts tests/client-file.test.ts tests/agent.test.ts tests/offer-versions.test.ts tests/business-brief.test.ts tests/technical-settings.test.ts tests/dialogue.test.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.78",
+    "@ai-sdk/react": "^4.0.119",
     "@base-ui/react": "^1.8.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "ai": "^7.0.116",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "dotenv": "^18.0.4",

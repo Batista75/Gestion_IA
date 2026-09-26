@@ -30,6 +30,74 @@ export type CatalogCommand =
     }
   | { type: "record_quote"; title: string; products: ProductInput[] };
 
+export type CommandField = { label: string; value: string };
+
+export function presentCommand(command: CatalogCommand): { reply: string; fields: CommandField[] } {
+  const fields = commandFields(command);
+  return {
+    fields,
+    reply: [
+      ...fields.map((field) => `${field.label} : ${field.value}`),
+      "Rien n’est enregistré avant votre accord.",
+      "Confirmez-vous l’enregistrement ?",
+    ].join("\n"),
+  };
+}
+
+function commandFields(command: CatalogCommand): CommandField[] {
+  switch (command.type) {
+    case "create_client":
+    case "update_client":
+    case "create_supplier":
+    case "update_supplier":
+      return [
+        { label: "Action", value: command.type.startsWith("update") ? "Mise à jour" : "Création" },
+        {
+          label: "Fiche",
+          value: command.type.includes("client") ? "Client" : "Fournisseur",
+        },
+        { label: "Nom", value: command.party.name },
+        ...filled("E-mail", command.party.email),
+        ...filled("Téléphone", command.party.phone),
+        ...filled("Adresse", command.party.address),
+        ...filled("SIREN", command.party.siren),
+      ];
+    case "create_product":
+    case "update_product":
+      return [
+        { label: "Action", value: command.type === "update_product" ? "Mise à jour" : "Création" },
+        { label: "Fiche", value: "Produit" },
+        { label: "Nom", value: command.product.name },
+        ...filled("Référence", command.product.reference),
+        ...filled("Unité", command.product.unit),
+        ...filled("Fournisseur", command.product.supplierName),
+      ];
+    case "create_project":
+      return [
+        { label: "Action", value: "Création" },
+        { label: "Fiche", value: "Projet" },
+        { label: "Nom", value: command.name },
+        { label: "Client", value: command.primaryClient },
+        ...filled("Prochaine action", command.nextAction),
+      ];
+    case "record_quote":
+      return [
+        { label: "Action", value: "Création" },
+        { label: "Fiche", value: "Devis" },
+        { label: "Titre", value: command.title },
+        {
+          label: "Produits",
+          value: command.products.map((product) => product.name).filter(Boolean).join(", "),
+        },
+      ];
+  }
+}
+
+function filled(label: string, value: string): CommandField[] {
+  const text = value.trim();
+  return text ? [{ label, value: text }] : [];
+}
+
 const FIELD_RE =
   /^(email|e-mail|t[ée]l[ée]phone|t[ée]l|siren|siret|adresse|notes|r[ée]f[ée]rence|unit[ée]|description|fournisseur|client|action|produit|article)\b\s*[:=]?\s*([\s\S]*)$/i;
 

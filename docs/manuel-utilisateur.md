@@ -1,6 +1,6 @@
 # Manuel utilisateur
 
-Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification).
+Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification). Le fonctionnement du socle livré est dans la [spécification technique](/documentation/technique).
 
 Dernière mise à jour : 26 septembre 2026. Le menu Configuration règle le serveur, les modèles et la clé d’API.
 
@@ -18,6 +18,10 @@ L’accueil est l’assistant, et il n’y en a qu’un. C’est l’expert de l
 
 Le même bloc sert à écrire, à joindre des fichiers et à poser une question. Le bouton **Envoyer** lance la lecture. Jusqu’à 8 fichiers de 20 Mo. Un texte, un tableau, un document Word ou un PDF dont le texte peut être lu est indexé. Si le texte ne peut pas être extrait, le fichier est quand même enregistré.
 
+Le fil reste enregistré sur cette machine. En revenant à l’accueil, les derniers messages sont là. **Nouveau fil** en ouvre un autre, sans effacer le précédent. Si un message cite un seul projet déjà ouvert, le fil lui est associé. La pièce reçue, elle, n’y est pas rattachée.
+
+Pendant la réponse, l’étape en cours s’affiche : lecture des fiches, règle métier, proposition à confirmer, ou recherche. Le texte arrive au fur et à mesure.
+
 Il reconnaît le type sur la première ligne ou le nom du fichier : demande de prix (RFQ), devis, commande, facture, tarif, avoir, bon de livraison, contrat, fiche technique. Il situe l’étape dans le fil, relève le client, le fournisseur et les produits, et les compare aux fiches déjà enregistrées. Si le message cite un projet déjà ouvert, il le nomme. La pièce n’y est pas rattachée, et aucun projet n’est créé, tant que vous ne le demandez pas.
 
 Une phrase explicite est enregistrée tout de suite. Exemple : `Créer le projet : Cartes et kits de développement pour le client grid solutions. Le projet consiste à fournir un kit de développement.` Le dossier s’ouvre, l’objet est repris, et l’actualité commence par cette ouverture. Si le client est déjà au répertoire, son nom est repris. Sinon la fiche client attend une description, puis une confirmation. Une fiche technique jointe au même envoi, par exemple un kit de développement, est rattachée à ce projet. Elle ne porte pas de prix si la fiche n’en indique pas.
@@ -28,7 +32,7 @@ Un tableau collé de clients, de produits, de services, de projets ou de devis e
 
 Un devis ou un tarif confirmé ajoute une version : numéro, date, fournisseur, prix indiqué et conditions. Une version déjà enregistrée n’est pas dupliquée. Une facture, une commande ou un avoir peut créer une fiche manquante, sans devenir une version de devis. Les prix restent ceux écrits dans la pièce. Ils ne sont pas calculés et ils ne sont pas additionnés.
 
-Sans fichier, un message trop court, moins de 3 caractères, n’est pas enregistré. Une fiche client décrite en phrase se confirme dans le fil, par **Confirmer** ou par `Je confirme.` L’adresse du serveur, les modèles et la clé d’API se règlent dans Configuration.
+Sans fichier, un message trop court, moins de 3 caractères, n’est pas enregistré. Une fiche client, un fournisseur, un produit, un projet court ou un devis se confirme dans le fil, par **Confirmer** ou par `Je confirme.` `non` n’enregistre rien. L’adresse du serveur, les modèles et la clé d’API se règlent dans Configuration.
 
 **Projets récents** reprend les six derniers dossiers. **Tous les projets** ouvre la liste complète.
 
@@ -97,37 +101,37 @@ Exemple de la spécification : coût `700`, marque `30`, remise `10`. Le prix af
 
 ## Assistant
 
-L’assistant est l’accueil, [au même endroit](/#assistant). Il reconnaît l’intention, relit les fiches déjà enregistrées, puis agit. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
+L’assistant est l’accueil, [au même endroit](/#assistant). Il reconnaît l’intention, relit les fiches déjà enregistrées, puis agit ou propose. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
 
-Il distingue quatre demandes :
+Il distingue cinq demandes :
 
 - **Consulter** : `que sait-on de Marie Dupont`, `cherche Holzwerk`. La réponse reprend uniquement les fiches trouvées. S’il n’y en a pas, il le dit et n’invente rien.
 - **Lister** : `liste des clients`, `quels fournisseurs`. La liste vient du répertoire.
+- **Nom seul déjà connu** : `Marie Dupont`. Il demande si vous voulez consulter la fiche ou la modifier. Il n’ouvre pas une création.
 - **Corriger une fiche connue** : `le téléphone de Holzwerk Müller GmbH est le +49 89 000111`. Il retrouve la fiche, garde les autres champs, et propose la mise à jour.
 - **Créer ou mettre à jour** avec une phrase explicite, comme ci-dessous.
 
 Pour un client, il commence par l’analyse de l’action demandée (création ou mise à jour), puis sépare le nom, la forme, l’adresse, le pays et les identifiants. Un bloc collé sur plusieurs lignes est lu de la même façon. Exemple : `ajoute le client : Grid Solutions Oy`, puis la rue, le code postal, la ville, le pays, le Business ID et le VAT ID. La proposition affiche **Action demandée** et **Analyse**. Rien n’est écrit tant que vous n’avez pas confirmé. Les champs encore absents, comme l’e-mail ou le contact, sont listés à part.
 
-- **Confirmer**, ou écrire `Je confirme.`, enregistre la fiche.
-- `non` laisse la proposition en attente et demande la correction.
-- Un commentaire, par exemple `le téléphone est le 06 98 76 54 32`, produit une nouvelle proposition.
-- Un nouveau texte commençant par `Nouveau client` remplace la proposition en cours.
+- **Confirmer**, ou écrire `Je confirme.`, enregistre la fiche la plus récente encore en attente, client ou autre.
+- `non` n’enregistre rien. Pour un client, la proposition reste affichée afin de la corriger. Pour un fournisseur, un produit, un projet ou un devis, elle est écartée.
+- Un commentaire sur un client, par exemple `le téléphone est le 06 98 76 54 32`, produit une nouvelle proposition.
+- Un nouveau texte commençant par `Nouveau client` remplace la proposition de client en cours.
 
-Les autres phrases sont exécutées sans passer par le modèle :
+Ces phrases préparent une fiche, sans l’enregistrer et sans passer par le modèle :
 
 - `ajouter un fournisseur Quincaillerie Durand`
 - `créer produit Vis à bois, référence VIS-01, fournisseur Quincaillerie Durand`
 - `créer projet Atlas, client Atelier Nord`
-- `Créer le projet : Cartes et kits de développement pour le client grid solutions. Le projet consiste à fournir un kit de développement.`
 - `devis Offre mars, produit Vis à bois, référence VIS-01, produit Charnière`
+
+Deux cas s’enregistrent tout de suite, avant cette confirmation : la phrase parlée `Créer le projet : Cartes et kits de développement pour le client grid solutions. Le projet consiste à fournir un kit de développement.` et un tableau collé de clients, de produits, de services, de projets ou de devis.
 
 `créer client Atelier Nord, email contact@atelier.fr` et `mettre à jour le client Atelier Nord, adresse 12 rue des Lilas, Paris` ouvrent une proposition, ils n’enregistrent pas tout seuls.
 
-Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches, y compris les pièces jointes, l’actualité des projets et chaque version de devis. La recherche prend d’abord un lot large, par les mots et par les embeddings. Le reranker, s’il est installé, reclasse ce lot et écarte les fiches hors sujet avant de les donner au modèle de conversation. Le modèle peut relancer une recherche. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. `que sait-on de Vis à bois` reprend toutes les versions enregistrées, avec le prix indiqué et les conditions de chacune. Une pièce reçue seule reste hors projet. Elle entre dans l’actualité du dossier si le même envoi demande explicitement de créer le projet.
+Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches, y compris les pièces jointes, l’actualité des projets et chaque version de devis. La recherche prend d’abord un lot large, par les mots et par les embeddings. Le reranker, s’il est installé, reclasse ce lot et écarte les fiches hors sujet avant de les donner au modèle de conversation. Le modèle peut relancer une recherche. S’il propose une fiche, l’outil ne l’écrit pas : le bouton **Confirmer** reste nécessaire. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. `que sait-on de Vis à bois` reprend toutes les versions enregistrées, avec le prix indiqué et les conditions de chacune. Une pièce reçue seule reste hors projet. Elle entre dans l’actualité du dossier si le même envoi demande explicitement de créer le projet.
 
 L’état du serveur, l’adresse et les trois modèles sont dans **Configuration**, pas sur l’accueil. Le budget prévu est un utilisateur, 16 Go de mémoire graphique et 32 Go de RAM. Les embeddings, puis le reranker, se chargent et se déchargent. Ensuite seulement le modèle de conversation, limité à 4 096 jetons. Sans `bge-m3`, l’index utilise `nomic-embed-text` s’il est là, sinon la recherche continue par les mots, même si Ollama ne répond pas.
-
-La conversation n’est pas enregistrée. **Effacer** la retire de l’écran.
 
 Si Configuration indique **Serveur injoignable**, le PC hôte doit faire écouter Ollama sur le port `11434`, et le pare-feu Windows doit autoriser ce port depuis le réseau local. Dans une VM VirtualBox en NAT, l’adresse peut être `http://10.0.2.2:11434`.
 
@@ -141,7 +145,7 @@ Ces trois écrans décrivent le comportement prévu. Ils ne saisissent pas encor
 
 ## Plus
 
-**Plus** ouvre les vues Clients, Fournisseurs et Produits, ce manuel et la spécification. Les versions de devis d’un produit, avec le prix indiqué et les conditions, sont sur la vue Produits. L’historique des prix de vente calculés, les exports, la sauvegarde et le connecteur de facturation électronique ne sont pas encore disponibles.
+**Plus** ouvre ce manuel, la spécification fonctionnelle et la spécification technique. Les versions de devis d’un produit, avec le prix indiqué et les conditions, sont sur la vue Produits. L’historique des prix de vente calculés, les exports, la sauvegarde et le connecteur de facturation électronique ne sont pas encore disponibles.
 
 ## Ce que vous ne pouvez pas faire ici
 

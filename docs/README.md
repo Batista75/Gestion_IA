@@ -1,14 +1,18 @@
 # Documentation
 
-Deux documents décrivent Gestion IA. Ils sont aussi accessibles dans l’interface, depuis l’en-tête et depuis Plus.
+Trois documents décrivent Gestion IA. Ils sont accessibles depuis Plus. Le manuel est aussi dans l’en-tête.
 
-## Spécification du projet
+## Spécification fonctionnelle
 
 [Spécification fonctionnelle et cadre de pilotage](specifications-gestion-ia.pdf), version 8 du 26 septembre 2026. Vingt pages. Cible : TPE et PME françaises, déploiement sur site. Le fichier fait foi pour le produit visé : facturation, achats, banque, pilotage, assistant, conservation des données sur site et validation humaine des décisions sensibles.
 
-Dans l’application, le même PDF s’ouvre par [Spécification](/documentation/specification).
+Dans l’application, le même PDF s’ouvre par [Spécification fonctionnelle](/documentation/specification).
 
-Le socle actuellement livré couvre l’accueil, les projets, le calcul de prix et l’assistant local. Le manuel utilisateur dit ce qui est utilisable. Il ne remplace pas la spécification.
+## Spécification technique
+
+[Spécification technique](specification-technique.md). Elle décrit le socle qui tourne : orchestration de l’assistant, fil conservé, confirmation, recherche dans les fiches, modèles et usage du GPU. Elle ne remplace pas le PDF. Quand ce fonctionnement change, ce fichier est mis à jour dans le même changement.
+
+Dans l’application : [Spécification technique](/documentation/technique).
 
 ## Manuel utilisateur
 

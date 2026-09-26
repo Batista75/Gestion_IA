@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ensureSpokenProject } from "@/lib/business-records";
+import { isConversationId, rememberTurn } from "@/lib/conversations";
 import { saveInboxPieces } from "@/lib/pieces";
 
 export type ActionState = {
@@ -54,4 +55,30 @@ export async function createInboxItemAction(
   revalidatePath("/produits");
   revalidatePath("/fournisseurs");
   return { message: result.message };
+}
+
+export async function recordExchangeAction(input: {
+  conversationId: string;
+  userText: string;
+  assistantText: string;
+}): Promise<{ ok: boolean }> {
+  if (!isConversationId(input.conversationId)) return { ok: false };
+  const userText = input.userText.trim().slice(0, 12_000);
+  const assistantText = input.assistantText.trim().slice(0, 12_000) || "Pièce enregistrée.";
+  if (userText) {
+    await rememberTurn({
+      conversationId: input.conversationId,
+      role: "user",
+      content: userText,
+      linkText: userText,
+    });
+  }
+  await rememberTurn({
+    conversationId: input.conversationId,
+    role: "assistant",
+    content: assistantText,
+    source: "action",
+    steps: ["Pièces enregistrées"],
+  });
+  return { ok: true };
 }

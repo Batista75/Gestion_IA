@@ -106,6 +106,30 @@ function isBareDirectory(folded: string): boolean {
   return leftovers.length === 0;
 }
 
+export function bareNameQuestion(text: string, titles: string[]): string | null {
+  if (understandIntent(text) !== "open") return null;
+  const folded = foldText(text).replace(/[?!.,]/g, "").trim();
+  if (
+    /\b(creer|cree|creez|ajoute|ajouter|ajoutez|ouvre|ouvrir|ouvrez|modifi\w*|chang\w*|supprim\w*|confirm\w*|devis|mettre|mets|mettez|nouveau|nouvelle|enregistrer|enregistre)\b/.test(
+      folded,
+    )
+  ) {
+    return null;
+  }
+  const hits = mentionedNames(text, titles);
+  if (hits.length !== 1) return null;
+  const name = hits[0] ?? "";
+  const nameTokens = new Set(
+    foldText(name)
+      .split(/[^a-z0-9]+/)
+      .filter((token) => token.length >= 3),
+  );
+  const queryTokens = folded.split(/[^a-z0-9]+/).filter((token) => token.length >= 3);
+  if (queryTokens.length === 0 || queryTokens.length > 4) return null;
+  if (!queryTokens.every((token) => nameTokens.has(token))) return null;
+  return `${name} est déjà enregistré. Voulez-vous consulter la fiche ou la modifier ?`;
+}
+
 export function recordFocus(text: string): SourceType | null {
   const folded = foldText(text);
   if (/\b(clients?|particuliers?|entreprises?)\b/.test(folded)) return "client";

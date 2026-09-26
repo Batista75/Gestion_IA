@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { kindLabel } from "@/domain/offer-versions";
+import { isConversationId, latestConversation, loadConversation } from "@/lib/conversations";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +50,20 @@ function previewEnrichment(value: string): string {
   return [...head, ...prices].slice(0, 8).join("\n");
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ nouveau?: string; fil?: string }>;
+}) {
+  const params = await searchParams;
+  const fresh = params.nouveau === "1";
+  const requested = typeof params.fil === "string" && isConversationId(params.fil) ? params.fil : "";
+  const thread = fresh
+    ? null
+    : requested
+      ? await loadConversation(requested)
+      : await latestConversation();
+  const conversationId = thread?.id ?? (requested && !fresh ? requested : crypto.randomUUID());
   const [projects, inbox, proposals] = await Promise.all([
     prisma.project.findMany({
       orderBy: { createdAt: "desc" },
@@ -85,7 +99,13 @@ export default async function HomePage() {
     <div className="grid gap-6">
       <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
 
-      <AssistantChat proposals={pending} />
+      <AssistantChat
+        key={conversationId}
+        conversationId={conversationId}
+        projectName={thread?.projectName ?? ""}
+        initialMessages={thread?.messages ?? []}
+        proposals={pending}
+      />
 
       <section className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
