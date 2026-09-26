@@ -86,6 +86,7 @@ const emptyDirectory: DirectorySnapshot = {
   products: [],
   quotes: [],
   demands: [],
+  projects: [],
 };
 
 test("une demande de prix, une commande et un devis connu produisent des propositions distinctes", () => {
@@ -132,6 +133,7 @@ Vis à bois VIS-01 | 0,18 € HT | franco 50 pièces`,
       },
     ],
     demands: [{ title: "Demande Helios", supplierName: "Quincaillerie Durand", clientName: "", status: "ouverte" }],
+    projects: ["Atlas"],
   };
   const quoteProposal = proposeFromReading(quote, "durand-2026.txt", known, []);
   assert.equal(quoteProposal?.actions.some((action) => action.type === "create_supplier"), false);
@@ -165,4 +167,9 @@ Vis à bois VIS-01 | 0,18 € HT | franco 50 pièces`,
   );
   assert.equal(duplicate?.actions.some((action) => action.type === "add_quote_version"), false);
   assert.match(duplicate?.summary ?? "", /déjà enregistrée/);
+
+  const linked = proposeFromReading(rfq, "rfq.txt", { ...emptyDirectory, projects: ["Atlas"] }, [], "pour le projet Atlas");
+  assert.match(linked?.summary ?? "", /Demande de devis reçue/);
+  assert.match(linked?.summary ?? "", /Projet déjà ouvert : Atlas/);
+  assert.equal(linked?.fields.find((field) => field.label === "Projet")?.value, "Atlas · déjà ouvert, pièce non rattachée");
 });

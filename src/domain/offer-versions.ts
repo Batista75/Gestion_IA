@@ -331,6 +331,7 @@ export type DirectorySnapshot = {
   products: Array<{ name: string; reference: string }>;
   quotes: DirectoryQuote[];
   demands: DirectoryDemand[];
+  projects: string[];
 };
 
 export type ProposedAction =
@@ -358,6 +359,7 @@ export function proposeFromReading(
   filename: string,
   directory: DirectorySnapshot,
   ragHits: ProposalSource[],
+  context = "",
 ): DocumentProposalDraft | null {
   if (reading.kind === "autre") return null;
   if (
@@ -373,6 +375,10 @@ export function proposeFromReading(
   const supplierName = reading.parties.supplierName;
   const knownClient = knownParty(clientName, directory.clients);
   const knownSupplier = knownParty(supplierName, directory.suppliers);
+  const projectName = mentionedProject(
+    `${context}\n${reading.heading}\n${filename}`,
+    directory.projects,
+  );
   const actions: ProposedAction[] = [];
   const title = (reading.offers[0]?.title || reading.heading || filename).slice(0, 180);
   const reference = reading.offers[0]?.versionLabel || "";
@@ -419,8 +425,8 @@ export function proposeFromReading(
   return {
     kind: reading.kind,
     title,
-    summary: summaryOf(reading, filename, knownClient, knownSupplier, directory, actions, ragHits),
-    fields: fieldsOf(reading, clientName, supplierName, knownClient, knownSupplier, actions),
+    summary: summaryOf(reading, filename, knownClient, knownSupplier, directory, actions, ragHits, projectName),
+    fields: fieldsOf(reading, clientName, supplierName, knownClient, knownSupplier, actions, projectName),
     actions,
     sources: sourcesOf(knownClient, knownSupplier, reading, directory, ragHits),
   };
@@ -450,6 +456,7 @@ function fieldsOf(
   knownClient: string | null,
   knownSupplier: string | null,
   actions: ProposedAction[],
+  projectName: string | null,
 ): ProposalField[] {
   const products = reading.pricedLines.map((line) => {
     const price = line.statedPrice ? ` — ${line.statedPrice}` : "";
@@ -458,6 +465,13 @@ function fieldsOf(
   });
   return [
     { label: "Type", value: kindLabel(reading.kind) },
+    { label: "Étape", value: cycleSentence(reading.kind) },
+    {
+      label: "Projet",
+      value: projectName
+        ? `${projectName} · déjà ouvert, pièce non rattachée`
+        : "Non rattaché",
+    },
     {
       label: "Client",
       value: clientName
@@ -493,10 +507,15 @@ function summaryOf(
   directory: DirectorySnapshot,
   actions: ProposedAction[],
   ragHits: ProposalSource[],
+  projectName: string | null,
 ): string {
   const clientName = reading.parties.clientName;
   const supplierName = reading.parties.supplierName;
-  const lines = [`Type reconnu : ${kindLabel(reading.kind)}.`, `Pièce : ${filename}.`];
+  const lines = [
+    `Type reconnu : ${kindLabel(reading.kind)}.`,
+    cycleSentence(reading.kind),
+    `Pièce : ${filename}.`,
+  ];
   lines.push(
     clientName
       ? knownClient
@@ -538,8 +557,43 @@ function summaryOf(
   if (ragHits.length > 0) {
     lines.push(`Fiches proches : ${ragHits.slice(0, 4).map((hit) => `${hit.label} ${hit.title}`).join(", ")}.`);
   }
-  lines.push("Aucun projet n’est créé. Rien n’est écrit tant que la proposition n’est pas confirmée.");
+  lines.push(
+    projectName
+      ? `Projet déjà ouvert : ${projectName}. La pièce reste hors dossier tant que vous ne demandez pas de l’y rattacher.`
+      : "Aucun projet n’est ouvert depuis cette pièce.",
+  );
+  lines.push("Rien n’est écrit tant que la proposition n’est pas confirmée.");
   return lines.join("\n");
+}
+
+export function cycleSentence(kind: DocumentKind): string {
+  switch (kind) {
+    case "rfq":
+      return "Demande de devis reçue. La suite est l’offre, puis la fourniture du produit ou du service dans un projet.";
+    case "devis":
+    case "tarif":
+      return "Offre à comparer. Les autres versions du même produit restent à part.";
+    case "commande":
+      return "Commande à honorer : produit ou service, dans le cadre d’un projet.";
+    case "livraison":
+      return "Fourniture du produit ou du service.";
+    case "facture":
+    case "avoir":
+      return "Pièce après la fourniture. Elle ne devient pas une version de devis.";
+    case "contrat":
+      return "Cadre de la fourniture, avant ou pendant le projet.";
+    default:
+      return "Pièce reçue dans le fil de l’activité.";
+  }
+}
+
+function mentionedProject(context: string, names: string[]): string | null {
+  const hay = fold(context);
+  const hits = names.filter((name) => {
+    const folded = fold(name);
+    return folded.length >= 3 && hay.includes(folded);
+  });
+  return hits.length === 1 ? hits[0] ?? null : null;
 }
 
 function sourcesOf(

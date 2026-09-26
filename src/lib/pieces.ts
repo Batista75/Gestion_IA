@@ -99,7 +99,7 @@ export async function saveInboxPieces(
   }
 
   const { queueDocumentProposals } = await import("@/lib/document-proposals");
-  const proposals = await queueDocumentProposals(stored);
+  const proposals = await queueDocumentProposals(stored, note);
   return { ok: true, message: intakeMessage(files.length, proposals) };
 }
 

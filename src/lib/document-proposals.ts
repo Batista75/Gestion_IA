@@ -13,6 +13,7 @@ import { recordOfferVersion } from "@/lib/pieces";
 
 export async function queueDocumentProposals(
   files: Array<{ id: string; originalName: string; reading: DocumentReading }>,
+  context = "",
 ): Promise<number> {
   const interesting = files.filter((file) => file.reading.kind !== "autre");
   if (interesting.length === 0) return 0;
@@ -20,7 +21,7 @@ export async function queueDocumentProposals(
   const hits = await ragHits(interesting);
   let count = 0;
   for (const file of interesting) {
-    const draft = proposeFromReading(file.reading, file.originalName, directory, hits);
+    const draft = proposeFromReading(file.reading, file.originalName, directory, hits, context);
     if (!draft) continue;
     await prisma.documentProposal.create({
       data: {
@@ -174,7 +175,7 @@ async function supplierIdOf(name: string): Promise<string | null> {
 }
 
 async function loadDirectory(): Promise<DirectorySnapshot> {
-  const [clients, suppliers, products, quotes, demands] = await Promise.all([
+  const [clients, suppliers, products, quotes, demands, projects] = await Promise.all([
     prisma.client.findMany({ take: 500, orderBy: { name: "asc" } }),
     prisma.supplier.findMany({ take: 500, orderBy: { name: "asc" } }),
     prisma.product.findMany({ take: 500, orderBy: { name: "asc" } }),
@@ -184,6 +185,7 @@ async function loadDirectory(): Promise<DirectorySnapshot> {
       include: { lines: { include: { product: true } } },
     }),
     prisma.demand.findMany({ take: 200, orderBy: { updatedAt: "desc" } }),
+    prisma.project.findMany({ take: 200, orderBy: { name: "asc" } }),
   ]);
   return {
     clients: clients.map((client) => client.name),
@@ -206,6 +208,7 @@ async function loadDirectory(): Promise<DirectorySnapshot> {
       clientName: demand.clientName,
       status: demand.status,
     })),
+    projects: projects.map((project) => project.name),
   };
 }
 

@@ -2,7 +2,7 @@
 
 Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification).
 
-Dernière mise à jour : 26 septembre 2026, avec l’assistant sur l’accueil et les propositions de pièces.
+Dernière mise à jour : 26 septembre 2026, avec un seul assistant sur l’accueil, de la demande de devis à la fourniture.
 
 ## Ouvrir l’application
 
@@ -14,19 +14,17 @@ Les données restent sur cette machine. L’assistant envoie le texte à Ollama 
 
 ## Accueil
 
-**Nouvelle information** sert à déposer un texte, des fichiers, ou les deux. Le commentaire est facultatif dès qu’un fichier est joint. Le bouton **Déposer pour analyse** conserve la pièce et prépare une proposition.
+L’accueil est l’assistant, et il n’y en a qu’un. C’est l’expert de l’activité, en achat-revente ou en fourniture de services. Il suit le fil : demande de devis reçue, offre, commande, puis fourniture du produit ou du service dans un projet.
 
-Tous les fichiers sont conservés, jusqu’à 8 fichiers de 20 Mo. Un texte, un tableau, un document Word ou un PDF dont le texte peut être lu est indexé. Si le texte ne peut pas être extrait, le fichier est quand même enregistré. Le téléchargement se fait depuis le nom du fichier.
+Le même bloc sert à écrire, à joindre des fichiers et à poser une question. Le bouton **Envoyer** lance la lecture. Jusqu’à 8 fichiers de 20 Mo. Un texte, un tableau, un document Word ou un PDF dont le texte peut être lu est indexé. Si le texte ne peut pas être extrait, le fichier est quand même enregistré.
 
-L’assistant reconnaît le type sur la première ligne ou le nom du fichier : demande de prix (RFQ), devis, commande, facture, tarif, avoir, bon de livraison, contrat. Il relève le client, le fournisseur et les produits, puis les compare aux fiches déjà enregistrées. **À valider** montre la proposition : créer un client, un fournisseur ou un produit, ouvrir une demande, ajouter une version de devis, ou marquer une demande comme offre reçue.
+Il reconnaît le type sur la première ligne ou le nom du fichier : demande de prix (RFQ), devis, commande, facture, tarif, avoir, bon de livraison, contrat. Il situe l’étape dans le fil, relève le client, le fournisseur et les produits, et les compare aux fiches déjà enregistrées. Si le message cite un projet déjà ouvert, il le nomme. La pièce n’y est pas rattachée, et aucun projet n’est créé, tant que vous ne le demandez pas.
 
-**Confirmer** écrit ces fiches. **Écarter** laisse le fichier dans À classer. Rien n’est écrit avant confirmation, et aucun projet n’est créé.
+**À confirmer**, dans le même bloc, propose de créer un client, un fournisseur ou un produit, d’ouvrir une demande, d’ajouter une version de devis, ou de marquer une demande comme offre reçue. **Confirmer** écrit ces fiches. **Écarter** laisse le fichier dans Pièces reçues.
 
 Un devis ou un tarif confirmé ajoute une version : numéro, date, fournisseur, prix indiqué et conditions. Une version déjà enregistrée n’est pas dupliquée. Une facture, une commande ou un avoir peut créer une fiche manquante, sans devenir une version de devis. Les prix restent ceux écrits dans la pièce. Ils ne sont pas calculés et ils ne sont pas additionnés.
 
-Sans fichier, une information trop courte, moins de 3 caractères, n’est pas enregistrée.
-
-L’**Assistant**, plus bas sur le même écran, reprend la conversation : questions sur les fiches, exemples de clients, confirmation d’une fiche décrite en phrase. Le bandeau Ollama est dans ce bloc.
+Sans fichier, un message trop court, moins de 3 caractères, n’est pas enregistré. Les exemples de clients et l’état d’Ollama sont dans ce même assistant. Une fiche client décrite en phrase se confirme dans le fil, par **Confirmer** ou par `Je confirme.`
 
 **Projets récents** reprend les six derniers dossiers. **Tous les projets** ouvre la liste complète.
 
@@ -83,7 +81,7 @@ Exemple de la spécification : coût `700`, marque `30`, remise `10`. Le prix af
 
 ## Assistant
 
-L’assistant est sur [l’accueil](/#assistant). Il reconnaît l’intention, relit les fiches déjà enregistrées, puis agit. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
+L’assistant est l’accueil, [au même endroit](/#assistant). Il reconnaît l’intention, relit les fiches déjà enregistrées, puis agit. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
 
 Il distingue quatre demandes :
 
@@ -115,7 +113,7 @@ Les autres phrases sont exécutées sans passer par le modèle :
 
 `créer client Atelier Nord, email contact@atelier.fr` et `mettre à jour le client Atelier Nord, adresse 12 rue des Lilas, Paris` ouvrent une proposition, ils n’enregistrent pas tout seuls.
 
-Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches, y compris les pièces jointes et chaque version de devis. Le modèle peut relancer une recherche. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. `que sait-on de Vis à bois` reprend toutes les versions enregistrées, avec le prix indiqué et les conditions de chacune. Une note de l’accueil reste « À classer » : elle ne devient un projet que si vous le demandez.
+Une demande plus libre est transmise à Ollama avec les extraits des fiches les plus proches, y compris les pièces jointes et chaque version de devis. Le modèle peut relancer une recherche. Seuls les champs présents dans votre message ou dans une fiche retrouvée sont proposés. `que sait-on de Vis à bois` reprend toutes les versions enregistrées, avec le prix indiqué et les conditions de chacune. Une pièce reçue sur l’accueil reste hors projet : elle n’entre dans un dossier que si vous le demandez.
 
 Le bandeau **Inférence sur le PC hôte** indique si Ollama répond et l’adresse utilisée, par défaut `http://192.168.1.5:11434`. Le budget prévu est un utilisateur, 16 Go de mémoire graphique et 32 Go de RAM. L’index `nomic-embed-text` se charge, puis se décharge. Ensuite seulement le modèle de conversation, limité à 4 096 jetons. `qwen-dgfip-multisec-2ep:latest` ou `qwen2.5:7b` conviennent. Un modèle 14B, Mixtral ou `bge-m3` ne doit pas rester chargé en même temps. Sans `nomic-embed-text`, la recherche dans les fiches continue par les mots, et elle fonctionne même si Ollama ne répond pas.
 

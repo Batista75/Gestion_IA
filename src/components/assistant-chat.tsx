@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createInboxItemAction } from "@/app/actions";
+import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,14 +41,17 @@ type ChatMessage = {
   sources?: SourceRef[];
 };
 
-export function AssistantChat() {
+export function AssistantChat({ proposals = [] }: { proposals?: PendingProposal[] }) {
   const [status, setStatus] = useState<OllamaStatus | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [model, setModel] = useState("");
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
   const [pending, setPending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -68,16 +74,41 @@ export function AssistantChat() {
     };
   }, []);
 
-  async function send(content: string) {
-    if (!content || pending) return;
+  async function send(content: string, attached: File[] = files) {
+    const text = content.trim();
+    if ((!text && attached.length === 0) || pending) return;
 
-    const history = [...messages, { role: "user" as const, content }];
+    const history = [
+      ...messages,
+      {
+        role: "user" as const,
+        content: text || attached.map((file) => file.name).join(", "),
+      },
+    ];
     setMessages(history);
     setDraft("");
+    setFiles([]);
+    if (fileRef.current) fileRef.current.value = "";
     setPending(true);
     setSendError(null);
 
     try {
+      if (attached.length > 0) {
+        const data = new FormData();
+        data.set("body", text);
+        for (const file of attached) data.append("files", file);
+        const result = await createInboxItemAction({ message: null }, data);
+        setMessages((current) => [
+          ...current,
+          {
+            role: "assistant",
+            content: result.message ?? "Pièce enregistrée.",
+            source: "action",
+          },
+        ]);
+        router.refresh();
+        return;
+      }
       const response = await fetch("/api/assistant", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -121,20 +152,23 @@ export function AssistantChat() {
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void send(draft.trim());
+    void send(draft, files);
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4" id="assistant">
       <Card>
         <CardHeader>
-          <CardTitle>Inférence sur le PC hôte</CardTitle>
+          <CardTitle>Assistant</CardTitle>
           <CardDescription>
-            Ollama utilise la carte graphique du poste 192.168.1.5. Le texte
-            reste sur le réseau local.
+            Un seul interlocuteur, de la demande de devis reçue jusqu’à la
+            fourniture du produit ou du service dans un projet. Achat-revente
+            ou prestation : il relit le répertoire, propose, puis attend
+            confirmation. Il ne calcule pas les prix.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3">
+        <CardContent className="grid gap-4">
+          <div className="grid gap-2">
           {status === null && !statusError ? (
             <p className="text-sm text-muted-foreground">
               Vérification d’Ollama…
@@ -190,26 +224,22 @@ export function AssistantChat() {
               </select>
             </div>
           ) : null}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Conversation</CardTitle>
-          <CardDescription>
-            Il reconnaît l’intention, relit les fiches déjà enregistrées, puis
-            agit. Une fiche client reste une proposition à confirmer. Il ne
-            calcule pas les prix. La conversation n’est pas conservée.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
+          </div>
+          {proposals.length > 0 ? (
+            <div className="grid gap-2">
+              <h2 className="text-sm font-medium">À confirmer</h2>
+              <ProposalBoard proposals={proposals} />
+            </div>
+          ) : null}
           {messages.length === 0 ? (
             <div className="grid gap-3">
               <p className="text-sm leading-6 text-muted-foreground">
-                Ces exemples proposent une fiche, sans l’enregistrer. Vous pouvez
-                aussi demander « que sait-on de Marie Dupont » ou « liste des
-                clients » : la réponse vient des fiches, pas d’une invention.
-                Pour un prix de vente, utilisez Ventes.
+                Déposez une demande de devis, une offre, une commande ou une
+                facture, ou posez une question. Ces exemples proposent une
+                fiche client, sans l’enregistrer. « que sait-on de Marie
+                Dupont » répond depuis les fiches. Un prix de vente se calcule
+                dans Ventes. La conversation n’est pas conservée ; les pièces
+                et les propositions le sont.
               </p>
               <div className="flex flex-wrap gap-2">
                 {CLIENT_EXAMPLES.map((example) => (
@@ -219,7 +249,7 @@ export function AssistantChat() {
                     variant="outline"
                     className="min-h-11 px-3"
                     disabled={pending}
-                    onClick={() => void send(example.text)}
+                    onClick={() => void send(example.text, [])}
                   >
                     {example.label}
                   </Button>
@@ -288,17 +318,33 @@ export function AssistantChat() {
               id="assistant-draft"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="Décrivez la pièce ou la question, sans donnée inutile."
+              placeholder="Demande de devis, pièce reçue, question sur un client ou un projet."
               maxLength={4000}
               className="min-h-28"
             />
+            <div className="grid gap-2">
+              <Label htmlFor="assistant-files">Pièces jointes</Label>
+              <input
+                ref={fileRef}
+                id="assistant-files"
+                type="file"
+                multiple
+                onChange={(event) => setFiles([...(event.target.files ?? [])])}
+                className="block w-full min-h-11 text-sm file:mr-3 file:min-h-9 file:rounded-md file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium"
+              />
+              {files.length > 0 ? (
+                <p className="text-sm text-muted-foreground break-words">
+                  {files.map((file) => file.name).join(", ")}
+                </p>
+              ) : null}
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 type="submit"
-                disabled={pending || draft.trim().length === 0}
+                disabled={pending || (draft.trim().length === 0 && files.length === 0)}
                 className="min-h-11 px-4"
               >
-                {pending ? "Inférence en cours…" : "Envoyer"}
+                {pending ? "Lecture…" : "Envoyer"}
               </Button>
               {messages.length > 0 ? (
                 <Button

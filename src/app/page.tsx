@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { AssistantChat } from "@/components/assistant-chat";
-import { InboxForm } from "@/components/inbox-form";
-import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
+import { type PendingProposal } from "@/components/proposal-board";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -85,52 +84,14 @@ export default async function HomePage() {
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Déposez une pièce ou posez une question. L’assistant reconnaît le
-          type, relit le répertoire, et propose une fiche avant de l’écrire.
-          Une pièce ne crée pas de projet.
+          Un seul assistant suit l’activité, achat-revente ou fourniture de
+          services : de la demande de devis reçue jusqu’à la fourniture du
+          produit ou du service dans un projet. Il propose les fiches et
+          n’ouvre pas de dossier tant que vous ne le lui demandez pas.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Nouvelle information</CardTitle>
-            <CardDescription>
-              Le fichier est conservé. La lecture du type, du client et du
-              fournisseur arrive dans À valider.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <InboxForm />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>À valider</CardTitle>
-            <CardDescription>
-              Client, fournisseur, produit, demande ou version de devis :
-              confirmez pour écrire, ou écartez. Les prix indiqués restent
-              séparés.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ProposalBoard proposals={pending} />
-          </CardContent>
-        </Card>
-      </div>
-
-      <section id="assistant" className="grid gap-3">
-        <div className="grid gap-1">
-          <h2 className="text-lg font-semibold">Assistant</h2>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            La conversation est ici, à côté des pièces. Elle relit les mêmes
-            fiches. Un client décrit en phrase reste une proposition à
-            confirmer dans le fil. Il ne calcule pas les prix.
-          </p>
-        </div>
-        <AssistantChat />
-      </section>
+      <AssistantChat proposals={pending} />
 
       <section className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
@@ -173,7 +134,7 @@ export default async function HomePage() {
       </section>
 
       <section className="grid gap-3">
-        <h2 className="text-lg font-semibold">À classer</h2>
+        <h2 className="text-lg font-semibold">Pièces reçues</h2>
         {inbox.length === 0 ? (
           <Card>
             <CardContent className="text-sm text-muted-foreground">
