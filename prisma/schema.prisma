@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Project {
+  id            String   @id @default(cuid())
+  name          String
+  primaryClient String
+  status        String   @default("À qualifier")
+  nextAction    String
+  createdAt     DateTime @default(now())
+}
+
+model InboxItem {
+  id        String   @id @default(cuid())
+  body      String
+  createdAt DateTime @default(now())
+}
