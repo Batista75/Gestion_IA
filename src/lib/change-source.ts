@@ -1,6 +1,11 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-const store = new AsyncLocalStorage<string>();
+const globalForSource = globalThis as unknown as {
+  changeSource?: AsyncLocalStorage<string>;
+};
+
+const store = globalForSource.changeSource ?? new AsyncLocalStorage<string>();
+globalForSource.changeSource = store;
 
 export function currentChangeSource(): string {
   return store.getStore() || "application";
