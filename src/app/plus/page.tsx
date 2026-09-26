@@ -9,8 +9,14 @@ import {
 } from "@/components/ui/card";
 import { cn } from "cn";
 
+const directories = [
+  { href: "/clients", label: "Clients" },
+  { href: "/fournisseurs", label: "Fournisseurs" },
+  { href: "/produits", label: "Produits" },
+];
+
 const later = [
-  "Clients, fournisseurs, produits et services, avec l’historique des prix.",
+  "Historique daté des prix d’achat et de vente.",
   "Export documentaire et export comptable, puis sauvegarde restaurable.",
   "Connecteur vers une plateforme agréée, désactivable.",
 ];
@@ -21,10 +27,30 @@ export default function MorePage() {
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Plus</h1>
         <p className="text-sm leading-6 text-muted-foreground">
-          Le manuel décrit les écrans en service. La spécification décrit le
-          produit visé. Le reste de cette page n’est pas encore saisissable.
+          Les référentiels se tiennent ici. Le manuel décrit les écrans en
+          service, la spécification décrit le produit visé.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Référentiels</CardTitle>
+          <CardDescription>
+            Ces fiches se remplissent à la main ou par l’assistant.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 sm:flex-row">
+          {directories.map((entry) => (
+            <Link
+              key={entry.href}
+              href={entry.href}
+              className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
+            >
+              {entry.label}
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

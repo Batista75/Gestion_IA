@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ProjectForm } from "@/components/project-form";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,7 +24,15 @@ export default async function ProjectsPage() {
           <CardTitle>Nouveau dossier</CardTitle>
           <CardDescription>
             Un projet relie un besoin, un client facturé et les pièces qui
-            suivront. Le statut initial est « À qualifier ».
+            suivront. Le statut initial est « À qualifier ». Le compte se tient
+            dans la{" "}
+            <Link
+              href="/clients"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              vue Clients
+            </Link>
+            .
           </CardDescription>
         </CardHeader>
         <CardContent>

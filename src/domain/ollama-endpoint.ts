@@ -52,7 +52,7 @@ function isPrivateHost(hostname: string): boolean {
 }
 
 const MONEY_INTENT =
-  /\b(calcul\w*|combien|prix de vente|taux de marque|marge|tva|montant|ht|ttc)\b/;
+  /\b(calcul\w*|combien|prix de vente|taux de marque|quel prix|quelle marge)\b/;
 
 export function asksModelToComputeMoney(text: string): boolean {
   const normalized = text

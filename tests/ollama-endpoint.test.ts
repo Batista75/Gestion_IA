@@ -38,4 +38,8 @@ test("une question de prix chiffrée ne part pas vers le modèle", () => {
     asksModelToComputeMoney("Comment ranger une facture fournisseur ?"),
     false,
   );
+  assert.equal(
+    asksModelToComputeMoney("créer produit Vis à bois, référence VIS-12"),
+    false,
+  );
 });

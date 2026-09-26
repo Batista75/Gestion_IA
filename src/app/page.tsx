@@ -29,9 +29,21 @@ export default async function HomePage() {
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Déposez une information ou ouvrez un dossier. Les pièces ambiguës
-          restent à classer : aucun projet n’est créé sans votre confirmation.
+          Déposez une information ou ouvrez un dossier. Une note de l’accueil
+          ne crée pas de projet. L’assistant peut créer un compte, un
+          fournisseur, un produit ou un projet si vous le lui demandez.
         </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Link href="/clients" className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 text-sm font-medium">
+            Clients
+          </Link>
+          <Link href="/fournisseurs" className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 text-sm font-medium">
+            Fournisseurs
+          </Link>
+          <Link href="/produits" className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 text-sm font-medium">
+            Produits
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">

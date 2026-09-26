@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PriceSimulator } from "@/components/price-simulator";
 import {
   Card,
@@ -15,7 +16,14 @@ export default function SalesPage() {
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
           Le simulateur calcule un prix conseillé à partir du coût, du taux de
           marque et de la remise. Il ne numérote pas de devis et ne fixe pas la
-          TVA.
+          TVA. Les produits cités dans un devis sont dans la{" "}
+          <Link
+            href="/produits"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            vue Produits
+          </Link>
+          .
         </p>
       </div>
       <Card>

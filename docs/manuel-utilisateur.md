@@ -2,7 +2,7 @@
 
 Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification).
 
-Dernière mise à jour : 26 septembre 2026.
+Dernière mise à jour : 26 septembre 2026, avec les vues Clients, Fournisseurs et Produits.
 
 ## Ouvrir l’application
 
@@ -21,6 +21,26 @@ Une information trop courte, moins de 3 caractères, n’est pas enregistrée.
 **À valider** est vide. Les propositions de prix, de tiers ou de rapprochement n’apparaissent pas encore.
 
 **Projets récents** reprend les six derniers dossiers. **Tous les projets** ouvre la liste complète.
+
+## Clients
+
+La [vue Clients](/clients) liste les comptes. **Nouveau client** demande un nom. Le SIREN, l’e-mail, le téléphone, l’adresse et les notes sont facultatifs. **Modifier** sur une fiche enregistre la mise à jour.
+
+La recherche porte sur le nom, l’e-mail et le SIREN. Un compte déjà présent n’est pas dupliqué.
+
+## Fournisseurs
+
+La [vue Fournisseurs](/fournisseurs) suit le même principe. **Achats** y renvoie. La commande, la réception et la facture fournisseur ne se saisissent pas encore.
+
+## Produits
+
+La [vue Produits](/produits) montre tout le catalogue :
+
+- **Saisie manuelle** : nom, référence, unité, fournisseur, description. Un fournisseur inconnu est créé.
+- **Issu d’un devis** : titre du devis et un produit par ligne. Les produits entrent au catalogue et restent rattachés à ce devis.
+- **Saisi par l’assistant** : quand vous lui demandez d’ajouter un produit.
+
+Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **Saisie manuelle** limitent la liste. Une fiche peut porter à la fois une saisie et un devis.
 
 ## Projets
 
@@ -47,7 +67,18 @@ Exemple de la spécification : coût `700`, marque `30`, remise `10`. Le prix af
 
 ## Assistant
 
-L’assistant prépare et explique. Il ne classe pas une pièce, n’émet pas de facture et ne calcule pas un prix. Une question chiffrée de prix, de TVA ou de marge reçoit la règle métier et renvoie vers Ventes.
+L’assistant prépare, explique, et enregistre les fiches que vous lui demandez. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
+
+Phrases qu’il exécute sans passer par le modèle :
+
+- `créer client Atelier Nord, email contact@atelier.fr`
+- `mettre à jour le client Atelier Nord, adresse 12 rue des Lilas, Paris`
+- `ajouter un fournisseur Quincaillerie Durand`
+- `créer produit Vis à bois, référence VIS-01, fournisseur Quincaillerie Durand`
+- `créer projet Atlas, client Atelier Nord`
+- `devis Offre mars, produit Vis à bois, référence VIS-01, produit Charnière`
+
+Une demande plus libre est transmise à Ollama, qui dispose des mêmes actions. Seuls les champs présents dans votre message sont écrits.
 
 Le bandeau **Inférence sur le PC hôte** indique si Ollama répond et l’adresse utilisée, par défaut `http://192.168.1.5:11434`. Choisissez un modèle de conversation. `qwen-dgfip-multisec-2ep:latest` convient. Les modèles d’embedding, comme `bge-m3` ou `nomic-embed-text`, ne répondent pas au chat.
 
@@ -65,11 +96,11 @@ Ces trois écrans décrivent le comportement prévu. Ils ne saisissent pas encor
 
 ## Plus
 
-**Plus** ouvre ce manuel et la spécification. Les clients, le catalogue, les exports, la sauvegarde et le connecteur de facturation électronique ne sont pas encore disponibles.
+**Plus** ouvre les vues Clients, Fournisseurs et Produits, ce manuel et la spécification. L’historique daté des prix, les exports, la sauvegarde et le connecteur de facturation électronique ne sont pas encore disponibles.
 
 ## Ce que vous ne pouvez pas faire ici
 
 - numéroter ou émettre une facture, un avoir ou une commande
 - faire calculer un montant par l’assistant
-- rattacher une information à un projet sans créer vous-même le dossier
+- rattacher une note de l’accueil à un projet : il faut créer le dossier, à la main ou en le demandant à l’assistant
 - lancer un paiement ou une transmission vers une plateforme agréée
