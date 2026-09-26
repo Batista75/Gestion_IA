@@ -17,8 +17,6 @@ import {
 
 export type SaleState = { message: string | null; ok: boolean };
 
-const empty: SaleState = { message: null, ok: false };
-
 function done(projectId: string, result: { ok: boolean; summary: string }): SaleState {
   revalidatePath(`/projets/${projectId}`);
   revalidatePath("/projets");
@@ -120,5 +118,3 @@ export async function reopenDocumentAction(_previous: SaleState, formData: FormD
   const id = projectId(formData);
   return run(id, () => reopenDocument(String(formData.get("documentId") ?? "")));
 }
-
-export { empty };
