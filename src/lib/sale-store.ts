@@ -1,4 +1,4 @@
-import { assignSuppliers, type SaleKind } from "@/domain/sale-line";
+import { assignSuppliers, saleParentAllowed, type SaleKind } from "@/domain/sale-line";
 import {
   centsFromStated,
   formatCents,
@@ -205,7 +205,7 @@ export async function markQuoteUnsuccessful(documentId: string): Promise<string>
 
 export async function openCustomerOrder(documentId: string): Promise<string> {
   const document = await loadDocument(documentId);
-  if (document.kind !== "devis" || document.status !== "en_cours") {
+  if (document.kind !== "devis" || document.status !== "en_cours" || !saleParentAllowed(document.kind, "commande_client")) {
     throw new Error("La commande client part d’un devis encore en cours.");
   }
   const created = await prisma.saleDocument.create({
@@ -215,6 +215,7 @@ export async function openCustomerOrder(documentId: string): Promise<string> {
       status: "en_cours",
       title: `Commande client · ${document.title}`.slice(0, 120),
       sourceId: document.id,
+      parentId: document.id,
       lines: { create: document.lines.map(snapshot) },
     },
   });
@@ -228,7 +229,7 @@ export async function openCustomerOrder(documentId: string): Promise<string> {
 
 export async function openSupplierOrders(documentId: string, fallbackSupplier: string): Promise<string> {
   const document = await loadDocument(documentId);
-  if (document.kind !== "commande_client" || document.status !== "en_cours") {
+  if (document.kind !== "commande_client" || document.status !== "en_cours" || !saleParentAllowed(document.kind, "commande_fournisseur")) {
     throw new Error("La commande fournisseur part d’une commande client en cours.");
   }
   const assigned = assignSuppliers(document.lines, fallbackSupplier);
@@ -244,6 +245,7 @@ export async function openSupplierOrders(documentId: string, fallbackSupplier: s
         title: `Commande fournisseur · ${group.supplierName}`.slice(0, 120),
         supplierName: group.supplierName,
         sourceId: document.id,
+        parentId: document.id,
         lines: { create: group.lines.map(snapshot) },
       },
     });

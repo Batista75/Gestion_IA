@@ -24,6 +24,13 @@ export function assignSuppliers<T extends { supplierName: string }>(
   };
 }
 
+/** Une commande client suit un devis. Une commande fournisseur suit une commande client. Pas de facture. */
+export function saleParentAllowed(parentKind: string, childKind: string): boolean {
+  if (childKind === "commande_client") return parentKind === "devis";
+  if (childKind === "commande_fournisseur") return parentKind === "commande_client";
+  return false;
+}
+
 export function saleKindLabel(kind: string): string {
   if (kind === "commande_client") return "Commande client";
   if (kind === "commande_fournisseur") return "Commande fournisseur";

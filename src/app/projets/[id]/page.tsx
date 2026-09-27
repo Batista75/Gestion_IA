@@ -26,7 +26,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     where: { id },
     include: {
       lines: { orderBy: { createdAt: "asc" } },
-      sales: { orderBy: { createdAt: "desc" }, include: { lines: { orderBy: { createdAt: "asc" } } } },
+      sales: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          lines: { orderBy: { createdAt: "asc" } },
+          parent: { select: { id: true, kind: true, title: true } },
+        },
+      },
       steps: true,
       events: { orderBy: { createdAt: "asc" } },
       client: true,
@@ -178,6 +184,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           supplierName: document.supplierName,
           createdLabel: document.createdAt.toLocaleString("fr-FR"),
           confirmedLabel: document.confirmedAt ? document.confirmedAt.toLocaleString("fr-FR") : null,
+          parent: document.parent,
           lines: document.lines.map((line) => ({
             id: line.id,
             name: line.name,

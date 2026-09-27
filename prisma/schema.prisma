@@ -464,12 +464,16 @@ model SaleDocument {
   title        String
   supplierName String             @default("")
   sourceId     String             @default("")
+  parentId     String?
+  parent       SaleDocument?      @relation("SaleLineage", fields: [parentId], references: [id], onDelete: SetNull)
+  children     SaleDocument[]     @relation("SaleLineage")
   confirmedAt  DateTime?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
   lines        SaleDocumentLine[]
 
   @@index([projectId])
+  @@index([parentId])
 }
 
 model SaleDocumentLine {

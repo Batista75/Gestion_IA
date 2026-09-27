@@ -46,6 +46,7 @@ export type OperationDocument = {
   supplierName: string;
   createdLabel: string;
   confirmedLabel: string | null;
+  parent: { id: string; kind: string; title: string } | null;
   lines: OperationLine[];
 };
 
@@ -417,6 +418,14 @@ function DocumentCard({
           Voir le document
         </Link>
       </div>
+      {document.parent ? (
+        <p className="text-sm">
+          Issue de{" "}
+          <Link href={`/projets/${projectId}/documents/${document.parent.id}`} className="font-medium underline-offset-4 hover:underline">
+            {saleKindLabel(document.parent.kind)} · {document.parent.title}
+          </Link>
+        </p>
+      ) : null}
       {document.supplierName ? <p className="text-sm">Fournisseur {document.supplierName}</p> : null}
       <ul className="grid gap-2">
         {document.lines.map((line, index) => (

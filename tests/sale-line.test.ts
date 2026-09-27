@@ -6,7 +6,7 @@ import {
   saleLineFigures,
   saleOperationTotals,
 } from "../src/domain/pricing.ts";
-import { assignSuppliers } from "../src/domain/sale-line.ts";
+import { assignSuppliers, saleParentAllowed } from "../src/domain/sale-line.ts";
 
 test("le prix de vente et la marge suivent la règle du coût", () => {
   const line = saleLineFigures({
@@ -69,4 +69,12 @@ test("un montant et une commande fournisseur se lisent sans inventer", () => {
   assert.equal(assigned.missing.length, 0);
   assert.equal(assigned.groups.length, 2);
   assert.equal(assigned.groups.find((group) => group.supplierName === "Helios")?.lines.length, 2);
+});
+
+test("une pièce ne suit que son parent prévu, et jamais une facture", () => {
+  assert.equal(saleParentAllowed("devis", "commande_client"), true);
+  assert.equal(saleParentAllowed("commande_client", "commande_fournisseur"), true);
+  assert.equal(saleParentAllowed("devis", "commande_fournisseur"), false);
+  assert.equal(saleParentAllowed("commande_client", "facture"), false);
+  assert.equal(saleParentAllowed("devis", "devis"), false);
 });

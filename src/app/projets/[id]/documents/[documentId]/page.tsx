@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { sheetBuys, sheetHeading } from "@/domain/company";
 import { deliveryFromRecord, deliverySummary } from "@/domain/delivery";
 import { formatCents, saleOperationTotals, storedSaleFigures } from "@/domain/pricing";
+import { saleKindLabel } from "@/domain/sale-line";
 import { loadCompany } from "@/lib/company-store";
 import { prisma } from "@/lib/db";
 import { cn } from "@/lib/utils";
@@ -20,7 +21,12 @@ export default async function SaleDocumentPage({
   const { id, documentId } = await params;
   const document = await prisma.saleDocument.findFirst({
     where: { id: documentId, projectId: id },
-    include: { lines: { orderBy: { createdAt: "asc" } }, project: true },
+    include: {
+      lines: { orderBy: { createdAt: "asc" } },
+      project: true,
+      parent: { select: { id: true, kind: true, title: true } },
+      children: { select: { id: true, kind: true, title: true }, orderBy: { createdAt: "asc" } },
+    },
   });
   if (!document) notFound();
   const buys = sheetBuys(document.kind);
@@ -56,6 +62,26 @@ export default async function SaleDocumentPage({
         </Link>
         <PrintButton />
       </div>
+      {document.parent ? (
+        <p className="text-sm print:hidden">
+          Issue de{" "}
+          <Link href={`/projets/${document.projectId}/documents/${document.parent.id}`} className="font-medium underline-offset-4 hover:underline">
+            {saleKindLabel(document.parent.kind)} · {document.parent.title}
+          </Link>
+        </p>
+      ) : null}
+      {document.children.length > 0 ? (
+        <ul className="grid gap-1 text-sm print:hidden">
+          {document.children.map((child) => (
+            <li key={child.id}>
+              A donné{" "}
+              <Link href={`/projets/${document.projectId}/documents/${child.id}`} className="font-medium underline-offset-4 hover:underline">
+                {saleKindLabel(child.kind)} · {child.title}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {!company.legalName ? (
         <p className="text-sm print:hidden">
           La raison sociale et le logo se saisissent dans{" "}

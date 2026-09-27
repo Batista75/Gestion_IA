@@ -181,7 +181,8 @@ Pièce établie dans le dossier. Suppression du projet en cascade.
 
 - `kind` : `devis`, `commande_client`, `commande_fournisseur`.
 - `status` : `en_cours`, `brouillon`, `non_abouti`, `transforme`. Défaut `en_cours`.
-- `title`, `supplierName`, `sourceId` (texte, sans clé étrangère), `confirmedAt`.
+- `title`, `supplierName`, `sourceId` (texte recopié), `confirmedAt`.
+- `parentId` vers un autre `SaleDocument`. La suppression du parent vide le lien. Un devis n’a pas de parent. Une commande client a pour parent un devis. Une commande fournisseur a pour parent une commande client. Aucune facture n’est créée ni numérotée.
 - `createdAt`, `updatedAt`.
 - Enfants : `SaleDocumentLine`.
 
@@ -361,7 +362,7 @@ Les faits de page et de zone affichés dans le fil sont calculés à la lecture.
 
 ## Avancement du lot
 
-6 sur 9, soit 67 %.
+7 sur 9, soit 78 %.
 
 | Point | État |
 | --- | --- |
@@ -371,7 +372,7 @@ Les faits de page et de zone affichés dans le fil sont calculés à la lecture.
 | Plusieurs adresses | Fait |
 | Centimes à côté du texte, sans addition | Fait |
 | Organisation unique, client et fournisseur | Pas fait |
-| Pièce commerciale reliée à sa parente, sans numéro de facture | Pas fait |
+| Pièce commerciale reliée à sa parente, sans numéro de facture | Fait |
 | Comparaison de l’historique de prix | Fait |
 | Confiance, version du modèle et validation | Pas fait |
 
@@ -382,7 +383,7 @@ Le lot suivant est retenu. Ces noms ne sont pas des tables.
 Priorité haute, pas encore faites :
 
 - Une `Organization` unique, à la fois client et fournisseur. `Client` et `Supplier` restent deux fiches, avec les mêmes attributs d’identité.
-- `SaleDocument` comme pièce commerciale reliée à sa pièce parente : devis, commande, livraison, facture, avoir. L’application n’émet toujours pas de facture et n’attribue pas de numéro.
+- Livraison, facture et avoir reliés à leur pièce parente. L’application n’émet toujours pas de facture et n’attribue pas de numéro.
 
 Priorité suivante :
 
