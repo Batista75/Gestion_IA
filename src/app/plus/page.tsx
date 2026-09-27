@@ -8,10 +8,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatDoneAt, v2Phases, v2Progress, v2ProgressCounts } from "@/domain/v2-progress";
+import { formatDoneAt, orderByDoneAt, readDoneOrder, v2Phases, v2Progress, v2ProgressCounts, type DoneOrder } from "@/domain/v2-progress";
 import { cn } from "cn";
 
-export default function MorePage() {
+export default async function MorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ordre?: string }>;
+}) {
+  const order = readDoneOrder((await searchParams).ordre);
+  const rows = order ? orderByDoneAt(v2Progress, order) : v2Progress;
   const counts = v2ProgressCounts();
   return (
     <div className="mx-auto grid w-full max-w-5xl gap-6">
@@ -125,7 +131,13 @@ export default function MorePage() {
           <p className="text-sm leading-6 text-muted-foreground">
             {counts.done} faits, {counts.open} pas faits. Ce tableau est la liste tenue à jour :
             une capacité livrée passe de Pas fait à Fait, avec la date et l’heure.
+            La colonne Réalisé trie du plus récent au plus ancien, ou l’inverse. Les lignes sans date restent en bas.
           </p>
+          <div className="flex flex-wrap gap-2">
+            <OrderLink href="/plus" active={order === null} label="Ordre de la liste" />
+            <OrderLink href="/plus?ordre=recent" active={order === "recent"} label="Plus récent" />
+            <OrderLink href="/plus?ordre=ancien" active={order === "ancien"} label="Plus ancien" />
+          </div>
         </div>
         <div className="overflow-x-auto rounded-lg border border-border bg-card">
           <table className="w-full min-w-[36rem] border-collapse text-sm">
@@ -135,11 +147,15 @@ export default function MorePage() {
                 <th className="px-3 py-2 font-medium">Domaine</th>
                 <th className="px-3 py-2 font-medium">Point</th>
                 <th className="w-28 px-3 py-2 font-medium">État</th>
-                <th className="w-40 px-3 py-2 font-medium">Réalisé</th>
+                <th className="w-40 px-3 py-2 font-medium">
+                  <Link href={nextOrderHref(order)} className="underline-offset-4 hover:underline">
+                    Réalisé{order === "recent" ? " ↓" : order === "ancien" ? " ↑" : ""}
+                  </Link>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {v2Progress.map((row) => (
+              {rows.map((row) => (
                 <tr key={row.point} className="border-b border-border last:border-0">
                   <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">{row.domain}</td>
                   <td className="px-3 py-1.5">{row.point}</td>
@@ -159,4 +175,22 @@ export default function MorePage() {
       </section>
     </div>
   );
+}
+
+function OrderLink({ href, active, label }: { href: string; active: boolean; label: string }) {
+  return (
+    <Link
+      href={href}
+      className={cn(buttonVariants({ variant: active ? "secondary" : "outline" }), "min-h-11 px-4")}
+      aria-current={active ? "page" : undefined}
+    >
+      {label}
+    </Link>
+  );
+}
+
+function nextOrderHref(order: DoneOrder | null): string {
+  if (order === "recent") return "/plus?ordre=ancien";
+  if (order === "ancien") return "/plus";
+  return "/plus?ordre=recent";
 }

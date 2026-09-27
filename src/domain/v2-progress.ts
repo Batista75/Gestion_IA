@@ -98,9 +98,9 @@ export const v2Phases: V2Phase[] = [
   {
     order: 5,
     title: "Sortie JSON de l’interpréteur",
-    state: "pas",
-    summary: "Le modèle choisit une intention du catalogue dans un objet contraint, sans lancer l’action.",
-    doneAt: "",
+    state: "fait",
+    summary: "Une demande hors règle reçoit un objet JSON du catalogue. Cette sortie ne lance pas l’action.",
+    doneAt: "2026-09-27T14:32:18Z",
   },
   {
     order: 6,
@@ -146,6 +146,30 @@ export function formatDoneAt(iso: string): string {
     minute: "2-digit",
     hourCycle: "h23",
   }).format(date);
+}
+
+export type DoneOrder = "recent" | "ancien";
+
+export function readDoneOrder(value: string | undefined): DoneOrder | null {
+  if (value === "recent" || value === "ancien") return value;
+  return null;
+}
+
+/** Les lignes datées se trient. Celles sans date restent après, dans l’ordre d’origine. */
+export function orderByDoneAt<T extends { doneAt: string }>(rows: T[], order: DoneOrder): T[] {
+  return rows
+    .map((row, index) => ({ row, index }))
+    .sort((left, right) => {
+      const leftDated = left.row.doneAt !== "";
+      const rightDated = right.row.doneAt !== "";
+      if (leftDated !== rightDated) return leftDated ? -1 : 1;
+      if (left.row.doneAt !== right.row.doneAt) {
+        const olderFirst = left.row.doneAt < right.row.doneAt ? -1 : 1;
+        return order === "ancien" ? olderFirst : -olderFirst;
+      }
+      return left.index - right.index;
+    })
+    .map((item) => item.row);
 }
 
 export function v2ProgressCounts(rows: V2ProgressRow[] = v2Progress): { done: number; open: number } {

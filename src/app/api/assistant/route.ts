@@ -36,6 +36,13 @@ import {
   type UnderstandingCard,
 } from "@/domain/completeness";
 import { contextBrief, contextLine, readHint, type ContextSnapshot } from "@/domain/context-envelope";
+import {
+  interpretationLine,
+  interpreterEffect,
+  plainQuestion,
+  type Interpretation,
+} from "@/domain/interpreter";
+import { readModelInterpretation } from "@/lib/interpreter";
 import { absentReply, decideFree, intentCatalog, type IntentDecision } from "@/domain/intent-catalog";
 import { attachConversationProject, resolveContext } from "@/lib/context-envelope";
 import { asksHybridQuote } from "@/domain/hybrid-quote";
@@ -120,18 +127,44 @@ export async function POST(request: Request) {
       step: "Fiche",
     });
   }
-  if (free.execution === "absente") {
+  if (free.execution === "absente" && free.id) {
     const blocked = await blockedTurn(baseText, free, snapshot, correction);
     return streamDirect({
       conversationId,
-      reply: blocked.question
-        ? `${blocked.question}\nRien n’est écrit.\n${contextLine(snapshot)}`
-        : blocked.card
-          ? `${blocked.card.action}. Les champs de la fiche sont remplis. Cette action n’est pas encore exécutée.\nRien n’est écrit.\n${contextLine(snapshot)}`
-          : `${absentReply(free)}\n${contextLine(snapshot)}`,
+      reply: blockedReply(free, blocked, snapshot),
       source: "regle-metier",
       step: blocked.card ? "Fiche" : "Catalogue",
       understanding: blocked.card,
+    });
+  }
+
+  const interpreted = plainQuestion(baseText) ?? (await modelInterpretation(baseText, snapshot));
+  if (interpreted && interpreterEffect(interpreted) === "ecrire") {
+    const blocked = await blockedTurn(
+      baseText,
+      { id: interpreted.intent, execution: "absente", missing: [] },
+      snapshot,
+      correction,
+    );
+    return streamDirect({
+      conversationId,
+      reply: blockedReply(
+        { id: interpreted.intent, execution: "absente", missing: [] },
+        blocked,
+        snapshot,
+        interpretationLine(interpreted),
+      ),
+      source: "regle-metier",
+      step: "Interprétation",
+      understanding: blocked.card,
+    });
+  }
+  if (free.execution === "absente") {
+    return streamDirect({
+      conversationId,
+      reply: `${absentReply(free)}\n${contextLine(snapshot)}`,
+      source: "regle-metier",
+      step: "Catalogue",
     });
   }
 
@@ -159,7 +192,9 @@ export async function POST(request: Request) {
     text: parsed.text,
     messages: parsed.uiMessages,
     model,
-    context: contextBrief(snapshot),
+    context: interpreted
+      ? `${contextBrief(snapshot)} ${interpretationLine(interpreted)}`
+      : contextBrief(snapshot),
   });
 }
 
@@ -332,6 +367,30 @@ function proposalResponse(opened: ProposalView) {
     source: "proposition" as const,
     proposal: opened.proposal,
   };
+}
+
+function blockedReply(
+  decision: IntentDecision,
+  blocked: { question: string | null; card: { action: string } | null },
+  snapshot: ContextSnapshot,
+  preface = "",
+): string {
+  const body = blocked.question
+    ? `${blocked.question}\nRien n’est écrit.`
+    : blocked.card
+      ? `${blocked.card.action}. Les champs de la fiche sont remplis. Cette action n’est pas encore exécutée.\nRien n’est écrit.`
+      : absentReply(decision);
+  return `${preface ? `${preface}\n` : ""}${body}\n${contextLine(snapshot)}`;
+}
+
+async function modelInterpretation(text: string, snapshot: ContextSnapshot): Promise<Interpretation | null> {
+  const status = await getOllamaStatus();
+  if (!status.ok || !status.defaultModel) return null;
+  return readModelInterpretation({
+    model: status.defaultModel,
+    text,
+    context: contextBrief(snapshot),
+  });
 }
 
 async function earlierUserText(conversationId: string): Promise<string> {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { formatDoneAt, v2Phases, v2Progress, v2ProgressCounts } from "../src/domain/v2-progress.ts";
+import { formatDoneAt, orderByDoneAt, readDoneOrder, v2Phases, v2Progress, v2ProgressCounts } from "../src/domain/v2-progress.ts";
 
 test("chaque ligne de Plus a un domaine, un point et un état", () => {
   const points = new Set<string>();
@@ -41,5 +41,20 @@ test("le tableau sépare ce qui est livré de la cible restante", () => {
   assert.equal(card?.status, "fait");
   const phase = v2Phases.find((item) => item.order === 4);
   assert.equal(phase?.state, "fait");
-  assert.equal(v2Phases.find((item) => item.order === 5)?.state, "pas");
+  assert.equal(v2Phases.find((item) => item.order === 5)?.state, "fait");
+  assert.equal(v2Phases.find((item) => item.order === 6)?.state, "pas");
+});
+
+test("la date trie du plus récent au plus ancien, et l’inverse", () => {
+  const rows = [
+    { doneAt: "2026-09-26T10:00:00Z", point: "ancien" },
+    { doneAt: "", point: "ouvert" },
+    { doneAt: "2026-09-27T10:00:00Z", point: "recent-a" },
+    { doneAt: "2026-09-27T10:00:00Z", point: "recent-b" },
+  ];
+  assert.deepEqual(orderByDoneAt(rows, "recent").map((row) => row.point), ["recent-a", "recent-b", "ancien", "ouvert"]);
+  assert.deepEqual(orderByDoneAt(rows, "ancien").map((row) => row.point), ["ancien", "recent-a", "recent-b", "ouvert"]);
+  assert.equal(readDoneOrder("recent"), "recent");
+  assert.equal(readDoneOrder("ancien"), "ancien");
+  assert.equal(readDoneOrder("autre"), null);
 });

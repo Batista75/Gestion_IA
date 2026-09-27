@@ -153,6 +153,8 @@ export async function chatWithOllama(input: {
   model: string;
   messages: OllamaChatMessage[];
   tools?: unknown;
+  timeoutMs?: number;
+  json?: boolean;
 }): Promise<{ content: string; toolCalls: OllamaToolCall[]; messages: OllamaChatMessage[] }> {
   const target = await inferenceTarget();
   const messages = input.messages.some((message) => message.role === "system")
@@ -169,9 +171,10 @@ export async function chatWithOllama(input: {
       messages,
       ...(input.tools ? { tools: input.tools } : {}),
       keep_alive: "10m",
+      ...(input.json ? { format: "json" } : {}),
       options: { num_ctx: 4_096, temperature: 0.1, num_predict: 500 },
     }),
-    signal: AbortSignal.timeout(CHAT_TIMEOUT_MS),
+    signal: AbortSignal.timeout(input.timeoutMs ?? CHAT_TIMEOUT_MS),
   });
 
   const body = (await response.json().catch(() => null)) as OllamaChatResponse | null;
