@@ -11,6 +11,7 @@ import { ProductManager } from "@/components/product-manager";
 import { listRecordEvents } from "@/lib/record-journal";
 import { shownUnitCost, writtenCurrency } from "@/domain/article";
 import { productOrigin } from "@/domain/catalog";
+import { formatOfferCents } from "@/domain/pricing";
 import { listProducts } from "@/lib/catalog-store";
 
 export const dynamic = "force-dynamic";
@@ -35,12 +36,13 @@ export default async function ProductsPage({
     <div className="grid gap-6">
     <DataBoard
       title="Liste des articles"
-      intro="Un article fournisseur est un produit ou un service. La référence, la désignation, la famille, le coût unitaire, la devise, le fournisseur et la date de saisie viennent de la fiche. Le coût reste le montant écrit, il n’est pas recalculé. La source ouvre la pièce d’origine quand elle existe. Sinon, la fiche peut porter une note ou le site du fournisseur."
+      intro="Un article est un produit ou un service. Le coût affiché est celui de la dernière offre fournisseur. Les autres offres restent sur la fiche, avec le prix écrit et sa valeur en centimes. La source ouvre la pièce d’origine quand elle existe."
       basePath="/produits"
       query={{ q: query, source }}
       headers={["Référence", "Désignation", "Famille", "Coût unitaire", "Devise", "Fournisseur", "Date de saisie", "Source", "Édition"]}
       rows={products.map((product) => {
-        const cost = shownUnitCost(
+        const latest = product.offers[0];
+        const cost = latest?.statedCost || shownUnitCost(
           product.costStated,
           product.lines.map((line) => line.statedPrice),
         );
@@ -59,9 +61,9 @@ export default async function ProductsPage({
         { text: product.reference || "—" },
         { text: product.name },
         { text: product.kind === "service" ? "Service" : "Produit" },
-        { text: cost || "non indiqué" },
+        { text: product.offers.length > 1 ? `${cost || "non indiqué"} · ${product.offers.length} offres` : cost || "non indiqué" },
         { text: currency || "non indiqué" },
-        { text: product.supplier?.name || "—" },
+        { text: latest?.supplier?.name || latest?.supplierName || product.supplier?.name || "—" },
         { text: product.createdAt.toLocaleDateString("fr-FR") },
         sourceCell,
         { text: "Éditer", href: `/produits?edition=${product.id}${query ? `&q=${encodeURIComponent(query)}` : ""}${source ? `&source=${source}` : ""}#edition` },
@@ -104,6 +106,16 @@ export default async function ProductsPage({
           product.lines.map((line) => line.quote.title),
         ),
         updatedLabel: product.updatedAt.toLocaleString("fr-FR"),
+        offers: product.offers.map((offer) => ({
+          id: offer.id,
+          supplierName: offer.supplier?.name || offer.supplierName,
+          statedCost: offer.statedCost,
+          centsLabel: offer.unitCostCents === null ? "" : formatOfferCents(offer.unitCostCents, offer.currency),
+          fileId: offer.sourceFile?.id ?? "",
+          fileName: offer.sourceFile?.originalName ?? "",
+          sourceUrl: offer.sourceUrl,
+          at: offer.createdAt.toLocaleString("fr-FR"),
+        })),
         versions: [...product.lines]
           .sort((left, right) => right.quote.createdAt.getTime() - left.quote.createdAt.getTime())
           .map((line) => ({

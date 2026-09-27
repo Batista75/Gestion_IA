@@ -223,6 +223,7 @@ model Supplier {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   products  Product[]
+  offers    SupplierOffer[]
 }
 
 model Product {
@@ -247,8 +248,31 @@ model Product {
   updatedAt    DateTime      @updatedAt
   lines        QuoteLine[]
   projectLines ProjectLine[]
+  offers       SupplierOffer[]
 
   @@index([source])
+}
+
+/** Prix d’un fournisseur pour un produit. Le texte écrit reste la preuve, les centimes servent à comparer. */
+model SupplierOffer {
+  id                String      @id @default(cuid())
+  productId         String
+  product           Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplierId        String?
+  supplier          Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  supplierName      String      @default("")
+  supplierReference String      @default("")
+  statedCost        String      @default("")
+  unitCostCents     Int?
+  currency          String      @default("")
+  sourceFileId      String?
+  sourceFile        StoredFile? @relation(fields: [sourceFileId], references: [id], onDelete: SetNull)
+  sourceUrl         String      @default("")
+  createdAt         DateTime    @default(now())
+
+  @@index([productId, createdAt])
+  @@index([supplierId])
+  @@index([sourceFileId])
 }
 
 model StoredFile {
@@ -267,6 +291,7 @@ model StoredFile {
   quotes        Quote[]
   proposals     DocumentProposal[]
   demands       Demand[]
+  offers        SupplierOffer[]
 
   @@index([inboxItemId])
   @@index([contentHash])

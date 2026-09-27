@@ -9,6 +9,7 @@ import {
 } from "@/domain/catalog";
 import { ensureSpokenProject } from "@/lib/business-records";
 import { prisma } from "@/lib/db";
+import { fillMissingOfferCents, recordSupplierOffer } from "@/lib/supplier-offers";
 
 export type ActionResult = { ok: boolean; summary: string };
 
@@ -40,6 +41,7 @@ export async function listSuppliers(query: string) {
 
 export async function listProducts(query: string, source: string) {
   const q = query.trim();
+  await fillMissingOfferCents();
   return prisma.product.findMany({
     where: {
       ...(q
@@ -56,6 +58,13 @@ export async function listProducts(query: string, source: string) {
     include: {
       supplier: true,
       lines: { include: { quote: { include: { file: { select: { id: true, originalName: true } } } } } },
+      offers: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          supplier: { select: { name: true } },
+          sourceFile: { select: { id: true, originalName: true } },
+        },
+      },
     },
     orderBy: { updatedAt: "desc" },
     take: 200,
@@ -243,7 +252,7 @@ async function createProduct(
     return { ok: true, summary: `Le produit « ${existing.name} » est déjà au catalogue.` };
   }
   const supplierId = await ensureSupplier(parsed.value.supplierName);
-  await prisma.product.create({
+  const created = await prisma.product.create({
     data: {
       name: parsed.value.name,
       nameKey: key,
@@ -258,6 +267,15 @@ async function createProduct(
       sourceUrl: parsed.value.sourceUrl ?? "",
       supplierId,
     },
+  });
+  await recordSupplierOffer(prisma, {
+    productId: created.id,
+    supplierId,
+    supplierName: parsed.value.supplierName,
+    supplierReference: parsed.value.reference,
+    statedCost: parsed.value.costStated,
+    currency: parsed.value.currency,
+    sourceUrl: parsed.value.sourceUrl,
   });
   return { ok: true, summary: `Produit « ${parsed.value.name} » ajouté au catalogue.` };
 }
@@ -315,6 +333,15 @@ async function updateProductById(
       sourceUrl: parsed.value.sourceUrl ?? "",
       ...(supplierId !== undefined ? { supplierId } : {}),
     },
+  });
+  await recordSupplierOffer(prisma, {
+    productId: id,
+    supplierId: supplierId ?? null,
+    supplierName: parsed.value.supplierName,
+    supplierReference: parsed.value.reference,
+    statedCost: parsed.value.costStated,
+    currency: parsed.value.currency,
+    sourceUrl: parsed.value.sourceUrl,
   });
   return { ok: true, summary: `Produit « ${parsed.value.name} » mis à jour.` };
 }

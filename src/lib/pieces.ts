@@ -10,6 +10,7 @@ import { composeExtraction, doclingExtension, documentBody } from "@/domain/docu
 import { readOfferFile, statedLineQuantity, type OfferLine, type OfferVersion } from "@/domain/offer-versions";
 import { convertWithDocling } from "@/lib/docling";
 import { prisma } from "@/lib/db";
+import { recordSupplierOffer } from "@/lib/supplier-offers";
 
 const execFileAsync = promisify(execFile);
 
@@ -164,7 +165,7 @@ export async function recordOfferVersion(
         },
       });
       for (const line of offer.lines) {
-        const productId = await ensureProduct(tx, line, offer.supplierName, source);
+        const productId = await ensureProduct(tx, line, offer.supplierName, source, fileId);
         await tx.quoteLine.create({
           data: {
             quoteId: quote.id,
@@ -184,15 +185,27 @@ export async function recordOfferVersion(
 }
 
 async function ensureProduct(
-  tx: Pick<typeof prisma, "product" | "supplier">,
+  tx: Pick<typeof prisma, "product" | "supplier" | "supplierOffer">,
   line: OfferLine,
   supplierName: string,
   source: "devis" | "tarif",
+  fileId: string | null,
 ): Promise<string> {
   const article = articleFromQuoteLine(line);
   const key = nameKey(article.name);
   const supplierId = await ensureSupplier(tx, supplierName);
   const existing = await tx.product.findUnique({ where: { nameKey: key } });
+  const remember = async (productId: string) => {
+    await recordSupplierOffer(tx, {
+      productId,
+      supplierId,
+      supplierName,
+      supplierReference: article.reference,
+      statedCost: article.costStated,
+      currency: article.currency,
+      sourceFileId: fileId,
+    });
+  };
   if (existing) {
     const data: {
       reference?: string;
@@ -209,6 +222,7 @@ async function ensureProduct(
     if (Object.keys(data).length > 0) {
       await tx.product.update({ where: { id: existing.id }, data });
     }
+    await remember(existing.id);
     return existing.id;
   }
   const created = await tx.product.create({
@@ -223,6 +237,7 @@ async function ensureProduct(
       supplierId,
     },
   });
+  await remember(created.id);
   return created.id;
 }
 

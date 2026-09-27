@@ -11,6 +11,8 @@ Client 1 ── * Project
 Supplier 1 ── * Product
 Product 1 ── * QuoteLine
 Product 1 ── * ProjectLine
+Product 1 ── * SupplierOffer * ── 0..1 Supplier
+SupplierOffer * ── 0..1 StoredFile
 Project 1 ── * ProjectStep
 Project 1 ── * ProjectEvent
 Project 1 ── * ProjectLine
@@ -77,7 +79,7 @@ Article produit ou service. `nameKey` est unique. Le catalogue est unique : une 
 - `name`, `reference`, `unit` (défaut `u`), `description`.
 - `kind` : `produit` ou `service`.
 - `source` : origine de la fiche. Valeurs écrites par l’application : `manuel`, `assistant`, `devis`, `fiche`, ou le type de la pièce d’origine.
-- `statedPrice`, `currency`, `vatNote`, `costStated` : textes saisis. Le modèle ne les recalcule pas.
+- `statedPrice`, `currency`, `vatNote`, `costStated` : textes saisis. `costStated` reprend le prix écrit de la dernière `SupplierOffer`. Le modèle ne les recalcule pas.
 - `stockQty` : entier facultatif.
 - `sourceNote` : note d’origine, au plus 500 caractères à la validation.
 - `sourceUrl` : lien `http` ou `https` du fournisseur, au plus 500 caractères. Vide si aucune adresse.
@@ -85,7 +87,21 @@ Article produit ou service. `nameKey` est unique. Le catalogue est unique : une 
 - `createdAt`, `updatedAt`.
 - Liens : plusieurs `QuoteLine` (suppression du produit en cascade) et plusieurs `ProjectLine` (la ligne de dossier reste, le produit est vidé).
 
-Le document source d’un article n’est pas une colonne. Il se lit par `QuoteLine` → `Quote.fileId` → `StoredFile`, servi par `GET /api/pieces/[id]`. Sans devis reçu, la fiche montre `sourceNote` ou `sourceUrl`.
+Le document source d’un article n’est pas une colonne. Il se lit par `QuoteLine` → `Quote.fileId` → `StoredFile`, ou par `SupplierOffer.sourceFileId`, servi par `GET /api/pieces/[id]`. Sans devis reçu, la fiche montre `sourceNote` ou `sourceUrl`.
+
+### SupplierOffer
+
+Offre d’un fournisseur pour un produit. Un produit en a plusieurs. Deux prix du même fournisseur restent deux lignes.
+
+- `productId` vers `Product`, suppression du produit en cascade.
+- `supplierId` vers `Supplier`, vide si le fournisseur disparaît. `supplierName` garde le nom au moment de l’offre.
+- `supplierReference`.
+- `statedCost` : prix écrit, preuve. `unitCostCents` : ce même montant en centimes quand la lecture est sans ambiguïté, sinon vide. Les lignes ne sont pas additionnées.
+- `currency`, `sourceUrl`.
+- `sourceFileId` vers `StoredFile`.
+- `createdAt` : date de l’offre. Il n’y a pas de durée de validité en colonne.
+
+La fiche produit continue d’exposer le dernier coût pour les dossiers déjà branchés sur `Product.costStated`. La comparaison se fait sur les offres.
 
 ## Dossier
 
@@ -317,6 +333,24 @@ Journal des créations, mises à jour et suppressions de `Client`, `Supplier`, `
 - `commande`, `facture`, `avoir`, `livraison`, `contrat` et `document` : un `Product` manquant, `source` égal au type, `costStated` égal au prix écrit sur la ligne. Pas de `Quote`. Le total imprimé reste dans `StoredFile.enrichment` et dans le texte extrait. Une facture lue ou un avoir lu ne devient pas un titre émis.
 
 Les faits de page et de zone affichés dans le fil sont calculés à la lecture. Ils ne sont pas enregistrés.
+
+## Cible encore non construite
+
+Le lot suivant est retenu. Ces noms ne sont pas des tables.
+
+Priorité haute, pas encore faites :
+
+- Harmoniser `Client` et `Supplier`, puis une `Organization` avec un rôle client, fournisseur, ou les deux.
+- `Contact` et `Address`, plusieurs interlocuteurs et plusieurs adresses. Le contact unique reste aujourd’hui sur `Client`.
+- `SaleDocument` comme pièce commerciale reliée à sa pièce parente : devis, commande, livraison, facture, avoir. L’application n’émet toujours pas de facture et n’attribue pas de numéro.
+- Montants métier en centimes sur `Quote` et `QuoteLine`, à côté des textes extraits. `SupplierOffer.unitCostCents` est le premier pas. Les prix de vente du dossier passent déjà par `src/domain/pricing.ts`.
+
+Priorité suivante :
+
+- L’historique de prix est la suite des `SupplierOffer`. Il n’y a pas encore d’écran de comparaison.
+- Confiance par champ, version du modèle et validation sur `DocumentProposal`, `CatalogProposal` et `ConversationMessage`. `DocumentProposal` reste le sas : rien n’est écrit avant confirmation.
+
+À terme, trois couches restent séparées. La vérité métier est confirmée. La preuve est le fichier et le texte extrait. L’interprétation de l’assistant est une proposition, jamais une fiche implicite.
 
 ## Informations calculées, absentes des tables
 

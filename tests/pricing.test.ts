@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checkAffair, quoteFromTargetMarkup } from "../src/domain/pricing.ts";
+import { centsFromWritten, checkAffair, formatOfferCents, quoteFromTargetMarkup } from "../src/domain/pricing.ts";
 
 test("exemple pédagogique de la spec : 700 €, marque 30 %, remise 10 %", () => {
   const quote = quoteFromTargetMarkup({
@@ -105,4 +105,17 @@ test("les trois devis d’exemple se contrôlent sans inventer un taux ni un co�
     }).marginCents,
     6_000,
   );
+});
+
+test("un montant écrit devient des centimes sans additionner deux prix", () => {
+  assert.equal(centsFromWritten("0,12 € HT"), 12);
+  assert.equal(centsFromWritten("1 254,30 € HT"), 125430);
+  assert.equal(centsFromWritten("2.170,00 EUR"), 217000);
+  assert.equal(centsFromWritten("21 109.75"), 2110975);
+  assert.equal(centsFromWritten("10,00"), 1000);
+  assert.equal(centsFromWritten("10.00"), 1000);
+  assert.equal(centsFromWritten("10,00 € et 20,00 €"), 1000);
+  assert.equal(centsFromWritten(""), null);
+  assert.equal(centsFromWritten("sans montant"), null);
+  assert.equal(formatOfferCents(125430, "EUR"), "1 254,30 EUR");
 });

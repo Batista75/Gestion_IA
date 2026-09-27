@@ -38,6 +38,17 @@ export type SourceDocument = {
   name: string;
 };
 
+export type ProductOfferView = {
+  id: string;
+  supplierName: string;
+  statedCost: string;
+  centsLabel: string;
+  fileId: string;
+  fileName: string;
+  sourceUrl: string;
+  at: string;
+};
+
 export type ProductRecord = {
   id: string;
   name: string;
@@ -58,6 +69,7 @@ export type ProductRecord = {
   enteredLabel: string;
   updatedLabel: string;
   versions: ProductVersionView[];
+  offers: ProductOfferView[];
 };
 
 const filters = [
@@ -99,8 +111,8 @@ export function ProductManager({
         <h1 className="text-2xl font-semibold tracking-tight">Produits</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
           Le catalogue réunit les saisies manuelles, les produits cités dans un
-          devis et ceux ajoutés par l’assistant. Un même produit peut porter
-          plusieurs devis : chaque prix et chaque condition restent une version.
+          devis et ceux ajoutés par l’assistant. Un produit peut avoir plusieurs
+          offres fournisseurs : chaque prix reste à part.
         </p>
       </div>
       ) : null}
@@ -201,6 +213,7 @@ export function ProductManager({
                   <ArticleFacts record={record} />
                   <p className="text-sm">{record.origin}</p>
                   <SourceBlock record={record} />
+                  <OfferBlock record={record} />
                   {record.versions.length > 0 ? (
                     <div className="grid gap-2">
                       <p className="text-sm font-medium">Versions de devis</p>
@@ -299,6 +312,9 @@ function ProductFields({
         </select>
       </div>
       <TextField prefix={prefix} label="Coût unitaire" name="costStated" defaultValue={record?.costStated} />
+      <p className="text-xs leading-5 text-muted-foreground">
+        Ce montant est enregistré comme une offre du fournisseur nommé. Un autre prix reste conservé.
+      </p>
       <div className="grid gap-2">
         <Label htmlFor={`${prefix}-currency`}>Devise</Label>
         <select
@@ -356,6 +372,46 @@ function ProductFields({
         {pending ? "Enregistrement…" : submitLabel}
       </Button>
     </form>
+  );
+}
+
+function OfferBlock({ record }: { record: ProductRecord }) {
+  return (
+    <div className="grid gap-2 text-sm leading-6">
+      <p className="font-medium">Offres fournisseurs</p>
+      {record.offers.length === 0 ? (
+        <p className="text-muted-foreground">Aucune offre fournisseur.</p>
+      ) : (
+        <ul className="grid gap-2">
+          {record.offers.map((offer) => (
+            <li key={offer.id} className="rounded-lg bg-muted px-3 py-2">
+              <p className="font-medium">{offer.supplierName || "Fournisseur non nommé"}</p>
+              <p>{offer.statedCost ? `Prix écrit ${offer.statedCost}` : "Prix non indiqué"}</p>
+              {offer.centsLabel ? <p>Valeur retenue {offer.centsLabel}</p> : null}
+              {offer.fileId ? (
+                <a
+                  href={`/api/pieces/${offer.fileId}`}
+                  className="inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
+                >
+                  Consulter {offer.fileName || "le document"}
+                </a>
+              ) : null}
+              {offer.sourceUrl ? (
+                <a
+                  href={offer.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
+                >
+                  Site du fournisseur
+                </a>
+              ) : null}
+              <p className="text-xs text-muted-foreground">{offer.at}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

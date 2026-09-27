@@ -67,6 +67,38 @@ export function centsFromStated(raw: string): number | null {
   return Number.isSafeInteger(cents) ? cents : null;
 }
 
+/** Premier montant écrit, en centimes. Les groupes de milliers sont lus, rien n’est additionné. */
+export function centsFromWritten(raw: string): number | null {
+  const text = raw.replace(/\u00a0/g, " ").trim();
+  const token = text.match(/\d{1,3}(?:[ .]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/);
+  if (!token) return null;
+  let value = token[0].replace(/ /g, "");
+  const lastComma = value.lastIndexOf(",");
+  const lastDot = value.lastIndexOf(".");
+  if (lastComma >= 0 && lastDot >= 0) {
+    value = lastComma > lastDot ? value.replace(/\./g, "").replace(",", ".") : value.replace(/,/g, "");
+  } else if (lastComma >= 0) {
+    const fraction = value.length - lastComma - 1;
+    value = fraction === 3 ? value.replace(/,/g, "") : value.replace(",", ".");
+  } else if (lastDot >= 0) {
+    const parts = value.split(".");
+    const tail = parts[parts.length - 1] ?? "";
+    value = tail.length === 3 ? parts.join("") : `${parts.slice(0, -1).join("")}.${tail}`;
+  }
+  const [whole, fraction = ""] = value.split(".");
+  if (!whole || !/^\d+$/.test(whole) || (fraction !== "" && !/^\d{1,2}$/.test(fraction))) return null;
+  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+  return Number.isSafeInteger(cents) ? cents : null;
+}
+
+export function formatOfferCents(cents: number, currency = ""): string {
+  const sign = cents < 0 ? "-" : "";
+  const absolute = Math.abs(Math.trunc(cents));
+  const whole = Math.floor(absolute / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const fraction = String(absolute % 100).padStart(2, "0");
+  return `${sign}${whole},${fraction}${currency ? ` ${currency}` : ""}`;
+}
+
 export function currencyOf(raw: string): MoneyCurrency {
   return /\$|\busd\b/i.test(raw) ? "USD" : "EUR";
 }
