@@ -1,3 +1,4 @@
+import { readUnderstanding, type UnderstandingCard } from "@/domain/completeness";
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { prisma } from "@/lib/db";
 
@@ -9,6 +10,7 @@ export type StoredTurn = {
   steps: string[];
   proposal: { fields: Array<{ label: string; value: string }> } | null;
   sources: Array<{ label: string; title: string }>;
+  understanding: UnderstandingCard | null;
 };
 
 const ID_RE = /^[\w-]{8,80}$/;
@@ -29,6 +31,7 @@ export async function rememberTurn(input: {
   steps?: string[];
   proposal?: { fields: Array<{ label: string; value: string }> } | null;
   sources?: Array<{ label: string; title: string }>;
+  understanding?: UnderstandingCard | null;
   linkText?: string;
 }): Promise<void> {
   const content = input.content.trim();
@@ -60,7 +63,7 @@ export async function rememberTurn(input: {
       content,
       source: input.source ?? "",
       steps: input.steps ?? [],
-      proposal: input.proposal ?? undefined,
+      proposal: storedProposal(input.proposal, input.understanding),
       sources: input.sources ?? [],
     },
   });
@@ -154,12 +157,24 @@ function presentConversation(row: {
       steps: stringList(message.steps),
       proposal: proposalOf(message.proposal),
       sources: sourceList(message.sources),
+      understanding: readUnderstanding(message.proposal),
     })),
   };
 }
 
 function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function storedProposal(
+  proposal: { fields: Array<{ label: string; value: string }> } | null | undefined,
+  understanding: UnderstandingCard | null | undefined,
+): { fields?: Array<{ label: string; value: string }>; understanding?: UnderstandingCard } | undefined {
+  if (!proposal && !understanding) return undefined;
+  return {
+    ...(proposal ? { fields: proposal.fields } : {}),
+    ...(understanding ? { understanding } : {}),
+  };
 }
 
 function proposalOf(value: unknown): StoredTurn["proposal"] {

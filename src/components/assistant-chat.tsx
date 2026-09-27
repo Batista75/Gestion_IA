@@ -9,8 +9,10 @@ import { createInboxItemAction } from "@/app/actions";
 import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { UnderstandingCard } from "@/domain/completeness";
 import type { StoredTurn } from "@/lib/conversations";
 import { cn } from "cn";
 
@@ -20,6 +22,7 @@ type ChatMeta = {
   source?: string;
   proposal?: { fields: Field[] } | null;
   sources?: SourceRef[];
+  understanding?: UnderstandingCard | null;
 };
 type ChatMessage = UIMessage<ChatMeta>;
 
@@ -156,7 +159,14 @@ export function AssistantChat({
                   message={message}
                   pending={pending}
                   confirm={message.id === lastAssistant?.id && hasProposal(message)}
+                  editable={message.id === lastAssistant?.id}
                   onConfirm={() => void send("Je confirme.")}
+                  onCorrect={(line, attachments) => {
+                    hint.current.attachments = attachments;
+                    void sendMessage({ text: line }).finally(() => {
+                      hint.current.attachments = [];
+                    });
+                  }}
                 />
               ))}
             </ol>
@@ -214,12 +224,16 @@ function MessageRow({
   message,
   pending,
   confirm,
+  editable,
   onConfirm,
+  onCorrect,
 }: {
   message: ChatMessage;
   pending: boolean;
   confirm: boolean;
+  editable: boolean;
   onConfirm: () => void;
+  onCorrect: (line: string, attachments: string[]) => void;
 }) {
   const label = roleLabel(message);
   const text = message.parts
@@ -232,6 +246,7 @@ function MessageRow({
   });
   const proposal = message.metadata?.proposal?.fields ?? [];
   const sources = message.metadata?.sources ?? [];
+  const understanding = message.metadata?.understanding ?? null;
 
   return (
     <li className="grid gap-1 rounded-lg border border-border px-3 py-2">
@@ -261,6 +276,15 @@ function MessageRow({
           ))}
         </dl>
       ) : null}
+      {understanding ? (
+        <UnderstandingPanel
+          card={understanding}
+          editable={editable}
+          pending={pending}
+          formId={message.id}
+          onCorrect={onCorrect}
+        />
+      ) : null}
       {confirm ? (
         <Button type="button" className="mt-2 min-h-11 w-fit px-4" disabled={pending} onClick={onConfirm}>
           Confirmer
@@ -278,6 +302,7 @@ function toUi(turns: StoredTurn[]): ChatMessage[] {
       source: turn.source,
       proposal: turn.proposal,
       sources: turn.sources,
+      understanding: turn.understanding,
     },
     parts: [
       ...turn.steps.map((step, index) => ({
@@ -308,6 +333,96 @@ function roleLabel(message: ChatMessage): string {
     default:
       return "Assistant";
   }
+}
+
+function UnderstandingPanel({
+  card,
+  editable,
+  pending,
+  formId,
+  onCorrect,
+}: {
+  card: UnderstandingCard;
+  editable: boolean;
+  pending: boolean;
+  formId: string;
+  onCorrect: (line: string, attachments: string[]) => void;
+}) {
+  return (
+    <form
+      className="mt-2 grid gap-3 rounded-md border border-border bg-muted/40 p-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        const projet = String(data.get("projet") ?? "").trim();
+        const type = String(data.get("type") ?? "").trim();
+        const supplier = String(data.get("fournisseur") ?? "").trim();
+        const parts = [
+          projet ? `projet ${projet}` : "",
+          type ? `type ${type}` : "",
+          supplier ? `fournisseur ${supplier}` : "",
+        ].filter(Boolean);
+        if (parts.length === 0) return;
+        onCorrect(`Fiche : ${parts.join(", ")}`, card.attachments);
+      }}
+    >
+      <p className="text-sm font-medium">Fiche de compréhension</p>
+      <p className="text-sm leading-6">Action proposée : {card.action}</p>
+      {card.understood.length > 0 ? (
+        <ul className="grid gap-1 text-sm leading-6">
+          {card.understood.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm leading-6 text-muted-foreground">Rien n’est encore assez sûr.</p>
+      )}
+      <p className="text-sm leading-6">
+        {card.confirm ? `À confirmer : ${card.confirm}` : "Rien à confirmer sur cette fiche."}
+      </p>
+      {editable ? (
+        <>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <CardField id={`${formId}-projet`} name="projet" label="Projet" value={card.project} options={card.projects} />
+            <CardField id={`${formId}-type`} name="type" label="Type" value={card.documentType} options={card.types} />
+            <CardField id={`${formId}-fournisseur`} name="fournisseur" label="Fournisseur" value={card.supplier} options={card.suppliers} />
+          </div>
+          <Button type="submit" disabled={pending} className="min-h-11 w-fit px-4">
+            Corriger la fiche
+          </Button>
+          <p className="text-xs leading-5 text-muted-foreground">
+            La correction vaut pour cette demande. Le message d’origine n’est pas réécrit.
+          </p>
+        </>
+      ) : null}
+    </form>
+  );
+}
+
+function CardField({
+  id,
+  name,
+  label,
+  value,
+  options,
+}: {
+  id: string;
+  name: string;
+  label: string;
+  value: string;
+  options: string[];
+}) {
+  return (
+    <div className="grid gap-1">
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} name={name} list={`${id}-list`} defaultValue={value} className="min-h-11" />
+      <datalist id={`${id}-list`}>
+        {options.map((option) => (
+          <option key={option} value={option} />
+        ))}
+      </datalist>
+    </div>
+  );
 }
 
 function hasProposal(message: ChatMessage): boolean {

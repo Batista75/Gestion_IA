@@ -26,7 +26,7 @@ Les prix, la TVA et les numéros de pièce ne sont pas calculés par le modèle.
 10. Un commentaire sur une fiche client en attente produit une nouvelle proposition.
 11. Un nom seul déjà connu, sans verbe d’action, demande s’il faut consulter ou modifier.
 
-S’il ne reste rien de tout cela, `decideFree` dans `src/domain/intent-catalog.ts` tranche. Une intention du catalogue encore sans exécution passe par `blockingQuestion` dans `src/domain/completeness.ts` : le premier champ sous son seuil produit une seule question, un choix fermé, une confirmation, ou une valeur manquante. Rien n’est écrit. Si tous les champs passent le seuil, la réponse dit que l’action n’est pas encore exécutée. Une phrase d’écriture hors liste dit qu’aucune action ne correspond. Une question libre, si Ollama répond, part au modèle. S’il ne répond pas, le fil affiche l’indisponibilité. La consultation des fiches continue par les mots.
+S’il ne reste rien de tout cela, `decideFree` dans `src/domain/intent-catalog.ts` tranche. Une intention du catalogue encore sans exécution passe par `blockingQuestion` dans `src/domain/completeness.ts` : le premier champ sous son seuil produit une seule question, un choix fermé, une confirmation, ou une valeur manquante. Rien n’est écrit. La même réponse porte une fiche de compréhension : l’action, les champs au-dessus de leur seuil, et le point à confirmer. Le projet, le type ou le fournisseur se corrigent sur cette fiche (`Fiche : projet …, type …, fournisseur …`) sans remplacer le message d’origine. Si tous les champs passent le seuil, la réponse dit que l’action n’est pas encore exécutée. Une phrase d’écriture hors liste dit qu’aucune action ne correspond. Une question libre, si Ollama répond, part au modèle. S’il ne répond pas, le fil affiche l’indisponibilité. La consultation des fiches continue par les mots.
 
 Le modèle ne dispose plus que d’outils de lecture : `search_records`, `search_client_agreements`, `get_product_info`. Il ne propose plus de fiche et ne crée plus de brouillon. Le brouillon de devis reste la règle `prépare un devis pour …`, exécutée avant lui. Il a au plus trois pas. Il ne numérote pas de facture et ne calcule pas de montant.
 
@@ -102,7 +102,7 @@ La fiche projet montre les produits et les devis dans la colonne principale, et 
 
 ## Ergonomie des rubriques
 
-Le menu est un rail à gauche : Accueil, Projets, Ventes, Achats, Référentiels, Finance, Pilotage, Administration. Administration contient Plus (`/plus`). Le tableau de cette page lit `v2Progress` dans `src/domain/v2-progress.ts` : chaque ligne a un domaine, un point et l’état `fait` ou `pas`. La barre du haut porte la raison sociale, la recherche globale, Configuration et le manuel. Sur un écran étroit, le rail s’ouvre par **Menu**.
+Le menu est un rail à gauche : Accueil, Projets, Ventes, Achats, Référentiels, Finance, Pilotage, Administration. Administration contient Plus (`/plus`). Le tableau de cette page lit `v2Progress` dans `src/domain/v2-progress.ts` : chaque ligne a un domaine, un point, l’état `fait` ou `pas`, et `doneAt`, l’instant de livraison affiché en heure de Paris. Une ligne pas faite n’a pas de date. La barre du haut porte la raison sociale, la recherche globale, Configuration et le manuel. Sur un écran étroit, le rail s’ouvre par **Menu**.
 
 Les listes partagent la même coquille : titre, recherche, filtres, choix de 10, 25, 50 ou 100 lignes, pagination, export CSV (`GET /api/tableaux`). Les montants HT des pièces produites passent par `saleLineFigures` et `saleOperationTotals`. Un total imprimé sur un devis reçu reste le texte de la pièce. Aucune liste n’attribue de numéro.
 
@@ -126,8 +126,8 @@ La chaîne décrite dans la spécification V2 n’est pas le chemin par défaut.
 - l’analyse d’une pièce dépend encore du message ;
 - le rapprochement mélange mots, vecteurs et reranker, sans faire primer l’identifiant métier ni appliquer les droits avant la recherche ;
 - le modèle peut encore expliquer une question libre, sans écrire ; l’interpréteur JSON n’est pas en place ;
-- la confiance champ par champ et la question unique s’appliquent aux actions du catalogue encore sans exécution ; elles ne s’affichent pas encore dans une fiche de compréhension ;
-- il n’y a pas de parcours d’états suspendu puis repris, ni de fiche de compréhension corrigeable ;
+- la confiance champ par champ, la question unique et la fiche de compréhension s’appliquent aux actions du catalogue encore sans exécution ;
+- il n’y a pas de parcours d’états suspendu puis repris ;
 - une correction n’est pas isolée dans la mémoire du document ;
 - le journal trace les changements de fiche, pas encore l’entrée, le contexte, la proposition, la validation et le résultat.
 

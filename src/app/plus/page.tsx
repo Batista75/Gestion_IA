@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { v2Phases, v2Progress, v2ProgressCounts } from "@/domain/v2-progress";
+import { formatDoneAt, v2Phases, v2Progress, v2ProgressCounts } from "@/domain/v2-progress";
 import { cn } from "cn";
 
 export default function MorePage() {
@@ -93,6 +93,7 @@ export default function MorePage() {
                 <th className="w-16 px-3 py-2 font-medium">Phase</th>
                 <th className="px-3 py-2 font-medium">Travail</th>
                 <th className="w-28 px-3 py-2 font-medium">État</th>
+                <th className="w-40 px-3 py-2 font-medium">Réalisé</th>
               </tr>
             </thead>
             <tbody>
@@ -108,6 +109,9 @@ export default function MorePage() {
                       {phase.state === "fait" ? "Fait" : "Pas fait"}
                     </Badge>
                   </td>
+                  <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">
+                    {formatDoneAt(phase.doneAt) || "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -120,7 +124,7 @@ export default function MorePage() {
           <h2 className="text-lg font-semibold tracking-tight">Cible V2</h2>
           <p className="text-sm leading-6 text-muted-foreground">
             {counts.done} faits, {counts.open} pas faits. Ce tableau est la liste tenue à jour :
-            une capacité livrée passe de Pas fait à Fait.
+            une capacité livrée passe de Pas fait à Fait, avec la date et l’heure.
           </p>
         </div>
         <div className="overflow-x-auto rounded-lg border border-border bg-card">
@@ -131,6 +135,7 @@ export default function MorePage() {
                 <th className="px-3 py-2 font-medium">Domaine</th>
                 <th className="px-3 py-2 font-medium">Point</th>
                 <th className="w-28 px-3 py-2 font-medium">État</th>
+                <th className="w-40 px-3 py-2 font-medium">Réalisé</th>
               </tr>
             </thead>
             <tbody>
@@ -142,6 +147,9 @@ export default function MorePage() {
                     <Badge variant={row.status === "fait" ? "secondary" : "outline"}>
                       {row.status === "fait" ? "Fait" : "Pas fait"}
                     </Badge>
+                  </td>
+                  <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">
+                    {formatDoneAt(row.doneAt) || "—"}
                   </td>
                 </tr>
               ))}

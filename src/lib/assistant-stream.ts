@@ -9,6 +9,7 @@ import {
   type UIMessage,
   type UIMessageChunk,
 } from "ai";
+import type { UnderstandingCard } from "@/domain/completeness";
 import { retrievalContext, sourceLabel } from "@/domain/knowledge";
 import { rememberTurn } from "@/lib/conversations";
 import { withGpuLane } from "@/lib/gpu-lane";
@@ -23,6 +24,7 @@ type Meta = {
   source: string;
   proposal: FieldList | null;
   sources: Array<{ label: string; title: string }>;
+  understanding: UnderstandingCard | null;
 };
 
 type DirectTurn = {
@@ -32,6 +34,7 @@ type DirectTurn = {
   step: string;
   proposal?: FieldList | null;
   sources?: Array<{ label: string; title: string }>;
+  understanding?: UnderstandingCard | null;
 };
 
 export function streamDirect(input: DirectTurn): Response {
@@ -39,6 +42,7 @@ export function streamDirect(input: DirectTurn): Response {
     source: input.source,
     proposal: input.proposal ?? null,
     sources: input.sources ?? [],
+    understanding: input.understanding ?? null,
   };
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
@@ -70,6 +74,7 @@ export function streamDirect(input: DirectTurn): Response {
         steps: [input.step],
         proposal: input.proposal,
         sources: input.sources,
+        understanding: input.understanding,
       });
       writer.write({ type: "finish", messageMetadata: metadata });
     },
@@ -92,7 +97,7 @@ export async function streamModel(input: {
     apiKey: config.apiKey || "ollama",
     name: "ollama",
   });
-  const side: Meta = { source: "ollama", proposal: null, sources: [] };
+  const side: Meta = { source: "ollama", proposal: null, sources: [], understanding: null };
 
   const stream = createUIMessageStream({
     originalMessages: input.messages,
@@ -152,6 +157,7 @@ export async function streamModel(input: {
                   source: side.source,
                   proposal: side.proposal,
                   sources: side.sources,
+                  understanding: null,
                 }
               : undefined,
         }), writer, input.conversationId, side);

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { v2Progress, v2ProgressCounts } from "../src/domain/v2-progress.ts";
+import { formatDoneAt, v2Phases, v2Progress, v2ProgressCounts } from "../src/domain/v2-progress.ts";
 
 test("chaque ligne de Plus a un domaine, un point et un état", () => {
   const points = new Set<string>();
@@ -8,6 +8,8 @@ test("chaque ligne de Plus a un domaine, un point et un état", () => {
     assert.ok(row.domain.trim().length > 0);
     assert.ok(row.point.trim().length > 0);
     assert.ok(row.status === "fait" || row.status === "pas");
+    if (row.status === "fait") assert.equal(Number.isNaN(new Date(row.doneAt).getTime()), false);
+    else assert.equal(row.doneAt, "");
     assert.equal(points.has(row.point), false);
     points.add(row.point);
   }
@@ -33,4 +35,11 @@ test("le tableau sépare ce qui est livré de la cible restante", () => {
   assert.equal(counts.done + counts.open, v2Progress.length);
   assert.ok(counts.done > 0);
   assert.ok(counts.open > 0);
+  assert.equal(formatDoneAt("2026-09-27T14:05:21.000Z"), "27/09/2026 16:05");
+  assert.equal(formatDoneAt(""), "");
+  const card = v2Progress.find((row) => row.point.startsWith("Fiche de compréhension"));
+  assert.equal(card?.status, "fait");
+  const phase = v2Phases.find((item) => item.order === 4);
+  assert.equal(phase?.state, "fait");
+  assert.equal(v2Phases.find((item) => item.order === 5)?.state, "pas");
 });

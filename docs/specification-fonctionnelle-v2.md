@@ -136,7 +136,7 @@ Quand la demande est comprise, l’écran montre :
 - le point encore à confirmer ;
 - l’action proposée.
 
-L’utilisateur corrige le projet, le type du document ou le fournisseur sur cette fiche, sans réécrire le message.
+L’utilisateur corrige le projet, le type du document ou le fournisseur sur cette fiche, sans réécrire le message. Cette fiche est en service pour une action du catalogue encore sans exécution. La correction vaut pour cette demande. Elle ne devient pas une règle pour les documents suivants.
 
 ## Périmètre métier
 

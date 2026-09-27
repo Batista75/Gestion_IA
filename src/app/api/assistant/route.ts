@@ -29,7 +29,12 @@ import { conversationIdOrNew, rememberTurn } from "@/lib/conversations";
 import type { UIMessage } from "ai";
 import { withGpuLane } from "@/lib/gpu-lane";
 import { mentionedNames } from "@/domain/knowledge";
-import { blockingQuestion } from "@/domain/completeness";
+import {
+  readCardCorrection,
+  understandingCard,
+  type FieldOverrides,
+  type UnderstandingCard,
+} from "@/domain/completeness";
 import { contextBrief, contextLine, readHint, type ContextSnapshot } from "@/domain/context-envelope";
 import { absentReply, decideFree, intentCatalog, type IntentDecision } from "@/domain/intent-catalog";
 import { attachConversationProject, resolveContext } from "@/lib/context-envelope";
@@ -81,28 +86,52 @@ export async function POST(request: Request) {
   );
   await attachConversationProject(conversationId, snapshot.projectId);
 
-  const direct = await answerDirectly(parsed.text);
-  if (direct) {
+  const correction = readCardCorrection(parsed.text);
+  const baseText = correction ? await earlierUserText(conversationId) : parsed.text;
+  if (correction && !baseText) {
     return streamDirect({
       conversationId,
-      reply: direct.reply,
-      source: direct.source,
-      step: stepFor(direct.source),
-      proposal: direct.proposal,
-      sources: direct.sources,
+      reply: "Aucune demande à corriger. Écrivez d’abord ce qu’il faut faire.",
+      source: "regle-metier",
+      step: "Fiche",
     });
   }
 
-  const free = decideFree(parsed.text);
-  if (free.execution === "absente") {
-    const question = await blockingQuestionFor(parsed.text, free, snapshot);
+  if (!correction) {
+    const direct = await answerDirectly(parsed.text);
+    if (direct) {
+      return streamDirect({
+        conversationId,
+        reply: direct.reply,
+        source: direct.source,
+        step: stepFor(direct.source),
+        proposal: direct.proposal,
+        sources: direct.sources,
+      });
+    }
+  }
+
+  const free = decideFree(baseText);
+  if (correction && free.execution !== "absente") {
     return streamDirect({
       conversationId,
-      reply: question
-        ? `${question}\nRien n’est écrit.\n${contextLine(snapshot)}`
-        : `${absentReply(free.id ? { ...free, missing: [] } : free)}\n${contextLine(snapshot)}`,
+      reply: "Cette demande n’a pas de fiche à corriger.",
       source: "regle-metier",
-      step: question ? "Question" : "Catalogue",
+      step: "Fiche",
+    });
+  }
+  if (free.execution === "absente") {
+    const blocked = await blockedTurn(baseText, free, snapshot, correction);
+    return streamDirect({
+      conversationId,
+      reply: blocked.question
+        ? `${blocked.question}\nRien n’est écrit.\n${contextLine(snapshot)}`
+        : blocked.card
+          ? `${blocked.card.action}. Les champs de la fiche sont remplis. Cette action n’est pas encore exécutée.\nRien n’est écrit.\n${contextLine(snapshot)}`
+          : `${absentReply(free)}\n${contextLine(snapshot)}`,
+      source: "regle-metier",
+      step: blocked.card ? "Fiche" : "Catalogue",
+      understanding: blocked.card,
     });
   }
 
@@ -305,15 +334,34 @@ function proposalResponse(opened: ProposalView) {
   };
 }
 
-async function blockingQuestionFor(
+async function earlierUserText(conversationId: string): Promise<string> {
+  const rows = await prisma.conversationMessage.findMany({
+    where: { conversationId, role: "user" },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: { content: true },
+  });
+  for (const row of rows) {
+    if (!readCardCorrection(row.content)) return row.content;
+  }
+  return "";
+}
+
+async function blockedTurn(
   text: string,
   decision: IntentDecision,
   snapshot: ContextSnapshot,
-): Promise<string | null> {
+  correction: FieldOverrides | null,
+): Promise<{ question: string | null; card: UnderstandingCard | null }> {
   const row = intentCatalog.find((item) => item.id === decision.id);
-  if (!row) return null;
-  const projects = await prisma.project.findMany({ select: { name: true }, take: 500 });
-  const question = blockingQuestion({
+  if (!row) return { question: null, card: null };
+  const [projects, suppliers] = await Promise.all([
+    prisma.project.findMany({ select: { name: true }, take: 200 }),
+    prisma.supplier.findMany({ select: { name: true }, take: 200 }),
+  ]);
+  const names = projects.map((project) => project.name);
+  const card = understandingCard({
+    action: row.label,
     required: row.required,
     text,
     projectName: snapshot.projectName,
@@ -321,9 +369,12 @@ async function blockingQuestionFor(
     attachments: snapshot.attachments,
     selectedLabel: snapshot.selectedLabel,
     selectedKind: snapshot.selectedKind,
-    projectChoices: mentionedNames(text, projects.map((project) => project.name)),
+    projectChoices: mentionedNames(text, names),
+    projectOptions: names,
+    supplierOptions: suppliers.map((supplier) => supplier.name),
+    overrides: correction ?? undefined,
   });
-  return question ? `${row.label}. ${question.text}` : null;
+  return { question: card.confirm ? `${row.label}. ${card.confirm}` : null, card };
 }
 
 async function directoryNames(): Promise<string[]> {

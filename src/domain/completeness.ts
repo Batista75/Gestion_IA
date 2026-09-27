@@ -23,6 +23,12 @@ export const fieldThresholds: Record<string, number> = {
   tva: 1,
 };
 
+export type FieldOverrides = {
+  projet: string;
+  type: string;
+  société: string;
+};
+
 export type CompletenessInput = {
   required: string[];
   text: string;
@@ -32,6 +38,22 @@ export type CompletenessInput = {
   selectedLabel: string;
   selectedKind: string;
   projectChoices: string[];
+  projectOptions?: string[];
+  supplierOptions?: string[];
+  overrides?: FieldOverrides;
+};
+
+export type UnderstandingCard = {
+  action: string;
+  understood: string[];
+  confirm: string;
+  project: string;
+  documentType: string;
+  supplier: string;
+  projects: string[];
+  types: string[];
+  suppliers: string[];
+  attachments: string[];
 };
 
 const TYPE_WORD = /\b(devis|facture|commande|contrat|bon de livraison|rfq)\b/;
@@ -46,7 +68,74 @@ export function blockingQuestion(input: CompletenessInput): BlockingQuestion | n
   return null;
 }
 
+const SPOKEN = ["document", "type", "projet", "société", "client"];
+
+export function understandingCard(input: CompletenessInput & { action: string }): UnderstandingCard {
+  const question = blockingQuestion(input);
+  const understood: string[] = [];
+  const readings = new Map<string, { value: string; confidence: number }>();
+  for (const field of [...new Set([...SPOKEN, ...input.required])]) {
+    const reading = readField(field, input);
+    readings.set(field, reading);
+    const threshold = fieldThresholds[field] ?? 0.9;
+    if (reading.value && reading.confidence >= threshold) {
+      understood.push(understoodSentence(field, reading.value));
+    }
+  }
+  const project = readings.get("projet")?.value ?? "";
+  const documentType = readings.get("type")?.value ?? "";
+  const supplier = readings.get("société")?.value ?? "";
+  return {
+    action: input.action,
+    understood,
+    confirm: question?.text ?? "",
+    project,
+    documentType,
+    supplier,
+    projects: listed([project, input.projectName, ...(input.projectOptions ?? []), ...input.projectChoices]),
+    types: listed([documentType, "devis", "facture", "commande", "contrat"]),
+    suppliers: listed([supplier, ...(input.supplierOptions ?? [])]),
+    attachments: input.attachments.slice(0, 8),
+  };
+}
+
+/** « Fiche : projet Atlas, type devis, fournisseur Durand » corrige la fiche, pas le message. */
+export function readCardCorrection(text: string): FieldOverrides | null {
+  const match = /^fiche\s*:\s*(.+)$/i.exec(text.trim());
+  if (!match) return null;
+  const body = match[1] ?? "";
+  const projet = labeled(body, "projet");
+  const type = labeled(body, "type");
+  const société = labeled(body, "fournisseur") || labeled(body, "société") || labeled(body, "societe");
+  if (!projet && !type && !société) return null;
+  return { projet, type, société };
+}
+
+export function readUnderstanding(value: unknown): UnderstandingCard | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as { understanding?: unknown; action?: unknown };
+  const source =
+    row.understanding && typeof row.understanding === "object" ? row.understanding : row.action ? row : null;
+  if (!source || typeof source !== "object") return null;
+  const card = source as Record<string, unknown>;
+  if (typeof card.action !== "string" || !card.action.trim()) return null;
+  return {
+    action: card.action,
+    understood: stringList(card.understood),
+    confirm: typeof card.confirm === "string" ? card.confirm : "",
+    project: typeof card.project === "string" ? card.project : "",
+    documentType: typeof card.documentType === "string" ? card.documentType : "",
+    supplier: typeof card.supplier === "string" ? card.supplier : "",
+    projects: stringList(card.projects).slice(0, 80),
+    types: stringList(card.types).slice(0, 12),
+    suppliers: stringList(card.suppliers).slice(0, 80),
+    attachments: stringList(card.attachments).slice(0, 8),
+  };
+}
+
 function readField(field: string, input: CompletenessInput): { value: string; confidence: number } {
+  const chosen = chosenValue(field, input.overrides);
+  if (chosen) return { value: chosen, confidence: 1 };
   const text = fold(input.text);
   const files = fold(input.attachments.join(" "));
   const selected = fold(input.selectedLabel);
@@ -138,6 +227,46 @@ function missingText(field: string): string {
   if (field === "ligne") return "Quelle ligne de coût faut-il mettre à jour ?";
   if (field === "source") return "Quelle pièce sert de source pour ce coût ?";
   return `Quelle valeur pour ${field} ?`;
+}
+
+function chosenValue(field: string, overrides: FieldOverrides | undefined): string {
+  if (!overrides) return "";
+  if (field === "projet") return overrides.projet.trim();
+  if (field === "type") return overrides.type.trim();
+  if (field === "société") return overrides.société.trim();
+  return "";
+}
+
+function understoodSentence(field: string, value: string): string {
+  if (field === "document") return `Le document est ${value}.`;
+  if (field === "type") return `Le type retenu est ${value}.`;
+  if (field === "projet") return `Le projet retenu est ${value}.`;
+  if (field === "société") return `La société retenue est ${value}.`;
+  if (field === "client") return `Le client facturé est ${value}.`;
+  return `${field} : ${value}.`;
+}
+
+function labeled(body: string, name: string): string {
+  const match = new RegExp(`(?:^|,)\\s*${name}\\s+([^,]+)`, "i").exec(body);
+  return (match?.[1] ?? "").trim();
+}
+
+function listed(values: string[]): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const value of values) {
+    const name = value.trim();
+    const key = name.toLowerCase();
+    if (!name || seen.has(key)) continue;
+    seen.add(key);
+    names.push(name);
+    if (names.length >= 80) break;
+  }
+  return names;
+}
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 function fold(value: string): string {
