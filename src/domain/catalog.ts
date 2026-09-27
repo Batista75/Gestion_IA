@@ -16,6 +16,8 @@ export type ProductInput = {
   kind?: string;
   costStated?: string;
   currency?: string;
+  sourceNote?: string;
+  sourceUrl?: string;
 };
 
 export type CatalogCommand =
@@ -261,6 +263,8 @@ export function validateProduct(
   if (unit.length > 20) {
     return { ok: false, error: "L’unité dépasse 20 caractères." };
   }
+  const sourceUrl = readSupplierUrl(input.sourceUrl ?? "");
+  if (!sourceUrl.ok) return sourceUrl;
   return {
     ok: true,
     value: {
@@ -272,8 +276,27 @@ export function validateProduct(
       kind: input.kind === "service" ? "service" : "produit",
       costStated: clip(input.costStated ?? "", 80),
       currency: input.currency === "USD" ? "USD" : input.currency === "EUR" ? "EUR" : "",
+      sourceNote: clip(input.sourceNote ?? "", 500),
+      sourceUrl: sourceUrl.value,
     },
   };
+}
+
+/** Lien http ou https vers le site du fournisseur. Vide si rien n’est saisi. */
+export function readSupplierUrl(raw: string): { ok: true; value: string } | { ok: false; error: string } {
+  const value = raw.trim();
+  if (!value) return { ok: true, value: "" };
+  if (value.length > 500) return { ok: false, error: "Le lien dépasse 500 caractères." };
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return { ok: false, error: "Le lien doit commencer par http:// ou https://." };
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return { ok: false, error: "Le lien doit commencer par http:// ou https://." };
+  }
+  return { ok: true, value: url.toString() };
 }
 
 export const CATALOG_TOOLS = [

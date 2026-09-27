@@ -79,9 +79,9 @@ La [vue Fournisseurs](/fournisseurs) s’ouvre sur un tableau : nom, e-mail, té
 
 ## Produits
 
-La [vue Articles](/produits) s’ouvre sur un tableau : référence, désignation, famille (produit ou service), coût unitaire, devise, fournisseur et date de saisie. **Éditer** ouvre le formulaire de cette fiche. Le coût unitaire reste le montant écrit sur la pièce ou sur la fiche. Il n’est pas recalculé. Le catalogue réunit :
+La [vue Articles](/produits) s’ouvre sur un tableau : référence, désignation, famille (produit ou service), coût unitaire, devise, fournisseur, date de saisie et source. **Éditer** ouvre le formulaire de cette fiche. Le coût unitaire reste le montant écrit sur la pièce ou sur la fiche. Il n’est pas recalculé. Quand une pièce est à l’origine de l’article, **Consulter** l’ouvre. Une saisie manuelle n’a pas toujours de pièce : la fiche accepte alors une note, ou un lien http ou https vers le site du fournisseur. Le catalogue réunit :
 
-- **Saisie manuelle** : nom, référence, unité, fournisseur, description. Un fournisseur inconnu est créé.
+- **Saisie manuelle** : nom, référence, unité, fournisseur, description, note et lien. Un fournisseur inconnu est créé.
 - **Issu d’un devis** : titre du devis et un produit par ligne, ou un fichier confirmé depuis l’accueil. Chaque confirmation de devis ajoute une version : prix indiqué et conditions. Une version ne remplace pas la précédente.
 - **Saisi par l’assistant** : quand vous lui demandez d’ajouter un produit.
 

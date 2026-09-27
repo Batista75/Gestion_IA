@@ -99,8 +99,13 @@ export function DataBoard({
                 <tr key={`${row[0]?.text ?? "ligne"}-${index}`} className="border-b border-border last:border-0">
                   {row.map((cell, cellIndex) => (
                     <td key={`${headers[cellIndex] ?? cellIndex}`} className="px-3 py-2 align-top">
-                      {cell.download && cell.href ? (
-                        <a href={cell.href} className="inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline">
+                      {cell.href && (cell.download || cell.external) ? (
+                        <a
+                          href={cell.href}
+                          target={cell.external ? "_blank" : undefined}
+                          rel={cell.external ? "noreferrer noopener" : undefined}
+                          className="inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
+                        >
                           {cell.text}
                         </a>
                       ) : cell.href ? (

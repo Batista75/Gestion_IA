@@ -55,7 +55,7 @@ export async function listProducts(query: string, source: string) {
     },
     include: {
       supplier: true,
-      lines: { include: { quote: true } },
+      lines: { include: { quote: { include: { file: { select: { id: true, originalName: true } } } } } },
     },
     orderBy: { updatedAt: "desc" },
     take: 200,
@@ -254,6 +254,8 @@ async function createProduct(
       kind: parsed.value.kind === "service" ? "service" : "produit",
       costStated: parsed.value.costStated ?? "",
       currency: parsed.value.currency ?? "",
+      sourceNote: parsed.value.sourceNote ?? "",
+      sourceUrl: parsed.value.sourceUrl ?? "",
       supplierId,
     },
   });
@@ -278,6 +280,8 @@ async function patchProduct(input: ProductInput): Promise<ActionResult> {
     kind: input.kind || existing.kind,
     costStated: input.costStated?.trim() || existing.costStated,
     currency: input.currency || existing.currency,
+    sourceNote: input.sourceNote !== undefined ? input.sourceNote : existing.sourceNote,
+    sourceUrl: input.sourceUrl !== undefined ? input.sourceUrl : existing.sourceUrl,
   }, Boolean(input.supplierName.trim()));
 }
 
@@ -307,6 +311,8 @@ async function updateProductById(
       kind: parsed.value.kind === "service" ? "service" : "produit",
       costStated: parsed.value.costStated ?? "",
       currency: parsed.value.currency ?? "",
+      sourceNote: parsed.value.sourceNote ?? "",
+      sourceUrl: parsed.value.sourceUrl ?? "",
       ...(supplierId !== undefined ? { supplierId } : {}),
     },
   });

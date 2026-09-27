@@ -29,6 +29,13 @@ export type ProductVersionView = {
   supplierName: string;
   statedPrice: string;
   conditions: string;
+  fileId: string;
+  fileName: string;
+};
+
+export type SourceDocument = {
+  id: string;
+  name: string;
 };
 
 export type ProductRecord = {
@@ -45,6 +52,9 @@ export type ProductRecord = {
   vatNote: string;
   kind: string;
   stockQty: number | null;
+  sourceNote: string;
+  sourceUrl: string;
+  documents: SourceDocument[];
   enteredLabel: string;
   updatedLabel: string;
   versions: ProductVersionView[];
@@ -141,7 +151,7 @@ export function ProductManager({
           <CardHeader>
             <CardTitle>Saisie manuelle</CardTitle>
             <CardDescription>
-              Un fournisseur inconnu est créé en même temps.
+              Un fournisseur inconnu est créé en même temps. Sans pièce, une note ou un lien vers le site du fournisseur suffit.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -190,6 +200,7 @@ export function ProductManager({
                   ) : null}
                   <ArticleFacts record={record} />
                   <p className="text-sm">{record.origin}</p>
+                  <SourceBlock record={record} />
                   {record.versions.length > 0 ? (
                     <div className="grid gap-2">
                       <p className="text-sm font-medium">Versions de devis</p>
@@ -206,6 +217,14 @@ export function ProductManager({
                                 : "Coût unitaire non indiqué"}
                             </p>
                             {version.conditions ? <p>Conditions : {version.conditions}</p> : null}
+                            {version.fileId ? (
+                              <a
+                                href={`/api/pieces/${version.fileId}`}
+                                className="inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
+                              >
+                                Consulter {version.fileName || "le document"}
+                              </a>
+                            ) : null}
                             <ConfirmDelete
                               action={deleteQuoteAction}
                               id={version.quoteId}
@@ -307,6 +326,22 @@ function ProductFields({
         defaultValue={record?.supplierName}
       />
       <div className="grid gap-2">
+        <Label htmlFor={`${prefix}-sourceNote`}>Note</Label>
+        <Textarea
+          id={`${prefix}-sourceNote`}
+          name="sourceNote"
+          defaultValue={record?.sourceNote}
+          rows={2}
+          placeholder="Origine de la saisie, si aucune pièce n’est jointe"
+        />
+      </div>
+      <TextField
+        prefix={prefix}
+        label="Lien du fournisseur"
+        name="sourceUrl"
+        defaultValue={record?.sourceUrl}
+      />
+      <div className="grid gap-2">
         <Label htmlFor={`${prefix}-description`}>Description</Label>
         <Textarea
           id={`${prefix}-description`}
@@ -321,6 +356,41 @@ function ProductFields({
         {pending ? "Enregistrement…" : submitLabel}
       </Button>
     </form>
+  );
+}
+
+function SourceBlock({ record }: { record: ProductRecord }) {
+  return (
+    <div className="grid gap-1 text-sm leading-6">
+      <p className="font-medium">Document source</p>
+      {record.documents.length > 0 ? (
+        <ul className="grid gap-1">
+          {record.documents.map((document) => (
+            <li key={document.id}>
+              <a
+                href={`/api/pieces/${document.id}`}
+                className="inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
+              >
+                Consulter {document.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-muted-foreground">Aucun document source.</p>
+      )}
+      {record.sourceNote ? <p>Note : {record.sourceNote}</p> : null}
+      {record.sourceUrl ? (
+        <a
+          href={record.sourceUrl}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
+        >
+          Site du fournisseur
+        </a>
+      ) : null}
+    </div>
   );
 }
 

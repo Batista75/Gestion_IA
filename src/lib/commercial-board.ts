@@ -13,7 +13,7 @@ type MoneyLine = {
   discountPercent: number;
 };
 
-export type Cell = { text: string; href?: string; download?: boolean };
+export type Cell = { text: string; href?: string; download?: boolean; external?: boolean };
 
 export type ProducedDocument = {
   id: string;

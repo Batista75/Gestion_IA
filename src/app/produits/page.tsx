@@ -35,16 +35,26 @@ export default async function ProductsPage({
     <div className="grid gap-6">
     <DataBoard
       title="Liste des articles"
-      intro="Un article fournisseur est un produit ou un service. La référence, la désignation, la famille, le coût unitaire, la devise, le fournisseur et la date de saisie viennent de la fiche. Le coût reste le montant écrit, il n’est pas recalculé."
+      intro="Un article fournisseur est un produit ou un service. La référence, la désignation, la famille, le coût unitaire, la devise, le fournisseur et la date de saisie viennent de la fiche. Le coût reste le montant écrit, il n’est pas recalculé. La source ouvre la pièce d’origine quand elle existe. Sinon, la fiche peut porter une note ou le site du fournisseur."
       basePath="/produits"
       query={{ q: query, source }}
-      headers={["Référence", "Désignation", "Famille", "Coût unitaire", "Devise", "Fournisseur", "Date de saisie", "Édition"]}
+      headers={["Référence", "Désignation", "Famille", "Coût unitaire", "Devise", "Fournisseur", "Date de saisie", "Source", "Édition"]}
       rows={products.map((product) => {
         const cost = shownUnitCost(
           product.costStated,
           product.lines.map((line) => line.statedPrice),
         );
         const currency = product.currency.trim() || writtenCurrency(cost);
+        const documents = sourceDocuments(product.lines);
+        const sourceCell = documents[0]
+          ? {
+              text: documents.length > 1 ? `${documents[0].name} (+${documents.length - 1})` : documents[0].name,
+              href: `/api/pieces/${documents[0].id}`,
+              download: true,
+            }
+          : product.sourceUrl
+            ? { text: "Site du fournisseur", href: product.sourceUrl, external: true }
+            : { text: product.sourceNote.trim() ? product.sourceNote.trim().slice(0, 80) : "—" };
         return [
         { text: product.reference || "—" },
         { text: product.name },
@@ -53,6 +63,7 @@ export default async function ProductsPage({
         { text: currency || "non indiqué" },
         { text: product.supplier?.name || "—" },
         { text: product.createdAt.toLocaleDateString("fr-FR") },
+        sourceCell,
         { text: "Éditer", href: `/produits?edition=${product.id}${query ? `&q=${encodeURIComponent(query)}` : ""}${source ? `&source=${source}` : ""}#edition` },
       ];
       })}
@@ -84,6 +95,9 @@ export default async function ProductsPage({
         vatNote: product.vatNote,
         kind: product.kind,
         stockQty: product.stockQty,
+        sourceNote: product.sourceNote,
+        sourceUrl: product.sourceUrl,
+        documents: sourceDocuments(product.lines),
         enteredLabel: product.createdAt.toLocaleDateString("fr-FR"),
         origin: productOrigin(
           product.source,
@@ -101,9 +115,25 @@ export default async function ProductsPage({
             supplierName: line.quote.supplierName,
             statedPrice: line.statedPrice,
             conditions: line.conditions,
+            fileId: line.quote.file?.id ?? "",
+            fileName: line.quote.file?.originalName ?? "",
           })),
       }))}
     />
     </div>
   );
+}
+
+function sourceDocuments(
+  lines: Array<{ quote: { file: { id: string; originalName: string } | null } }>,
+): Array<{ id: string; name: string }> {
+  const seen = new Set<string>();
+  const documents: Array<{ id: string; name: string }> = [];
+  for (const line of lines) {
+    const file = line.quote.file;
+    if (!file || seen.has(file.id)) continue;
+    seen.add(file.id);
+    documents.push({ id: file.id, name: file.originalName || "document" });
+  }
+  return documents;
 }

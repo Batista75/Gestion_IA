@@ -4,6 +4,8 @@ import {
   commandFromTool,
   parseCatalogCommand,
   productOrigin,
+  readSupplierUrl,
+  validateProduct,
 } from "../src/domain/catalog.ts";
 
 test("crée un compte client et une mise à jour", () => {
@@ -65,6 +67,28 @@ test("un outil Ollama devient une commande", () => {
   if (command?.type === "create_product") {
     assert.equal(command.product.supplierName, "Durand");
   }
+});
+
+test("une note vide et un lien http sont acceptés, un autre schéma non", () => {
+  const empty = validateProduct({
+    name: "Vis à bois",
+    reference: "",
+    unit: "",
+    description: "",
+    supplierName: "",
+    sourceNote: "  Prix vu en magasin  ",
+    sourceUrl: "",
+  });
+  assert.equal(empty.ok, true);
+  if (empty.ok) {
+    assert.equal(empty.value.sourceNote, "Prix vu en magasin");
+    assert.equal(empty.value.sourceUrl, "");
+  }
+  const site = readSupplierUrl("https://fournisseur.example/vis");
+  assert.equal(site.ok, true);
+  if (site.ok) assert.equal(site.value, "https://fournisseur.example/vis");
+  assert.equal(readSupplierUrl("javascript:alert(1)").ok, false);
+  assert.equal(readSupplierUrl("www.fournisseur.example").ok, false);
 });
 
 test("l’origine produit cite le devis", () => {

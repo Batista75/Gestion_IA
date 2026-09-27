@@ -239,6 +239,8 @@ model Product {
   vatNote     String      @default("")
   costStated  String      @default("")
   stockQty    Int?
+  sourceNote  String      @default("")
+  sourceUrl   String      @default("")
   supplierId  String?
   supplier    Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   createdAt    DateTime      @default(now())
