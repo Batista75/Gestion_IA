@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { sheetBuys, sheetHeading } from "@/domain/company";
 import { deliveryFromRecord, deliverySummary } from "@/domain/delivery";
 import { formatCents, saleOperationTotals, storedSaleFigures } from "@/domain/pricing";
+import { notedPieceLabel } from "@/domain/noted-piece";
 import { saleKindLabel } from "@/domain/sale-line";
 import { loadCompany } from "@/lib/company-store";
 import { prisma } from "@/lib/db";
@@ -26,6 +27,16 @@ export default async function SaleDocumentPage({
       project: true,
       parent: { select: { id: true, kind: true, title: true } },
       children: { select: { id: true, kind: true, title: true }, orderBy: { createdAt: "asc" } },
+      notedPieces: {
+        where: { pieceParentId: null },
+        orderBy: { createdAt: "asc" },
+        include: {
+          children: {
+            orderBy: { createdAt: "asc" },
+            include: { children: { orderBy: { createdAt: "asc" } } },
+          },
+        },
+      },
     },
   });
   if (!document) notFound();
@@ -69,6 +80,28 @@ export default async function SaleDocumentPage({
             {saleKindLabel(document.parent.kind)} · {document.parent.title}
           </Link>
         </p>
+      ) : null}
+      {document.notedPieces.length > 0 ? (
+        <ul className="grid gap-1 text-sm print:hidden">
+          {document.notedPieces.map((piece) => (
+            <li key={piece.id}>
+              {notedPieceLabel(piece.kind)} · {piece.reference}
+              <span className="text-muted-foreground"> · référence recopiée, sans numéro attribué</span>
+              {piece.children.length > 0 ? (
+                <ul className="mt-1 grid gap-1 pl-4">
+                  {piece.children.map((child) => (
+                    <li key={child.id}>
+                      {notedPieceLabel(child.kind)} · {child.reference}
+                      {child.children.length > 0
+                        ? ` · ${child.children.map((grandchild) => `${notedPieceLabel(grandchild.kind)} ${grandchild.reference}`).join(", ")}`
+                        : ""}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          ))}
+        </ul>
       ) : null}
       {document.children.length > 0 ? (
         <ul className="grid gap-1 text-sm print:hidden">

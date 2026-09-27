@@ -124,7 +124,8 @@ function clientKnowsOffers(client: ReturnType<typeof createClient>): boolean {
     typeof client.supplierOffer?.findMany === "function" &&
     typeof client.contact?.findMany === "function" &&
     typeof client.address?.findMany === "function" &&
-    typeof client.organization?.findMany === "function"
+    typeof client.organization?.findMany === "function" &&
+    typeof client.notedPiece?.findMany === "function"
   );
 }
 

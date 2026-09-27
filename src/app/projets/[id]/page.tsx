@@ -20,6 +20,35 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+function toPiece(piece: {
+  id: string;
+  kind: string;
+  reference: string;
+  children?: Array<{
+    id: string;
+    kind: string;
+    reference: string;
+    children?: Array<{ id: string; kind: string; reference: string }>;
+  }>;
+}) {
+  return {
+    id: piece.id,
+    kind: piece.kind,
+    reference: piece.reference,
+    children: (piece.children ?? []).map((child) => ({
+      id: child.id,
+      kind: child.kind,
+      reference: child.reference,
+      children: (child.children ?? []).map((grandchild) => ({
+        id: grandchild.id,
+        kind: grandchild.kind,
+        reference: grandchild.reference,
+        children: [],
+      })),
+    })),
+  };
+}
+
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const project = await prisma.project.findUnique({
@@ -31,6 +60,16 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         include: {
           lines: { orderBy: { createdAt: "asc" } },
           parent: { select: { id: true, kind: true, title: true } },
+          notedPieces: {
+            where: { pieceParentId: null },
+            orderBy: { createdAt: "asc" },
+            include: {
+              children: {
+                orderBy: { createdAt: "asc" },
+                include: { children: { orderBy: { createdAt: "asc" } } },
+              },
+            },
+          },
         },
       },
       steps: true,
@@ -185,6 +224,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           createdLabel: document.createdAt.toLocaleString("fr-FR"),
           confirmedLabel: document.confirmedAt ? document.confirmedAt.toLocaleString("fr-FR") : null,
           parent: document.parent,
+          pieces: document.notedPieces.map(toPiece),
           lines: document.lines.map((line) => ({
             id: line.id,
             name: line.name,

@@ -193,6 +193,7 @@ Pièce établie dans le dossier. Suppression du projet en cascade.
 - `status` : `en_cours`, `brouillon`, `non_abouti`, `transforme`. Défaut `en_cours`.
 - `title`, `supplierName`, `sourceId` (texte recopié), `confirmedAt`.
 - `parentId` vers un autre `SaleDocument`. La suppression du parent vide le lien. Un devis n’a pas de parent. Une commande client a pour parent un devis. Une commande fournisseur a pour parent une commande client. Aucune facture n’est créée ni numérotée.
+- Enfants `NotedPiece` : une livraison, une facture ou un avoir rattaché, sans devenir une pièce de vente.
 - `createdAt`, `updatedAt`.
 - Enfants : `SaleDocumentLine`.
 
@@ -206,6 +207,19 @@ Aucune colonne de numéro. L’écran `/projets/[id]/facture` réimprime la dern
 - `markupPercent` défaut 30, `discountPercent` défaut 0.
 - `createdAt`.
 - Suppression du document en cascade.
+
+### NotedPiece
+
+Pièce constatée, rattachée à une commande ou à une autre pièce constatée. Ce n’est pas une facture émise.
+
+- `kind` : `livraison`, `facture`, `avoir`.
+- `reference` : texte recopié sur la pièce. L’application ne l’invente pas et n’attribue pas de numéro.
+- `projectId` vers `Project`.
+- `saleParentId` vers `SaleDocument`, pour une livraison ou une facture rattachée à une commande client ou fournisseur.
+- `pieceParentId` vers une autre `NotedPiece`. Une facture peut suivre une livraison. Un avoir suit une facture.
+- Une seule parente : soit la commande, soit la pièce constatée.
+- `createdAt`.
+- La suppression du dossier, de la commande ou de la pièce parente emporte les pièces rattachées.
 
 ## Fichiers et lectures
 
@@ -396,11 +410,13 @@ Les faits de page et de zone affichés dans le fil sont calculés à la lecture.
 
 ## Cible encore non construite
 
-Le lot suivant est retenu. Ces noms ne sont pas des tables.
+La livraison, la facture et l’avoir se rattachent par `NotedPiece`. L’application n’émet toujours pas de facture et n’attribue pas de numéro. Les points qui suivent ne sont pas encore des tables.
 
 Priorité haute, pas encore faites :
 
-- Livraison, facture et avoir reliés à leur pièce parente. L’application n’émet toujours pas de facture et n’attribue pas de numéro.
+- Validité de trente jours d’une offre fournisseur.
+- Contrôle des doublons de contacts et d’adresses.
+- Rôles et notifications.
 
 À terme, trois couches restent séparées. La vérité métier est confirmée. La preuve est le fichier et le texte extrait. L’interprétation de l’assistant est une proposition, jamais une fiche implicite.
 
@@ -408,5 +424,5 @@ Priorité haute, pas encore faites :
 
 - Les faits de page et de zone (`readDocumentFacts` dans `src/domain/document-facts.ts`) sont produits à la lecture du texte extrait. Aucune table ne les conserve. Le message de l’utilisateur n’est pas un argument de cette lecture.
 - Le prix de vente, la marge et les totaux de dossier sont calculés par `src/domain/pricing.ts` à partir des centimes déjà stockés.
-- L’application n’enregistre pas de numéro de facture, d’avoir émis, ni de relevé bancaire.
+- L’application n’attribue pas de numéro de facture ni d’avoir. Une `NotedPiece` recopie la référence déjà écrite. Elle n’enregistre pas de relevé bancaire.
 - La validité de trente jours d’une offre fournisseur, les rôles et les notifications ne sont pas des tables. L’historique de prix est la suite des `SupplierOffer`. `Quote.versionLabel` et `Quote.fingerprint` identifient une offre reçue, sans durée de validité en colonne.

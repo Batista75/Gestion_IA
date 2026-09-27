@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import {
   addLineAction,
@@ -10,6 +10,7 @@ import {
   loseQuoteAction,
   quoteAction,
   reopenDocumentAction,
+  attachNotedPieceAction,
   supplierOrderAction,
   updateDocumentAction,
   updateLinesAction,
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { centsInput, formatCents, saleLineFigures, saleOperationTotals, storedSaleFigures } from "@/domain/pricing";
+import { notedPieceLabel } from "@/domain/noted-piece";
 import { saleKindLabel, saleStatusLabel } from "@/domain/sale-line";
 
 const initial: SaleState = { message: null, ok: false };
@@ -38,6 +40,13 @@ export type OperationLine = {
   confirmedLabel: string | null;
 };
 
+export type NotedPieceView = {
+  id: string;
+  kind: string;
+  reference: string;
+  children: NotedPieceView[];
+};
+
 export type OperationDocument = {
   id: string;
   kind: string;
@@ -48,6 +57,7 @@ export type OperationDocument = {
   confirmedLabel: string | null;
   parent: { id: string; kind: string; title: string } | null;
   lines: OperationLine[];
+  pieces: NotedPieceView[];
 };
 
 export type CatalogChoice = {
@@ -426,6 +436,16 @@ function DocumentCard({
           </Link>
         </p>
       ) : null}
+      <PieceTree pieces={document.pieces} projectId={projectId} />
+      {document.kind === "commande_client" || document.kind === "commande_fournisseur" ? (
+        <AttachPiece
+          projectId={projectId}
+          saleParentId={document.id}
+          pieceParentId=""
+          kinds={["livraison", "facture"]}
+          summary="Rattacher une livraison ou une facture"
+        />
+      ) : null}
       {document.supplierName ? <p className="text-sm">Fournisseur {document.supplierName}</p> : null}
       <ul className="grid gap-2">
         {document.lines.map((line, index) => (
@@ -475,6 +495,101 @@ function DocumentCard({
         <SupplierOrderForm projectId={projectId} documentId={document.id} suppliers={suppliers} />
       ) : null}
     </li>
+  );
+}
+
+function PieceTree({ pieces, projectId }: { pieces: NotedPieceView[]; projectId: string }) {
+  if (pieces.length === 0) return null;
+  return (
+    <ul className="grid gap-2">
+      {pieces.map((piece) => (
+        <li key={piece.id} className="grid gap-2 rounded-lg bg-muted/50 px-3 py-2">
+          <p className="text-sm">
+            {notedPieceLabel(piece.kind)} · {piece.reference}
+            <span className="text-muted-foreground"> · référence recopiée, sans numéro attribué</span>
+          </p>
+          <PieceTree pieces={piece.children} projectId={projectId} />
+          {piece.kind === "livraison" ? (
+            <AttachPiece
+              projectId={projectId}
+              saleParentId=""
+              pieceParentId={piece.id}
+              kinds={["facture"]}
+              summary="Rattacher une facture"
+            />
+          ) : null}
+          {piece.kind === "facture" ? (
+            <AttachPiece
+              projectId={projectId}
+              saleParentId=""
+              pieceParentId={piece.id}
+              kinds={["avoir"]}
+              summary="Rattacher un avoir"
+            />
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function AttachPiece({
+  projectId,
+  saleParentId,
+  pieceParentId,
+  kinds,
+  summary,
+}: {
+  projectId: string;
+  saleParentId: string;
+  pieceParentId: string;
+  kinds: Array<"livraison" | "facture" | "avoir">;
+  summary: string;
+}) {
+  const [state, action, pending] = useActionState(attachNotedPieceAction, initial);
+  const [reference, setReference] = useState("");
+  const ready = reference.trim().length >= 2;
+  return (
+    <details>
+      <summary className="min-h-11 cursor-pointer text-sm font-medium">{summary}</summary>
+      <form action={action} className="grid max-w-md gap-2 pt-2">
+        <input type="hidden" name="projectId" value={projectId} />
+        <input type="hidden" name="saleParentId" value={saleParentId} />
+        <input type="hidden" name="pieceParentId" value={pieceParentId} />
+        {kinds.length > 1 ? (
+          <div className="grid gap-1">
+            <Label htmlFor={`kind-${saleParentId || pieceParentId}`}>Pièce</Label>
+            <select id={`kind-${saleParentId || pieceParentId}`} name="kind" className={fieldClass}>
+              {kinds.map((kind) => (
+                <option key={kind} value={kind}>
+                  {notedPieceLabel(kind)}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <input type="hidden" name="kind" value={kinds[0]} />
+        )}
+        <div className="grid gap-1">
+          <Label htmlFor={`ref-${saleParentId || pieceParentId}`}>Référence écrite sur la pièce</Label>
+          <Input
+            id={`ref-${saleParentId || pieceParentId}`}
+            name="reference"
+            value={reference}
+            onChange={(event) => setReference(event.target.value)}
+            maxLength={80}
+            className="min-h-11"
+          />
+        </div>
+        <p className="text-xs leading-5 text-muted-foreground">
+          Cette référence est recopiée. L’application ne l’invente pas et n’émet pas la pièce.
+        </p>
+        <Button type="submit" disabled={!ready || pending} className="min-h-11 w-fit px-4">
+          {pending ? "Enregistrement…" : "Rattacher"}
+        </Button>
+        <FormMessage state={state} />
+      </form>
+    </details>
   );
 }
 

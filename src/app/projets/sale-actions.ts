@@ -14,6 +14,7 @@ import {
   updateDocumentLines,
   updateProjectLines,
 } from "@/lib/sale-store";
+import { attachNotedPiece } from "@/lib/noted-pieces";
 
 export type SaleState = { message: string | null; ok: boolean };
 
@@ -117,4 +118,17 @@ export async function confirmDocumentAction(_previous: SaleState, formData: Form
 export async function reopenDocumentAction(_previous: SaleState, formData: FormData): Promise<SaleState> {
   const id = projectId(formData);
   return run(id, () => reopenDocument(String(formData.get("documentId") ?? "")));
+}
+
+export async function attachNotedPieceAction(_previous: SaleState, formData: FormData): Promise<SaleState> {
+  const id = projectId(formData);
+  return run(id, () =>
+    attachNotedPiece({
+      projectId: id,
+      kind: String(formData.get("kind") ?? ""),
+      reference: String(formData.get("reference") ?? ""),
+      saleParentId: String(formData.get("saleParentId") ?? ""),
+      pieceParentId: String(formData.get("pieceParentId") ?? ""),
+    }),
+  );
 }

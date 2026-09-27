@@ -65,6 +65,7 @@ model Project {
   lines         ProjectLine[]
   sales         SaleDocument[]
   steps         ProjectStep[]
+  notedPieces   NotedPiece[]
 
   @@index([clientId])
 }
@@ -497,9 +498,28 @@ model SaleDocument {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
   lines        SaleDocumentLine[]
+  notedPieces  NotedPiece[]
 
   @@index([projectId])
   @@index([parentId])
+}
+
+model NotedPiece {
+  id            String        @id @default(cuid())
+  projectId     String
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind          String
+  reference     String
+  saleParentId  String?
+  saleParent    SaleDocument? @relation(fields: [saleParentId], references: [id], onDelete: Cascade)
+  pieceParentId String?
+  pieceParent   NotedPiece?   @relation("NotedLineage", fields: [pieceParentId], references: [id], onDelete: Cascade)
+  children      NotedPiece[]  @relation("NotedLineage")
+  createdAt     DateTime      @default(now())
+
+  @@index([projectId])
+  @@index([saleParentId])
+  @@index([pieceParentId])
 }
 
 model SaleDocumentLine {
