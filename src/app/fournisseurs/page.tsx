@@ -4,6 +4,7 @@ import {
   updateSupplierAction,
 } from "@/app/catalog-actions";
 import { ChangeJournal } from "@/components/change-journal";
+import { DataBoard } from "@/components/data-board";
 import { PartyManager } from "@/components/party-manager";
 import { listSuppliers } from "@/lib/catalog-store";
 import { listRecordEvents } from "@/lib/record-journal";
@@ -22,10 +23,25 @@ export default async function SuppliersPage({
   ]);
   return (
     <div className="grid gap-6">
+    <DataBoard
+      title="Liste des fournisseurs"
+      intro="La commande, la réception et la facture fournisseur ne se saisissent pas encore. La fiche se tient sous le tableau."
+      basePath="/fournisseurs"
+      query={{ q }}
+      headers={["Nom", "E-mail", "Téléphone", "Adresse"]}
+      rows={suppliers.map((supplier) => [
+        { text: supplier.name },
+        { text: supplier.email || "—" },
+        { text: supplier.phone || "—" },
+        { text: supplier.address || "—" },
+      ])}
+      empty="Aucun fournisseur ne correspond à cette recherche."
+    />
     <ChangeJournal entries={journal.slice(0, 12)} />
     <PartyManager
-      title="Fournisseurs"
-      intro="La fiche fournisseur sert aux produits et aux devis. La commande, la réception et la facture restent à venir."
+      title=""
+      intro=""
+      showFinder={false}
       actionPath="/fournisseurs"
       query={q}
       noun="fournisseur"

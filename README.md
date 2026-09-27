@@ -77,7 +77,7 @@ Si cette commande échoue et que l’Ubuntu est une machine virtuelle VirtualBox
 OLLAMA_BASE_URL="http://10.0.2.2:11434"
 ```
 
-L’accueil affiche alors si Ollama répond et quels modèles sont installés. Une question de prix chiffrée n’est pas envoyée au modèle : le calcul reste dans Ventes. Les listes clients, fournisseurs et produits sont dans le menu Répertoire.
+L’accueil affiche alors si Ollama répond et quels modèles sont installés. Une question de prix chiffrée n’est pas envoyée au modèle : le calcul reste dans Ventes. Le menu de gauche groupe les actions, le suivi des devis, les listes, le pilotage et le journal.
 
 ## Vérifier
 

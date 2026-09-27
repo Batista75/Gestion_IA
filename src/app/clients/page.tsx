@@ -4,6 +4,7 @@ import {
   updateClientAction,
 } from "@/app/catalog-actions";
 import { ChangeJournal } from "@/components/change-journal";
+import { DataBoard } from "@/components/data-board";
 import { PartyManager } from "@/components/party-manager";
 import { listClients } from "@/lib/catalog-store";
 import { listRecordEvents } from "@/lib/record-journal";
@@ -19,10 +20,29 @@ export default async function ClientsPage({
   const [clients, journal] = await Promise.all([listClients(q), listRecordEvents("client", 40)]);
   return (
     <div className="grid gap-6">
+    <DataBoard
+      title="Liste des clients"
+      intro="Particuliers et entreprises. La fiche se saisit sous le tableau. La recherche porte sur le nom, l’e-mail et le SIREN."
+      basePath="/clients"
+      query={{ q }}
+      headers={["Nom", "Type", "Adresse", "Code postal", "Ville", "Téléphone", "Mail", "Fonction"]}
+      rows={clients.map((client) => [
+        { text: client.name },
+        { text: client.kind === "entreprise" ? "Entreprise" : client.kind === "particulier" ? "Particulier" : "Non qualifié" },
+        { text: client.address || "—" },
+        { text: client.postalCode || "—" },
+        { text: client.city || "—" },
+        { text: client.phone || "—" },
+        { text: client.email || "—" },
+        { text: client.contactRole || "—" },
+      ])}
+      empty="Aucun client ne correspond à cette recherche."
+    />
     <ChangeJournal entries={journal.slice(0, 12)} />
     <PartyManager
-      title="Clients"
-      intro="Un client est un particulier ou une entreprise, en France ou à l’international. Le formulaire enregistre la fiche. L’assistant identifie d’abord les informations, puis demande confirmation."
+      title=""
+      intro="Le formulaire enregistre la fiche. L’assistant identifie d’abord les informations, puis demande confirmation."
+      showFinder={false}
       actionPath="/clients"
       query={q}
       noun="client"

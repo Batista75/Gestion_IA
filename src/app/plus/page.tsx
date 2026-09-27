@@ -24,7 +24,7 @@ export default function MorePage() {
           Le manuel décrit les écrans en service. L’instruction métier fixe
           l’ordre des preuves de l’achat-revente. La spécification fonctionnelle
           décrit le produit visé, la spécification technique décrit le socle
-          livré. Les listes sont dans Répertoire. Le serveur, les modèles
+          livré. Les listes sont dans le menu de gauche. Le serveur, les modèles
           et la clé d’API sont dans{" "}
           <Link href="/configuration" className="font-medium text-foreground underline-offset-4 hover:underline">
             Configuration

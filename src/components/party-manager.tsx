@@ -53,6 +53,7 @@ export function PartyManager({
   createAction,
   updateAction,
   deleteAction,
+  showFinder = true,
 }: {
   title?: string;
   intro: string;
@@ -61,6 +62,7 @@ export function PartyManager({
   records: PartyRecord[];
   noun: string;
   profile?: "client";
+  showFinder?: boolean;
   createAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   updateAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   deleteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
@@ -72,11 +74,11 @@ export function PartyManager({
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{intro}</p>
         </div>
-      ) : (
+      ) : intro ? (
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{intro}</p>
-      )}
+      ) : null}
 
-      <form action={actionPath} className="flex flex-col gap-2 sm:flex-row">
+      {showFinder ? <form action={actionPath} className="flex flex-col gap-2 sm:flex-row">
         <Label htmlFor={`${actionPath}-q`} className="sr-only">
           Rechercher
         </Label>
@@ -90,7 +92,7 @@ export function PartyManager({
         <Button type="submit" variant="outline" className="min-h-11 px-4">
           Rechercher
         </Button>
-      </form>
+      </form> : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <Card>

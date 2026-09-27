@@ -2,13 +2,21 @@
 
 Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification). Le fonctionnement du socle livré est dans la [spécification technique](/documentation/technique).
 
-Dernière mise à jour : 26 septembre 2026. Le menu Configuration règle le serveur, les modèles et la clé d’API.
+Dernière mise à jour : 27 septembre 2026. Le menu Configuration règle le serveur, les modèles et la clé d’API.
 
 ## Ouvrir l’application
 
 Sur la machine Ubuntu, ouvrez [l’accueil](/). L’adresse locale est `http://127.0.0.1:3847`.
 
-Neuf entrées restent en place : Accueil, Répertoire, Projets, Ventes, Achats, Banque, Pilotage, Configuration et Plus. L’assistant est sur l’accueil. Les listes Clients, Fournisseurs et Produits sont dans Répertoire. Le manuel se trouve dans l’en-tête et dans Plus.
+Le menu est à gauche, en cinq groupes.
+
+- **Actions** : Accueil, Nouveau dossier, Aide au prix.
+- **Suivi de devis** : le tableau des devis en attente, transformés ou non aboutis, leur liste, et les projets.
+- **Liste** : Documents, Clients, Fournisseurs, Articles, Regroupements, Historiques lignes, Échéances impayées, Textes.
+- **Pilotage** : Tableau de bord, Tableau d’analyse.
+- **Comptabilité** : Journal des ventes, Achats, Banque.
+
+La barre du haut porte le nom de l’entreprise, une recherche de documents, Configuration, le manuel et Plus. Sur un téléphone, **Menu** ouvre le rail. Chaque liste a une recherche, un nombre de lignes (10, 25, 50 ou 100), une pagination et, pour les tableaux commerciaux, un export CSV.
 
 Les données restent sur cette machine. L’assistant envoie le texte à Ollama sur le PC hôte du réseau local, pas à un service d’IA public.
 
@@ -48,11 +56,11 @@ Trois listes reprennent les modèles annoncés par le serveur : **Modèle conver
 
 ## Répertoire
 
-Le menu **Répertoire** ouvre les trois listes. Chaque liste reste un écran : [Clients](/clients), [Fournisseurs](/fournisseurs), [Produits](/produits).
+Le groupe **Liste** ouvre directement [Clients](/clients), [Fournisseurs](/fournisseurs) et [Articles](/produits). Le [répertoire](/repertoire) reste une porte d’entrée vers ces trois fiches.
 
 ## Clients
 
-La [vue Clients](/clients) distingue un **particulier** et une **entreprise**, en **France** ou à l’**international**. Une fiche sans type affiche **Non qualifié**. Une fiche créée depuis une pièce confirmée porte le nom relevé et une note « à compléter ».
+La [vue Clients](/clients) s’ouvre sur un tableau : nom, type, adresse, code postal, ville, téléphone, mail et fonction du contact. Elle distingue un **particulier** et une **entreprise**, en **France** ou à l’**international**. Une fiche sans type affiche **Non qualifié**. Une fiche créée depuis une pièce confirmée porte le nom relevé et une note « à compléter ».
 
 **Nouveau client** enregistre dès que vous validez le formulaire. Renseignez le type, le nom ou la raison sociale, le pays, l’adresse, un e-mail ou un téléphone. Pour une entreprise française, le SIREN permet de déduire le numéro de TVA. Pour une entreprise étrangère, indiquez l’identifiant fiscal. Le contact et sa fonction servent au dossier commercial.
 
@@ -64,11 +72,11 @@ Créer un projet ne crée plus la fiche client. Le dossier s’ouvre, et la fich
 
 ## Fournisseurs
 
-La [vue Fournisseurs](/fournisseurs) suit le même principe : créer, modifier, supprimer. Les produits liés restent au catalogue. **Achats** y renvoie. La commande, la réception et la facture fournisseur ne se saisissent pas encore. **Modifications** y date chaque changement, comme pour les clients.
+La [vue Fournisseurs](/fournisseurs) s’ouvre sur un tableau : nom, e-mail, téléphone, adresse. Elle suit le même principe : créer, modifier, supprimer. Les produits liés restent au catalogue. **Achats** y renvoie. La commande, la réception et la facture fournisseur ne se saisissent pas encore. **Modifications** y date chaque changement, comme pour les clients.
 
 ## Produits
 
-La [vue Produits](/produits) montre tout le catalogue :
+La [vue Articles](/produits) s’ouvre sur un tableau : référence, désignation, famille, prix indiqué, coût indiqué, unité et fournisseur. Ces prix restent ceux de la fiche. Le catalogue réunit :
 
 - **Saisie manuelle** : nom, référence, unité, fournisseur, description. Un fournisseur inconnu est créé.
 - **Issu d’un devis** : titre du devis et un produit par ligne, ou un fichier confirmé depuis l’accueil. Chaque confirmation de devis ajoute une version : prix indiqué et conditions. Une version ne remplace pas la précédente.
@@ -150,13 +158,34 @@ L’état du serveur, l’adresse et les trois modèles sont dans **Configuratio
 
 Si Configuration indique **Serveur injoignable**, le PC hôte doit faire écouter Ollama sur le port `11434`, et le pare-feu Windows doit autoriser ce port depuis le réseau local. Dans une VM VirtualBox en NAT, l’adresse peut être `http://10.0.2.2:11434`.
 
-## Achats, Banque et Pilotage
+## Listes commerciales
 
-Ces trois écrans décrivent le comportement prévu. Ils ne saisissent pas encore de pièce, de relevé ou d’indicateur.
+[Documents](/listes/documents) aligne les devis, les commandes et les devis reçus : type, date, référence du dossier, client ou fournisseur, projet, montant HT, situation. Le montant d’une pièce produite additionne les lignes qui ont un coût. Le total imprimé d’un devis reçu n’est pas recalculé.
+
+[Suivi de devis](/suivi) présente trois colonnes : en attente, transformé en commande, non abouti. **Liste** ouvre le même ensemble en tableau.
+
+[Regroupements](/listes/regroupements) classe les articles par fournisseur. Il n’y a pas de pack au prix modifié.
+
+[Historique des lignes](/listes/lignes) reprend chaque ligne de devis ou de commande.
+
+[Échéances](/listes/echeances) liste les commandes client. Sans référence sur l’étape Facturation, la ligne est « À facturer ». Le paiement reste « Non suivi » : l’application n’enregistre pas d’encaissement et ne calcule pas de pénalité.
+
+[Textes](/listes/textes) montre les conditions déjà lues sur un devis, les descriptions d’articles et les consignes de livraison.
+
+## Pilotage et journal
+
+Le [tableau de bord](/pilotage) compte les devis en attente, les commandes client, le chiffre d’affaires HT de ces commandes et les projets. Il classe les articles par montant, par quantité et par marge, et les clients par montant. Les impayés sont le nombre de commandes sans référence de facture. Aucun coût journalier de retard n’est affiché.
+
+Le [tableau d’analyse](/pilotage/analyse) compare deux périodes. Par défaut, le mois précédent et le mois en cours. Les lignes sont le chiffre d’affaires HT, le nombre de commandes, le nombre de devis et la marge HT. L’écart est la seconde période moins la première.
+
+Le [journal des ventes](/comptabilite/journal) filtre par dates. La case **Ventes** affiche les devis et les commandes client, en HT. Les cases **Paiements**, **TVA sur encaissements** et **Paiements en attente** n’ajoutent pas de lignes : elles rappellent que ces montants ne sont pas tenus.
+
+## Achats et Banque
+
+Ces deux écrans décrivent le comportement prévu. Ils ne saisissent pas encore de pièce ni de relevé.
 
 - **Achats** séparera l’offre, la commande, la réception, la facture et le paiement. Ces montants ne s’additionnent pas.
 - **Banque** préparera un rapprochement à confirmer. Aucun paiement n’est lancé depuis l’application.
-- **Pilotage** montrera le prévu, l’engagé, le facturé et le payé quand ces montants existeront. Tant qu’ils n’existent pas, aucun chiffre n’est inventé.
 
 ## Plus
 

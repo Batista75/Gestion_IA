@@ -6,6 +6,7 @@ import {
   updateProductAction,
 } from "@/app/catalog-actions";
 import { ChangeJournal } from "@/components/change-journal";
+import { DataBoard } from "@/components/data-board";
 import { ProductManager } from "@/components/product-manager";
 import { listRecordEvents } from "@/lib/record-journal";
 import { productOrigin } from "@/domain/catalog";
@@ -30,10 +31,30 @@ export default async function ProductsPage({
 
   return (
     <div className="grid gap-6">
+    <DataBoard
+      title="Liste des articles"
+      intro="Le prix indiqué et le coût indiqué restent ceux écrits sur la fiche. Ils ne sont pas recalculés. La saisie et les versions de devis sont sous le tableau."
+      basePath="/produits"
+      query={{ q: query, source }}
+      headers={["Référence", "Désignation", "Famille", "Prix indiqué", "Coût indiqué", "Unité", "Fournisseur"]}
+      rows={products.map((product) => [
+        { text: product.reference || "—" },
+        { text: product.name },
+        { text: product.kind === "service" ? "Service" : "Produit" },
+        { text: product.statedPrice || "non indiqué" },
+        { text: product.costStated || "non indiqué" },
+        { text: product.unit || "—" },
+        { text: product.supplier?.name || "—" },
+      ])}
+      empty="Aucun article ne correspond à cette recherche."
+      filters={source ? <input type="hidden" name="source" value={source} /> : undefined}
+    />
     <ChangeJournal entries={journal.slice(0, 12)} />
     <ProductManager
       query={query}
       source={source}
+      showHeading={false}
+      showFinder={false}
       createAction={createProductAction}
       updateAction={updateProductAction}
       deleteAction={deleteProductAction}

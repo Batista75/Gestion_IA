@@ -33,8 +33,9 @@ export default function DirectoryPage() {
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Répertoire</h1>
         <p className="text-sm leading-6 text-muted-foreground">
-          Les listes clients, fournisseurs et produits. L’accueil propose une
-          fiche ; ces écrans la tiennent et permettent de la saisir à la main.
+          Les mêmes fiches que le menu Liste : clients, fournisseurs et articles.
+          L’accueil propose une fiche ; ces écrans la tiennent et permettent de
+          la saisir à la main.
         </p>
       </div>
       <ul className="grid gap-3">

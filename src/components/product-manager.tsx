@@ -61,6 +61,8 @@ export function ProductManager({
   deleteAction,
   deleteQuoteAction,
   quoteAction,
+  showHeading = true,
+  showFinder = true,
 }: {
   query: string;
   source: string;
@@ -70,9 +72,12 @@ export function ProductManager({
   deleteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   deleteQuoteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   quoteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
+  showHeading?: boolean;
+  showFinder?: boolean;
 }) {
   return (
     <div className="grid gap-6">
+      {showHeading ? (
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Produits</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -81,9 +86,10 @@ export function ProductManager({
           plusieurs devis : chaque prix et chaque condition restent une version.
         </p>
       </div>
+      ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <form action="/produits" className="flex flex-col gap-2 sm:flex-row">
+        {showFinder ? <form action="/produits" className="flex flex-col gap-2 sm:flex-row">
           <input type="hidden" name="source" value={source} />
           <Label htmlFor="product-q" className="sr-only">
             Rechercher
@@ -98,7 +104,7 @@ export function ProductManager({
           <Button type="submit" variant="outline" className="min-h-11 px-4">
             Rechercher
           </Button>
-        </form>
+        </form> : null}
         <div className="flex flex-wrap gap-2">
           {filters.map((filter) => {
             const href = filter.source

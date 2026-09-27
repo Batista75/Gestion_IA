@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { SiteNav } from "@/components/site-nav";
+import { AppShell } from "@/components/app-shell";
+import { prisma } from "@/lib/db";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,17 +20,21 @@ export const metadata: Metadata = {
     "Gestion locale des projets, devis et pièces pour une petite entreprise.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  let company = "Société locale";
+  try {
+    const row = await prisma.companyProfile.findUnique({ where: { id: "local" } });
+    if (row?.legalName.trim()) company = row.legalName.trim();
+  } catch {
+    company = "Société locale";
+  }
   return (
     <html
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
-        <SiteNav />
-        <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-          {children}
-        </main>
+        <AppShell company={company}>{children}</AppShell>
       </body>
     </html>
   );

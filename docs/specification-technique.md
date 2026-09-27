@@ -1,6 +1,6 @@
 # Spécification technique
 
-Ce document décrit le socle qui tourne au 26 septembre 2026. Il ne remplace pas la [spécification fonctionnelle (PDF)](/documentation/specification), qui reste le cadre du produit visé. Le [manuel](/manuel) dit ce que l’on fait à l’écran. Ici, c’est le fonctionnement.
+Ce document décrit le socle qui tourne au 27 septembre 2026. Il ne remplace pas la [spécification fonctionnelle (PDF)](/documentation/specification), qui reste le cadre du produit visé. Le [manuel](/manuel) dit ce que l’on fait à l’écran. Ici, c’est le fonctionnement.
 
 ## Socle
 
@@ -87,6 +87,23 @@ La clé d’API n’est envoyée qu’en en-tête `Authorization` vers cet hôte
 
 La fiche projet montre les produits et les devis dans la colonne principale, et le tableau des neuf étapes à droite sur un grand écran. Une seule étape est ouverte pour la saisie. Le parcours commercial est `ProjectStep`, une ligne par étape et par projet. Les neuf étapes, leurs actions et leurs preuves sont dans `src/domain/trade-workflow.ts` (`TRADE_STEPS`). Le fichier lu à l’écran et ajouté au prompt du modèle est `instructions/metiers/achat-revente-technologies.md`. Une situation « fait » exige une référence d’au moins deux caractères. L’avertissement d’ordre est indicatif : les étapes de remise et de réception attendent l’expédition, la facturation attend un bon de livraison ou un procès-verbal. `asksTradeWorkflow` répond avant la consultation des fiches. Si un seul projet est nommé, `listProjectSteps` et `projectTradeReply` décrivent la prochaine preuve.
 
+## Ergonomie des rubriques
+
+Le menu est un rail à gauche, sur le modèle d’un logiciel de devis et de factures. Cinq groupes : Actions, Suivi de devis, Liste, Pilotage, Comptabilité. La barre du haut porte la raison sociale, la recherche de documents, Configuration, le manuel et Plus. Sur un écran étroit, le rail s’ouvre par **Menu**.
+
+Les listes partagent la même coquille : titre, recherche, filtres, choix de 10, 25, 50 ou 100 lignes, pagination, export CSV (`GET /api/tableaux`). Les montants HT des pièces produites passent par `saleLineFigures` et `saleOperationTotals`. Un total imprimé sur un devis reçu reste le texte de la pièce. Aucune liste n’attribue de numéro.
+
+- **Suivi de devis** (`/suivi`) range les devis du dossier en trois colonnes : en attente, transformé, non abouti. **Liste** (`/suivi?vue=liste`) est le même ensemble en tableau.
+- **Documents** (`/listes/documents`) mêle devis, commandes client, commandes fournisseur et devis reçus. Colonnes : type, date, référence du dossier, client ou fournisseur, projet, montant HT, situation.
+- **Clients, fournisseurs, articles** gardent la saisie sous le tableau. L’article affiche le prix indiqué et le coût indiqué, sans les recalculer.
+- **Regroupements** (`/listes/regroupements`) groupe le catalogue par fournisseur. Un pack au prix ajusté n’existe pas.
+- **Historiques lignes** (`/listes/lignes`) donne une ligne de tableau par ligne de pièce.
+- **Échéances** (`/listes/echeances`) liste les commandes client. La facturation est « À facturer » ou « Référence enregistrée ». Le paiement est « Non suivi ». Aucune date d’échéance et aucun coût de retard ne sont calculés.
+- **Textes** (`/listes/textes`) reprend les conditions de devis reçu, les descriptions d’articles et les consignes de livraison.
+- **Tableau de bord** (`/pilotage`) compte les devis en attente, les commandes client, le chiffre d’affaires HT de ces commandes et les projets. Il classe les articles et les clients des commandes. Les impayés sont le nombre de commandes sans référence de facture.
+- **Tableau d’analyse** (`/pilotage/analyse`) compare deux périodes : chiffre d’affaires HT, nombre de commandes, nombre de devis, marge HT. L’écart est la seconde période moins la première. `periodGap` dans `src/domain/board.ts` calcule le pourcentage. Si la première valeur est nulle et la seconde ne l’est pas, le pourcentage reste « — ».
+- **Journal des ventes** (`/comptabilite/journal`) filtre par dates et par cases : ventes, paiements, TVA sur encaissements, paiements en attente. Seule la case Ventes alimente le tableau. Les trois autres rappellent que le paiement et la TVA ne sont pas tenus.
+
 ## Hors de ce socle
 
-L’avoir, le paiement, le rapprochement bancaire, le pilotage chiffré, l’export et le connecteur agréé ne sont pas implémentés. Ils restent dans la spécification fonctionnelle. La facture affichée ne crée pas de titre de paiement : elle montre la référence déjà saisie. La commande client et la commande fournisseur de la vue projet préparent l’opération, sans numéro de pièce ni transmission.
+L’avoir, l’encaissement, le rapprochement bancaire, la date d’échéance, le pack d’articles et le connecteur agréé ne sont pas implémentés. Ils restent dans la spécification fonctionnelle. La facture affichée ne crée pas de titre de paiement : elle montre la référence déjà saisie. La commande client et la commande fournisseur de la vue projet préparent l’opération, sans numéro de pièce ni transmission.
