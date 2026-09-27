@@ -119,8 +119,17 @@ async function writeEvent(
 
 const globalForPrisma = globalThis as unknown as { prisma?: ReturnType<typeof createClient> };
 
-export const prisma = globalForPrisma.prisma ?? createClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+function clientKnowsOffers(client: ReturnType<typeof createClient>): boolean {
+  return typeof client.supplierOffer?.findMany === "function";
 }
+
+function readClient(): ReturnType<typeof createClient> {
+  const cached = globalForPrisma.prisma;
+  if (cached && clientKnowsOffers(cached)) return cached;
+  if (cached) void cached.$disconnect().catch(() => undefined);
+  const created = createClient();
+  if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = created;
+  return created;
+}
+
+export const prisma = readClient();

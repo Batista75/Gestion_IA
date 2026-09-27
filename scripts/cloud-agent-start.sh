@@ -73,6 +73,7 @@ else
 fi
 
 npx prisma migrate deploy
+npx prisma generate
 
 if [[ "$prepare_only" -eq 1 ]]; then
   echo "PostgreSQL est prêt et les migrations sont appliquées."

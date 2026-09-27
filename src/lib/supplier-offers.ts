@@ -56,6 +56,7 @@ export async function recordSupplierOffer(db: OfferDb, input: OfferInput): Promi
 }
 
 export async function fillMissingOfferCents(): Promise<void> {
+  if (typeof prisma.supplierOffer?.findMany !== "function") return;
   const pending = await prisma.supplierOffer.findMany({
     where: { unitCostCents: null, statedCost: { not: "" } },
     select: { id: true, statedCost: true },
