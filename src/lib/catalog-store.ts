@@ -251,6 +251,9 @@ async function createProduct(
       unit: parsed.value.unit,
       description: parsed.value.description,
       source,
+      kind: parsed.value.kind === "service" ? "service" : "produit",
+      costStated: parsed.value.costStated ?? "",
+      currency: parsed.value.currency ?? "",
       supplierId,
     },
   });
@@ -272,6 +275,9 @@ async function patchProduct(input: ProductInput): Promise<ActionResult> {
     unit: input.unit.trim() || existing.unit,
     description: input.description.trim() || existing.description,
     supplierName: input.supplierName.trim(),
+    kind: input.kind || existing.kind,
+    costStated: input.costStated?.trim() || existing.costStated,
+    currency: input.currency || existing.currency,
   }, Boolean(input.supplierName.trim()));
 }
 
@@ -298,6 +304,9 @@ async function updateProductById(
       reference: parsed.value.reference,
       unit: parsed.value.unit,
       description: parsed.value.description,
+      kind: parsed.value.kind === "service" ? "service" : "produit",
+      costStated: parsed.value.costStated ?? "",
+      currency: parsed.value.currency ?? "",
       ...(supplierId !== undefined ? { supplierId } : {}),
     },
   });

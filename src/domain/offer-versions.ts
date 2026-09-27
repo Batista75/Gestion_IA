@@ -822,16 +822,23 @@ function summaryOf(
   );
   for (const line of reading.pricedLines) {
     const known = matchProduct(line, directory.products);
+    const family = /\b(services?|prestations?|forfaits?|abonnements?|maintenances?|assistances?|formations?)\b/i.test(
+      `${line.product}\n${line.conditions}`,
+    )
+      ? "Service"
+      : "Produit";
+    const cost = line.statedPrice ? `, coût unitaire ${line.statedPrice}` : "";
+    const devise = /\$|\busd\b/i.test(line.statedPrice) ? "USD" : /€|\beur\b/i.test(line.statedPrice) ? "EUR" : "";
     lines.push(
       known
-        ? `Produit déjà au catalogue : ${known.name}${line.statedPrice ? `, prix indiqué ${line.statedPrice}` : ""}.`
-        : `Produit à créer : ${line.product}${line.statedPrice ? `, prix indiqué ${line.statedPrice}` : ""}.`,
+        ? `Article déjà au catalogue : ${known.name}, famille ${family}${cost}${devise ? `, devise ${devise}` : ""}.`
+        : `Article à créer : ${line.product}, famille ${family}${cost}${devise ? `, devise ${devise}` : ""}.`,
     );
     const earlier = earlierVersion(line, reading, directory);
     const oldPrice = earlier?.lines.find((item) => sameText(item.product, line.product))?.statedPrice;
     if (earlier && line.statedPrice && oldPrice && oldPrice !== line.statedPrice) {
       lines.push(
-        `Une version existe déjà${earlier.versionLabel ? ` (${earlier.versionLabel})` : ""}, prix indiqué ${oldPrice}. Le prix indiqué ${line.statedPrice} est proposé à part, avec ses conditions.`,
+        `Une version existe déjà${earlier.versionLabel ? ` (${earlier.versionLabel})` : ""}, coût unitaire ${oldPrice}. Le coût unitaire ${line.statedPrice} est proposé à part, avec ses conditions.`,
       );
     }
   }

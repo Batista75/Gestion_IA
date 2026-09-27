@@ -21,7 +21,7 @@ export default async function GroupsPage({
         intro="Les articles du catalogue sont regroupés par fournisseur. Un pack au prix ajusté, affiché en une seule ligne sur la pièce, n’est pas un objet distinct."
         basePath="/listes/regroupements"
         query={query}
-        headers={["Fournisseur", "Référence", "Désignation", "Famille", "Prix indiqué"]}
+        headers={["Fournisseur", "Référence", "Désignation", "Famille", "Coût unitaire", "Devise", "Date de saisie"]}
         rows={rows}
         empty="Aucun article ne correspond à cette recherche."
         exportView="regroupements"

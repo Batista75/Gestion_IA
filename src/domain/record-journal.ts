@@ -28,11 +28,13 @@ export const PARTY_FIELD_LABELS: Record<string, string> = {
 };
 
 export const PRODUCT_FIELD_LABELS: Record<string, string> = {
-  name: "Nom",
+  name: "Désignation",
   reference: "Référence",
   unit: "Unité",
   description: "Description",
+  kind: "Famille",
   statedPrice: "Prix indiqué",
+  costStated: "Coût unitaire",
   currency: "Devise",
 };
 

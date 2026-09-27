@@ -13,6 +13,9 @@ export type ProductInput = {
   unit: string;
   description: string;
   supplierName: string;
+  kind?: string;
+  costStated?: string;
+  currency?: string;
 };
 
 export type CatalogCommand =
@@ -266,6 +269,9 @@ export function validateProduct(
       unit,
       description: clip(input.description, 1000),
       supplierName: input.supplierName.trim().replace(/\s+/g, " "),
+      kind: input.kind === "service" ? "service" : "produit",
+      costStated: clip(input.costStated ?? "", 80),
+      currency: input.currency === "USD" ? "USD" : input.currency === "EUR" ? "EUR" : "",
     },
   };
 }

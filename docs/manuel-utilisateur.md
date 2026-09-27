@@ -38,7 +38,7 @@ Un tableau collé de clients, de produits, de services, de projets ou de devis e
 
 **À confirmer**, dans le même bloc, propose de créer un client, un fournisseur ou un produit, d’ouvrir une demande, d’ajouter une version de devis, ou de marquer une demande comme offre reçue. **Confirmer** écrit ces fiches. **Écarter** laisse le fichier dans Pièces reçues.
 
-Un devis ou un tarif confirmé ajoute une version : numéro, date, fournisseur, prix indiqué et conditions. Un PDF qui contient déjà du texte est lu sur place, sans modèle : références, quantités et prix sont repris tels qu’ils sont écrits, y compris un montant en `EUR 2.170,00` ou `21 109.75`. Le total imprimé est conservé, il n’est pas recalculé. Un composant sans prix n’est pas transformé en ligne chiffrée. Un scan sans texte passe par Docling. Une version déjà enregistrée n’est pas dupliquée. Une facture, une commande ou un avoir peut créer une fiche manquante, sans devenir une version de devis. Les prix restent ceux écrits dans la pièce. Ils ne sont pas calculés et ils ne sont pas additionnés.
+Un devis ou un tarif confirmé ajoute l’article au catalogue : référence, désignation, famille, coût unitaire écrit, devise et fournisseur. La date de saisie est celle de la création. Une version ajoute : numéro, date, fournisseur, coût unitaire et conditions. Un PDF qui contient déjà du texte est lu sur place, sans modèle : références, quantités et prix sont repris tels qu’ils sont écrits, y compris un montant en `EUR 2.170,00` ou `21 109.75`. Le total imprimé est conservé, il n’est pas recalculé. Un composant sans prix n’est pas transformé en ligne chiffrée. Un scan sans texte passe par Docling. Une version déjà enregistrée n’est pas dupliquée. Une facture, une commande ou un avoir peut créer une fiche manquante, sans devenir une version de devis. Les prix restent ceux écrits dans la pièce. Ils ne sont pas calculés et ils ne sont pas additionnés.
 
 Sans fichier, un message trop court, moins de 3 caractères, n’est pas enregistré. Une fiche client, un fournisseur, un produit, un projet court ou un devis se confirme dans le fil, par **Confirmer** ou par `Je confirme.` `non` n’enregistre rien. L’adresse du serveur, les modèles et la clé d’API se règlent dans Configuration.
 
@@ -76,7 +76,7 @@ La [vue Fournisseurs](/fournisseurs) s’ouvre sur un tableau : nom, e-mail, té
 
 ## Produits
 
-La [vue Articles](/produits) s’ouvre sur un tableau : référence, désignation, famille, prix indiqué, coût indiqué, unité, fournisseur et date de saisie. **Éditer** ouvre le formulaire de cette fiche. Ces prix restent ceux de la fiche. Le catalogue réunit :
+La [vue Articles](/produits) s’ouvre sur un tableau : référence, désignation, famille (produit ou service), coût unitaire, devise, fournisseur et date de saisie. **Éditer** ouvre le formulaire de cette fiche. Le coût unitaire reste le montant écrit sur la pièce ou sur la fiche. Il n’est pas recalculé. Le catalogue réunit :
 
 - **Saisie manuelle** : nom, référence, unité, fournisseur, description. Un fournisseur inconnu est créé.
 - **Issu d’un devis** : titre du devis et un produit par ligne, ou un fichier confirmé depuis l’accueil. Chaque confirmation de devis ajoute une version : prix indiqué et conditions. Une version ne remplace pas la précédente.

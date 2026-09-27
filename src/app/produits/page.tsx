@@ -9,6 +9,7 @@ import { ChangeJournal } from "@/components/change-journal";
 import { DataBoard } from "@/components/data-board";
 import { ProductManager } from "@/components/product-manager";
 import { listRecordEvents } from "@/lib/record-journal";
+import { shownUnitCost, writtenCurrency } from "@/domain/article";
 import { productOrigin } from "@/domain/catalog";
 import { listProducts } from "@/lib/catalog-store";
 
@@ -34,22 +35,27 @@ export default async function ProductsPage({
     <div className="grid gap-6">
     <DataBoard
       title="Liste des articles"
-      intro="Le prix indiqué et le coût indiqué restent ceux écrits sur la fiche. Ils ne sont pas recalculés. La saisie et les versions de devis sont sous le tableau."
+      intro="Un article fournisseur est un produit ou un service. La référence, la désignation, la famille, le coût unitaire, la devise, le fournisseur et la date de saisie viennent de la fiche. Le coût reste le montant écrit, il n’est pas recalculé."
       basePath="/produits"
       query={{ q: query, source }}
-      headers={["Référence", "Désignation", "Famille", "Prix indiqué", "Coût indiqué", "Stock", "Unité", "Fournisseur", "Date de saisie", "Édition"]}
-      rows={products.map((product) => [
+      headers={["Référence", "Désignation", "Famille", "Coût unitaire", "Devise", "Fournisseur", "Date de saisie", "Édition"]}
+      rows={products.map((product) => {
+        const cost = shownUnitCost(
+          product.costStated,
+          product.lines.map((line) => line.statedPrice),
+        );
+        const currency = product.currency.trim() || writtenCurrency(cost);
+        return [
         { text: product.reference || "—" },
         { text: product.name },
         { text: product.kind === "service" ? "Service" : "Produit" },
-        { text: product.statedPrice || "non indiqué" },
-        { text: product.costStated || "non indiqué" },
-        { text: product.stockQty === null ? "non indiqué" : String(product.stockQty) },
-        { text: product.unit || "—" },
+        { text: cost || "non indiqué" },
+        { text: currency || "non indiqué" },
         { text: product.supplier?.name || "—" },
         { text: product.createdAt.toLocaleDateString("fr-FR") },
         { text: "Éditer", href: `/produits?edition=${product.id}${query ? `&q=${encodeURIComponent(query)}` : ""}${source ? `&source=${source}` : ""}#edition` },
-      ])}
+      ];
+      })}
       empty="Aucun article ne correspond à cette recherche."
       filters={source ? <input type="hidden" name="source" value={source} /> : undefined}
     />
@@ -73,6 +79,8 @@ export default async function ProductsPage({
         description: product.description,
         supplierName: product.supplier?.name ?? "",
         statedPrice: product.statedPrice,
+        costStated: shownUnitCost(product.costStated, product.lines.map((line) => line.statedPrice)),
+        currency: product.currency.trim() || writtenCurrency(shownUnitCost(product.costStated, product.lines.map((line) => line.statedPrice))),
         vatNote: product.vatNote,
         kind: product.kind,
         stockQty: product.stockQty,

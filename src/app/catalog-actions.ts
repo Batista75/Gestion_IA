@@ -224,5 +224,8 @@ function productFields(formData: FormData) {
     unit: String(formData.get("unit") ?? ""),
     description: String(formData.get("description") ?? ""),
     supplierName: String(formData.get("supplierName") ?? ""),
+    kind: String(formData.get("kind") ?? ""),
+    costStated: String(formData.get("costStated") ?? ""),
+    currency: String(formData.get("currency") ?? "").trim().toUpperCase(),
   };
 }

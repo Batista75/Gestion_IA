@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
+import { articleFromQuoteLine } from "@/domain/article";
 import { nameKey } from "@/domain/catalog";
 import { composeExtraction, doclingExtension, documentBody } from "@/domain/document-chunks";
 import { readOfferFile, type OfferLine, type OfferVersion } from "@/domain/offer-versions";
@@ -175,14 +176,23 @@ async function ensureProduct(
   line: OfferLine,
   supplierName: string,
 ): Promise<string> {
-  const name = line.product.slice(0, 120);
-  const key = nameKey(name);
+  const article = articleFromQuoteLine(line);
+  const key = nameKey(article.name);
   const supplierId = await ensureSupplier(tx, supplierName);
   const existing = await tx.product.findUnique({ where: { nameKey: key } });
   if (existing) {
-    const data: { reference?: string; supplierId?: string } = {};
-    if (!existing.reference && line.reference) data.reference = line.reference.slice(0, 60);
+    const data: {
+      reference?: string;
+      supplierId?: string;
+      kind?: string;
+      costStated?: string;
+      currency?: string;
+    } = {};
+    if (!existing.reference && article.reference) data.reference = article.reference;
     if (!existing.supplierId && supplierId) data.supplierId = supplierId;
+    if (!existing.costStated && article.costStated) data.costStated = article.costStated;
+    if (!existing.currency && article.currency) data.currency = article.currency;
+    if (existing.kind !== "service" && article.kind === "service") data.kind = "service";
     if (Object.keys(data).length > 0) {
       await tx.product.update({ where: { id: existing.id }, data });
     }
@@ -190,10 +200,13 @@ async function ensureProduct(
   }
   const created = await tx.product.create({
     data: {
-      name,
+      name: article.name,
       nameKey: key,
-      reference: line.reference.slice(0, 60),
+      reference: article.reference,
       source: "devis",
+      kind: article.kind,
+      costStated: article.costStated,
+      currency: article.currency,
       supplierId,
     },
   });

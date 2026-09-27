@@ -1,4 +1,5 @@
 import { dayKey, inDayRange, periodGap } from "@/domain/board";
+import { shownUnitCost, writtenCurrency } from "@/domain/article";
 import { figuresFromSaleUnit, formatCents, saleLineFigures, saleOperationTotals, type SaleLineFigures } from "@/domain/pricing";
 import { saleKindLabel, saleStatusLabel } from "@/domain/sale-line";
 import { prisma } from "@/lib/db";
@@ -310,7 +311,9 @@ export async function listGroups(query: string): Promise<SupplierGroup[]> {
       { text: blank(product.reference), href: "/produits" },
       { text: product.name },
       { text: product.kind === "service" ? "Service" : "Produit" },
-      { text: product.statedPrice.trim() || "non indiqué" },
+      { text: shownUnitCost(product.costStated, [product.statedPrice]) || "non indiqué" },
+      { text: product.currency.trim() || writtenCurrency(product.costStated || product.statedPrice) || "non indiqué" },
+      { text: product.createdAt.toLocaleDateString("fr-FR") },
     ]);
     groups.set(supplier, bucket);
   }

@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { writtenCurrency } from "@/domain/article";
 
 const emptyState: FormState = { message: null, ok: false };
 
@@ -39,6 +40,8 @@ export type ProductRecord = {
   supplierName: string;
   origin: string;
   statedPrice: string;
+  costStated: string;
+  currency: string;
   vatNote: string;
   kind: string;
   stockQty: number | null;
@@ -185,13 +188,7 @@ export function ProductManager({
                   {record.description ? (
                     <p className="text-sm leading-6">{record.description}</p>
                   ) : null}
-                  {record.statedPrice ? (
-                    <p className="text-sm">
-                      Prix unitaire indiqué {record.statedPrice}
-                      {record.vatNote ? ` · TVA indiquée ${record.vatNote}` : ""}
-                      {record.kind === "service" ? " · service" : ""}
-                    </p>
-                  ) : null}
+                  <ArticleFacts record={record} />
                   <p className="text-sm">{record.origin}</p>
                   {record.versions.length > 0 ? (
                     <div className="grid gap-2">
@@ -205,8 +202,8 @@ export function ProductManager({
                             {version.supplierName ? <p>{version.supplierName}</p> : null}
                             <p>
                               {version.statedPrice
-                                ? `Prix indiqué ${version.statedPrice}`
-                                : "Prix non indiqué"}
+                                ? `Coût unitaire ${version.statedPrice}`
+                                : "Coût unitaire non indiqué"}
                             </p>
                             {version.conditions ? <p>Conditions : {version.conditions}</p> : null}
                             <ConfirmDelete
@@ -268,8 +265,34 @@ function ProductFields({
   return (
     <form action={formAction} className="grid gap-3">
       {record ? <input type="hidden" name="id" value={record.id} /> : null}
-      <TextField prefix={prefix} label="Nom" name="name" required defaultValue={record?.name} />
+      <TextField prefix={prefix} label="Désignation" name="name" required defaultValue={record?.name} />
       <TextField prefix={prefix} label="Référence" name="reference" defaultValue={record?.reference} />
+      <div className="grid gap-2">
+        <Label htmlFor={`${prefix}-kind`}>Famille</Label>
+        <select
+          id={`${prefix}-kind`}
+          name="kind"
+          defaultValue={record?.kind === "service" ? "service" : "produit"}
+          className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground"
+        >
+          <option value="produit">Produit</option>
+          <option value="service">Service</option>
+        </select>
+      </div>
+      <TextField prefix={prefix} label="Coût unitaire" name="costStated" defaultValue={record?.costStated} />
+      <div className="grid gap-2">
+        <Label htmlFor={`${prefix}-currency`}>Devise</Label>
+        <select
+          id={`${prefix}-currency`}
+          name="currency"
+          defaultValue={record?.currency === "USD" ? "USD" : record?.currency === "EUR" ? "EUR" : ""}
+          className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground"
+        >
+          <option value="">Non indiquée</option>
+          <option value="EUR">EUR</option>
+          <option value="USD">USD</option>
+        </select>
+      </div>
       <TextField prefix={prefix} label="Unité" name="unit" defaultValue={record?.unit} />
       <TextField
         prefix={prefix}
@@ -292,11 +315,26 @@ function ProductFields({
           rows={3}
         />
       </div>
+      {record ? <p className="text-sm text-muted-foreground">Date de saisie {record.enteredLabel}</p> : null}
       <FormMessage state={state} />
       <Button type="submit" disabled={pending} className="min-h-11 w-fit px-4">
         {pending ? "Enregistrement…" : submitLabel}
       </Button>
     </form>
+  );
+}
+
+function ArticleFacts({ record }: { record: ProductRecord }) {
+  const cost = record.costStated || record.versions.find((version) => version.statedPrice)?.statedPrice || "";
+  const currency = record.currency || writtenCurrency(cost);
+  return (
+    <p className="text-sm">
+      {record.kind === "service" ? "Service" : "Produit"}
+      {" · "}
+      {cost ? `Coût unitaire ${cost}` : "Coût unitaire non indiqué"}
+      {currency ? ` · ${currency}` : ""}
+      {` · saisi le ${record.enteredLabel}`}
+    </p>
   );
 }
 
