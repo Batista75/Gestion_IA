@@ -31,6 +31,17 @@ test("les réalisations publiées sont celles du tableau de l’application", ()
   assert.match(functional, /\| 9 \| Évaluation sur messages courts \| Fait \|/);
 });
 
+test("le fonctionnel et la technique disent la même chose des faits de pièce", () => {
+  const chaine = readFileSync("docs/fonctionnel/docs/chaine.md", "utf8");
+  const orchestration = readFileSync("docs/technique/docs/orchestration.md", "utf8");
+  assert.match(chaine, /sans s’appuyer sur la phrase/);
+  assert.match(chaine, /page et la zone/);
+  assert.match(chaine, /ne sont pas recalculés/);
+  assert.match(orchestration, /n’est pas un argument/);
+  assert.match(orchestration, /page et la zone/);
+  assert.match(orchestration, /n’est recalculé/);
+});
+
 test("le fonctionnel et la technique disent la même chose de la mémoire de pièce", () => {
   const chaine = readFileSync("docs/fonctionnel/docs/chaine.md", "utf8");
   const ecart = readFileSync("docs/technique/docs/ecart.md", "utf8");

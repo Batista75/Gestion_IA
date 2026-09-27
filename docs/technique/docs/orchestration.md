@@ -22,6 +22,8 @@ Si tous les champs passent le seuil et que l’action est à risque, `simulateWr
 
 Une correction de projet, de type ou de fournisseur est enregistrée dans `DocumentMemory`, sous le nom de la pièce. `mergeMemory` dans `src/domain/document-memory.ts` ne recopie pas cette correction sur un autre fichier. Elle ne modifie pas le répertoire. Sans pièce nommée, la correction reste sur la demande en cours.
 
+Avant la question, `readDocumentFacts` dans `src/domain/document-facts.ts` relit le texte déjà extrait de la pièce. La phrase en cours n’est pas un argument. Chaque fait cite la page et la zone. Un montant est recopié tel qu’il est écrit. Aucun total n’est recalculé, et aucun numéro de facture n’est attribué. Un nom du répertoire trouvé dans la pièce devient un lien possible. Sans texte extrait, la réponse le dit et ne tire aucun fait de la phrase.
+
 Une phrase d’écriture hors liste, et une phrase qui n’est ni une règle ni une question explicite, passent par `parseInterpretation` dans `src/domain/interpreter.ts`. Le modèle ne peut renvoyer que les clés `intent`, `targets`, `missing`, `hypotheses` et `confidence`, avec une intention du catalogue. Une intention d’écriture n’est pas exécutée : elle ouvre la fiche. Une question explicite, si Ollama répond, part encore au modèle pour être expliquée. S’il ne répond pas, le fil affiche l’indisponibilité.
 
 Le modèle ne dispose plus que d’outils de lecture : `search_records`, `search_client_agreements`, `get_product_info`. Il ne propose plus de fiche et ne crée plus de brouillon. Il a au plus trois pas.

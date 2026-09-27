@@ -60,6 +60,7 @@ import {
   type DocumentMemory,
 } from "@/domain/document-memory";
 import { loadDocumentMemory, saveDocumentMemory } from "@/lib/document-memory";
+import { factsForNames } from "@/lib/document-facts";
 import { attachConversationProject, resolveContext } from "@/lib/context-envelope";
 import { asksHybridQuote } from "@/domain/hybrid-quote";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
   if (correction && !baseText) {
     return streamDirect({
       conversationId,
-      reply: "Aucune demande à corriger. Écrivez d’abord ce qu’il faut faire.",
+      reply: prefixFacts("Aucune demande à corriger. Écrivez d’abord ce qu’il faut faire.", await pieceFacts(snapshot)),
       source: "regle-metier",
       step: "Fiche",
     });
@@ -149,7 +150,7 @@ export async function POST(request: Request) {
     if (direct) {
       return streamDirect({
         conversationId,
-        reply: direct.reply,
+        reply: prefixFacts(direct.reply, await pieceFacts(snapshot)),
         source: direct.source,
         step: stepFor(direct.source),
         proposal: direct.proposal,
@@ -162,7 +163,7 @@ export async function POST(request: Request) {
   if (correction && free.execution !== "absente") {
     return streamDirect({
       conversationId,
-      reply: "Cette demande n’a pas de fiche à corriger.",
+      reply: prefixFacts("Cette demande n’a pas de fiche à corriger.", await pieceFacts(snapshot)),
       source: "regle-metier",
       step: "Fiche",
     });
@@ -221,7 +222,7 @@ export async function POST(request: Request) {
   if (free.execution === "absente") {
     return streamDirect({
       conversationId,
-      reply: `${absentReply(free)}\n${contextLine(snapshot)}`,
+      reply: prefixFacts(`${absentReply(free)}\n${contextLine(snapshot)}`, await pieceFacts(snapshot)),
       source: "regle-metier",
       step: "Catalogue",
     });
@@ -231,7 +232,10 @@ export async function POST(request: Request) {
   if (!status.ok || !status.defaultModel) {
     return streamDirect({
       conversationId,
-      reply: `${status.error ?? "Ollama est indisponible."} Une recherche dans les fiches, par exemple « que sait-on de Marie Dupont », fonctionne sans le modèle.`,
+      reply: prefixFacts(
+        `${status.error ?? "Ollama est indisponible."} Une recherche dans les fiches, par exemple « que sait-on de Marie Dupont », fonctionne sans le modèle.`,
+        await pieceFacts(snapshot),
+      ),
       source: "dossier",
       step: "Serveur injoignable",
     });
@@ -240,7 +244,10 @@ export async function POST(request: Request) {
   if (!status.models.includes(model) || isEmbedOnlyModel(model) || isRerankModel(model)) {
     return streamDirect({
       conversationId,
-      reply: "Ce modèle ne sert pas à la conversation. Choisissez-le dans Configuration.",
+      reply: prefixFacts(
+        "Ce modèle ne sert pas à la conversation. Choisissez-le dans Configuration.",
+        await pieceFacts(snapshot),
+      ),
       source: "dossier",
       step: "Modèle inadapté",
     });
@@ -535,7 +542,10 @@ async function publishBlocked(input: {
   }
   return streamDirect({
     conversationId: input.conversationId,
-    reply: blockedReply(input.decision, { question: blocked.question, card }, input.snapshot, [preface, path].filter(Boolean).join("\n")),
+    reply: prefixFacts(
+      blockedReply(input.decision, { question: blocked.question, card }, input.snapshot, [preface, path].filter(Boolean).join("\n")),
+      await pieceFacts(input.snapshot),
+    ),
     source: "regle-metier",
     step: card ? "Parcours" : "Catalogue",
     understanding: card,
@@ -621,6 +631,21 @@ async function blockedTurn(
     client: card.understood.some((line) => line.startsWith("Le client facturé")) ? snapshot.projectClient : "",
   });
   return { question: ready ? null : `${row.label}. ${card.confirm}`, card: { ...card, simulation } };
+}
+
+async function pieceFacts(snapshot: ContextSnapshot): Promise<string> {
+  const names = [
+    ...snapshot.attachments,
+    snapshot.selectedKind === "document" ? snapshot.selectedLabel : "",
+  ];
+  if (!names.some((name) => name.trim())) return "";
+  return factsForNames(names, await directoryNames());
+}
+
+function prefixFacts(reply: string, facts: string): string {
+  if (!facts.trim()) return reply;
+  if (reply.includes("lus sans la phrase") || reply.includes("Aucun fait n’est tiré de la phrase")) return reply;
+  return `${facts}\n${reply}`;
 }
 
 async function directoryNames(): Promise<string[]> {

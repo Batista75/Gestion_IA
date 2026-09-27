@@ -184,6 +184,9 @@ export function AssistantChat({
             />
             <div className="grid gap-2">
               <Label htmlFor="assistant-files">Pièces jointes</Label>
+              <p className="text-sm leading-6 text-muted-foreground">
+                La pièce est lue sans la phrase. Les montants restent ceux qui sont écrits.
+              </p>
               <input
                 ref={fileRef}
                 id="assistant-files"

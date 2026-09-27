@@ -31,7 +31,7 @@ export const v2Progress: V2ProgressRow[] = [
   { domain: "Administration", point: "Journal des changements de fiche, avec l’auteur", status: "fait", doneAt: "2026-09-27T06:27:00Z" },
   { domain: "Chaîne", point: "Phrase déjà reconnue traitée par une règle, avant le modèle", status: "fait", doneAt: "2026-09-26T20:50:13Z" },
   { domain: "Chaîne", point: "Enveloppe de contexte : page, sélection, actions récentes, rôle, droits", status: "fait", doneAt: "2026-09-27T13:38:23Z" },
-  { domain: "Chaîne", point: "Faits du document sourcés, page et zone, indépendants du message", status: "pas", doneAt: "" },
+  { domain: "Chaîne", point: "Faits du document sourcés, page et zone, indépendants du message", status: "fait", doneAt: "2026-09-27T15:26:42Z" },
   { domain: "Chaîne", point: "Résolveur SQL, lexique, vecteurs et récence, droits avant la recherche", status: "pas", doneAt: "" },
   { domain: "Chaîne", point: "Catalogue fermé : intention structurée, pas une action libre", status: "fait", doneAt: "2026-09-27T13:26:10Z" },
   { domain: "Chaîne", point: "Complétude de chaque champ, seuil selon la criticité", status: "fait", doneAt: "2026-09-27T14:05:21Z" },

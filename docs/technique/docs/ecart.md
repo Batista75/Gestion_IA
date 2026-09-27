@@ -3,7 +3,7 @@
 Les demandes décrites dans `docs/fonctionnel` ne sont pas toutes le chemin par défaut. Aujourd’hui :
 
 - l’enveloppe cite la page, le projet, le document ouvert et les noms de pièces, pas encore la zone dans la page ;
-- l’analyse d’une pièce dépend encore du message ;
+- une pièce jointe est lue sans la phrase : `readDocumentFacts` dans `src/domain/document-facts.ts` pose des faits avec la page et la zone ; les montants restent ceux écrits sur la pièce ;
 - le rapprochement mélange mots, vecteurs et reranker, sans faire primer l’identifiant métier ni appliquer les droits avant la recherche ;
 - une question explicite peut encore être expliquée par le modèle, sans écrire ; l’interpréteur JSON précède les demandes qui ne sont pas déjà des règles, et il n’exécute pas ;
 - la confiance champ par champ, la question unique et la fiche de compréhension s’appliquent aux actions du catalogue encore sans exécution ;

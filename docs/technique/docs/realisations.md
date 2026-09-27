@@ -40,7 +40,7 @@ Le fonctionnel, la technique et ce tableau utilisent les mêmes libellés et les
 | Administration | Journal des changements de fiche, avec l’auteur | Fait | 27/09/2026 08:27 |
 | Chaîne | Phrase déjà reconnue traitée par une règle, avant le modèle | Fait | 26/09/2026 22:50 |
 | Chaîne | Enveloppe de contexte : page, sélection, actions récentes, rôle, droits | Fait | 27/09/2026 15:38 |
-| Chaîne | Faits du document sourcés, page et zone, indépendants du message | Pas fait | — |
+| Chaîne | Faits du document sourcés, page et zone, indépendants du message | Fait | 27/09/2026 17:26 |
 | Chaîne | Résolveur SQL, lexique, vecteurs et récence, droits avant la recherche | Pas fait | — |
 | Chaîne | Catalogue fermé : intention structurée, pas une action libre | Fait | 27/09/2026 15:26 |
 | Chaîne | Complétude de chaque champ, seuil selon la criticité | Fait | 27/09/2026 16:05 |
