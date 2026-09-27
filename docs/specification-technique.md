@@ -1,6 +1,6 @@
 # Spécification technique
 
-Ce document décrit le socle qui tourne au 27 septembre 2026. La cible de refonte est la [spécification V2](/documentation/v2). Le [PDF d’origine](/documentation/specification) reste conservé. Le [manuel](/manuel) dit ce que l’on fait à l’écran. Ici, c’est le fonctionnement.
+Ce document décrit le socle qui tourne au 27 septembre 2026. La cible de revue est la [spécification V2](/documentation/v2) : une chaîne où le modèle interprète et les règles exécutent. Le [PDF d’origine](/documentation/specification) est conservé, il n’est plus la base de revue. Le [manuel](/manuel) dit ce que l’on fait à l’écran. Ici, c’est le fonctionnement, puis l’écart avec la chaîne.
 
 ## Socle
 
@@ -10,9 +10,9 @@ L’accueil sert l’assistant. Le port de développement est `3847`.
 
 Les prix, la TVA et les numéros de pièce ne sont pas calculés par le modèle. Les formules de prix de vente sont dans `src/domain/pricing.ts`. Un montant écrit par l’utilisateur est conservé tel quel.
 
-## Orchestration
+## Orchestration en service
 
-`POST /api/assistant` reçoit le fil, au plus 40 messages. Le dernier message utilisateur est enregistré, puis traité dans cet ordre.
+`POST /api/assistant` reçoit le fil, au plus 40 messages. Le dernier message utilisateur est enregistré, puis traité dans cet ordre. Ce traitement est une suite de règles, puis un relais au modèle si aucune règle ne reconnaît la phrase. La cible V2 retire ce relais libre : une demande non couverte par le catalogue pose une question ciblée, elle n’invente pas une action.
 
 1. Une phrase parlée du type « Créer le projet : … Le projet consiste à … », ou un tableau collé, est enregistrée tout de suite.
 2. Une question de prix de vente reçoit la règle métier, sans modèle.
@@ -116,6 +116,22 @@ Les listes partagent la même coquille : titre, recherche, filtres, choix de 10,
 - **Tableau d’analyse** (`/pilotage/analyse`) compare deux périodes : chiffre d’affaires HT, nombre de commandes, nombre de devis, marge HT. L’écart est la seconde période moins la première. `periodGap` dans `src/domain/board.ts` calcule le pourcentage. Si la première valeur est nulle et la seconde ne l’est pas, le pourcentage reste « — ».
 - **Journal des ventes** (`/comptabilite/journal`) filtre par dates et par cases : ventes, paiements, TVA sur encaissements, paiements en attente. Seule la case Ventes alimente le tableau. Les trois autres rappellent que le paiement et la TVA ne sont pas tenus.
 
+## Écart avec la chaîne cible
+
+La chaîne décrite dans la spécification V2 n’est pas le chemin par défaut. Aujourd’hui :
+
+- l’enveloppe de contexte (page ouverte, objet sélectionné, actions récentes, rôle, droits) n’est pas construite avant le modèle ;
+- l’analyse d’une pièce dépend encore du message et ne cite pas la page ni la zone ;
+- le rapprochement mélange mots, vecteurs et reranker, sans faire primer l’identifiant métier ni appliquer les droits avant la recherche ;
+- le modèle de conversation prend le relais hors catalogue et peut proposer une fiche ;
+- la confiance n’est pas évaluée champ par champ ;
+- la question de clarification n’est pas limitée au choix fermé, à la confirmation ou à la valeur manquante ;
+- il n’y a pas de parcours d’états suspendu puis repris, ni de fiche de compréhension corrigeable ;
+- une correction n’est pas isolée dans la mémoire du document ;
+- le journal trace les changements de fiche, pas encore l’entrée, le contexte, la proposition, la validation et le résultat.
+
+Deux bornes sont déjà en place et restent la référence des règles : `prépare un devis pour …` calcule hors du modèle, et les outils d’écriture du catalogue ne font que proposer. Le détail du devis est dans [Assistant devis hybride](/documentation/devis-hybride).
+
 ## Hors de ce socle
 
-L’avoir, l’encaissement, le rapprochement bancaire, la date d’échéance, le pack d’articles et le connecteur agréé ne sont pas implémentés. Ils restent dans la spécification fonctionnelle. La facture affichée ne crée pas de titre de paiement : elle montre la référence déjà saisie. La commande client et la commande fournisseur de la vue projet préparent l’opération, sans numéro de pièce ni transmission.
+L’avoir, l’encaissement, le rapprochement bancaire, la date d’échéance, le pack d’articles et le connecteur agréé ne sont pas implémentés. Ils restent dans la spécification V2. La facture affichée ne crée pas de titre de paiement : elle montre la référence déjà saisie. La commande client et la commande fournisseur de la vue projet préparent l’opération, sans numéro de pièce ni transmission.

@@ -4,7 +4,7 @@ Trois documents décrivent Gestion IA. Ils sont accessibles depuis Plus, avec le
 
 ## Spécification fonctionnelle
 
-[Spécification fonctionnelle et cadre de pilotage](specifications-gestion-ia.pdf), version 8 du 26 septembre 2026. Vingt pages. Cible : TPE et PME françaises, déploiement sur site. Le fichier fait foi pour le produit visé : facturation, achats, banque, pilotage, assistant, conservation des données sur site et validation humaine des décisions sensibles.
+[Spécification fonctionnelle et cadre de pilotage](specifications-gestion-ia.pdf), version 8 du 26 septembre 2026. Vingt pages. Cible d’origine : TPE et PME françaises, déploiement sur site. Le fichier est conservé. La base de revue est désormais la [spécification V2](specification-fonctionnelle-v2.md) : chaîne hybride, catalogue fermé d’intentions, règles métier pour l’exécution.
 
 Dans l’application, le même PDF s’ouvre par [Spécification fonctionnelle](/documentation/specification).
 

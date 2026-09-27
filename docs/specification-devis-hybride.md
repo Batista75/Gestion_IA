@@ -1,16 +1,14 @@
 # Assistant devis hybride (RAG + SQL)
 
-Ce document fixe la préparation automatique d’un devis. Il complète la [spécification technique](/documentation/technique). Il ne remplace pas la [spécification fonctionnelle (PDF)](/documentation/specification).
+Ce document fixe une intention du [catalogue V2](/documentation/v2) : préparer un devis client. Il complète la [spécification technique](/documentation/technique). Il ne décrit pas le reste de la chaîne.
 
 ## Objectif
 
 Préparer un devis brouillon à partir d’une demande écrite. Les conditions commerciales viennent des documents du client. Les prix, le stock et l’enregistrement viennent de PostgreSQL. Le modèle local ne fait pas les calculs.
 
-## Architecture
+## Place dans la chaîne
 
-L’accueil envoie la demande à l’orchestrateur. L’orchestrateur est le traitement de `POST /api/assistant`, puis Qwen 2.5 sur Ollama si la phrase n’est pas déjà comprise.
-
-Deux lectures, jamais mélangées :
+`prépare un devis pour …` est exécuté par la règle métier, avant le modèle. Deux lectures restent séparées :
 
 - Les conditions : notes du client, dossiers, devis reçus et pièces rattachées à ses dossiers.
 - Les montants : clients, produits, devis et lignes dans PostgreSQL.

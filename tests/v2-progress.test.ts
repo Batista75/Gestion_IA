@@ -20,6 +20,15 @@ test("le tableau sépare ce qui est livré de la cible restante", () => {
     "fait",
   );
   assert.equal(byPoint.get("Notifications, rôles et règles automatiques"), "pas");
+  assert.equal(
+    byPoint.get("Phrase déjà reconnue traitée par une règle, avant le modèle"),
+    "fait",
+  );
+  assert.equal(
+    byPoint.get("Catalogue fermé : intention structurée, pas une action libre"),
+    "pas",
+  );
+  assert.equal(byPoint.has("Confiance et source affichées sur chaque donnée extraite"), false);
   const counts = v2ProgressCounts();
   assert.equal(counts.done + counts.open, v2Progress.length);
   assert.ok(counts.done > 0);

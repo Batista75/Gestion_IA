@@ -1,6 +1,6 @@
 # Manuel utilisateur
 
-Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La cible de refonte est la [spécification V2](/documentation/v2). Le PDF d’origine reste la [spécification fonctionnelle](/documentation/specification). Le fonctionnement du socle livré est dans la [spécification technique](/documentation/technique).
+Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La cible de revue est la [spécification V2](/documentation/v2). Le PDF d’origine reste la [spécification fonctionnelle](/documentation/specification), conservée. Le fonctionnement du socle livré est dans la [spécification technique](/documentation/technique).
 
 Dernière mise à jour : 27 septembre 2026. Le menu Configuration règle le serveur, les modèles et la clé d’API.
 
@@ -126,7 +126,7 @@ Exemple de la spécification : coût `700`, marque `30`, remise `10`. Le prix af
 
 ## Assistant
 
-L’assistant est l’accueil, [au même endroit](/#assistant). Il reconnaît l’intention, relit les fiches déjà enregistrées, puis agit ou propose. Il n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
+L’assistant est l’accueil, [au même endroit](/#assistant). Les phrases déjà reconnues suivent une règle métier : consulter, lister, corriger, préparer un devis. Une demande plus libre est encore transmise au modèle. Cette transmission libre n’est pas la cible : la [spécification V2](/documentation/v2) décrit la chaîne où le modèle interprète et les règles exécutent. L’assistant n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
 
 Il distingue cinq demandes :
 
