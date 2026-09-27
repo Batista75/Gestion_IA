@@ -48,6 +48,7 @@ export type ProductOfferView = {
   fileName: string;
   sourceUrl: string;
   at: string;
+  lowest?: boolean;
 };
 
 export type ProductRecord = {
@@ -71,6 +72,7 @@ export type ProductRecord = {
   updatedLabel: string;
   versions: ProductVersionView[];
   offers: ProductOfferView[];
+  comparison: { note: string; rows: ProductOfferView[] };
 };
 
 const filters = [
@@ -214,6 +216,7 @@ export function ProductManager({
                   <ArticleFacts record={record} />
                   <p className="text-sm">{record.origin}</p>
                   <SourceBlock record={record} />
+                  <ComparisonBlock record={record} />
                   <OfferBlock record={record} />
                   {record.versions.length > 0 ? (
                     <div className="grid gap-2">
@@ -373,6 +376,29 @@ function ProductFields({
         {pending ? "Enregistrement…" : submitLabel}
       </Button>
     </form>
+  );
+}
+
+function ComparisonBlock({ record }: { record: ProductRecord }) {
+  return (
+    <div className="grid gap-2 text-sm leading-6">
+      <p className="font-medium">Comparaison des prix</p>
+      <p className="text-muted-foreground">{record.comparison.note}</p>
+      {record.comparison.rows.length > 0 ? (
+        <ol className="grid gap-2">
+          {record.comparison.rows.map((offer, index) => (
+            <li key={offer.id} className="rounded-lg bg-muted px-3 py-2">
+              <p className="font-medium">
+                {index + 1}. {offer.supplierName || "Fournisseur non nommé"}
+                {offer.lowest ? " · prix le plus bas" : ""}
+              </p>
+              <p>{offer.statedCost ? `Prix écrit ${offer.statedCost}` : "Prix non indiqué"}</p>
+              {offer.centsLabel ? <p>Valeur retenue {offer.centsLabel}</p> : <p>Prix non lu, hors classement</p>}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </div>
   );
 }
 

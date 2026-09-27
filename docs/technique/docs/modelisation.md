@@ -361,7 +361,7 @@ Les faits de page et de zone affichés dans le fil sont calculés à la lecture.
 
 ## Avancement du lot
 
-5 sur 9, soit 56 %.
+6 sur 9, soit 67 %.
 
 | Point | État |
 | --- | --- |
@@ -372,7 +372,7 @@ Les faits de page et de zone affichés dans le fil sont calculés à la lecture.
 | Centimes à côté du texte, sans addition | Fait |
 | Organisation unique, client et fournisseur | Pas fait |
 | Pièce commerciale reliée à sa parente, sans numéro de facture | Pas fait |
-| Comparaison de l’historique de prix | Pas fait |
+| Comparaison de l’historique de prix | Fait |
 | Confiance, version du modèle et validation | Pas fait |
 
 ## Cible encore non construite
@@ -386,7 +386,6 @@ Priorité haute, pas encore faites :
 
 Priorité suivante :
 
-- L’historique de prix est la suite des `SupplierOffer`. Il n’y a pas encore d’écran de comparaison.
 - Confiance par champ, version du modèle et validation sur `DocumentProposal`, `CatalogProposal` et `ConversationMessage`. `DocumentProposal` reste le sas : rien n’est écrit avant confirmation.
 
 À terme, trois couches restent séparées. La vérité métier est confirmée. La preuve est le fichier et le texte extrait. L’interprétation de l’assistant est une proposition, jamais une fiche implicite.
@@ -396,4 +395,4 @@ Priorité suivante :
 - Les faits de page et de zone (`readDocumentFacts` dans `src/domain/document-facts.ts`) sont produits à la lecture du texte extrait. Aucune table ne les conserve. Le message de l’utilisateur n’est pas un argument de cette lecture.
 - Le prix de vente, la marge et les totaux de dossier sont calculés par `src/domain/pricing.ts` à partir des centimes déjà stockés.
 - L’application n’enregistre pas de numéro de facture, d’avoir émis, ni de relevé bancaire.
-- La validité de trente jours d’une offre fournisseur, l’historique de prix, les rôles et les notifications ne sont pas des tables. `Quote.versionLabel` et `Quote.fingerprint` identifient une offre reçue, sans durée de validité en colonne.
+- La validité de trente jours d’une offre fournisseur, les rôles et les notifications ne sont pas des tables. L’historique de prix est la suite des `SupplierOffer`. `Quote.versionLabel` et `Quote.fingerprint` identifient une offre reçue, sans durée de validité en colonne.

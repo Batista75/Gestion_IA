@@ -12,6 +12,7 @@ import { listRecordEvents } from "@/lib/record-journal";
 import { shownUnitCost, writtenCurrency } from "@/domain/article";
 import { productOrigin } from "@/domain/catalog";
 import { formatOfferCents } from "@/domain/pricing";
+import { compareOffers } from "@/domain/supplier-offer";
 import { listProducts } from "@/lib/catalog-store";
 
 export const dynamic = "force-dynamic";
@@ -106,16 +107,8 @@ export default async function ProductsPage({
           product.lines.map((line) => line.quote.title),
         ),
         updatedLabel: product.updatedAt.toLocaleString("fr-FR"),
-        offers: product.offers.map((offer) => ({
-          id: offer.id,
-          supplierName: offer.supplier?.name || offer.supplierName,
-          statedCost: offer.statedCost,
-          centsLabel: offer.unitCostCents === null ? "" : formatOfferCents(offer.unitCostCents, offer.currency),
-          fileId: offer.sourceFile?.id ?? "",
-          fileName: offer.sourceFile?.originalName ?? "",
-          sourceUrl: offer.sourceUrl,
-          at: offer.createdAt.toLocaleString("fr-FR"),
-        })),
+        offers: product.offers.map((offer) => offerView(offer)),
+        comparison: offerComparison(product.offers),
         versions: [...product.lines]
           .sort((left, right) => right.quote.createdAt.getTime() - left.quote.createdAt.getTime())
           .map((line) => ({
@@ -135,6 +128,48 @@ export default async function ProductsPage({
     />
     </div>
   );
+}
+
+function offerView(offer: {
+  id: string;
+  supplierName: string;
+  statedCost: string;
+  unitCostCents: number | null;
+  currency: string;
+  sourceUrl: string;
+  createdAt: Date;
+  supplier: { name: string } | null;
+  sourceFile: { id: string; originalName: string } | null;
+}) {
+  return {
+    id: offer.id,
+    supplierName: offer.supplier?.name || offer.supplierName,
+    statedCost: offer.statedCost,
+    centsLabel: offer.unitCostCents === null ? "" : formatOfferCents(offer.unitCostCents, offer.currency),
+    fileId: offer.sourceFile?.id ?? "",
+    fileName: offer.sourceFile?.originalName ?? "",
+    sourceUrl: offer.sourceUrl,
+    at: offer.createdAt.toLocaleString("fr-FR"),
+  };
+}
+
+function offerComparison(offers: Parameters<typeof offerView>[0][]) {
+  const compared = compareOffers(
+    offers.map((offer) => ({
+      id: offer.id,
+      supplierName: offer.supplier?.name || offer.supplierName,
+      statedCost: offer.statedCost,
+      unitCostCents: offer.unitCostCents,
+    })),
+  );
+  const byId = new Map(offers.map((offer) => [offer.id, offer]));
+  return {
+    note: compared.note,
+    rows: compared.rows.flatMap((row) => {
+      const offer = byId.get(row.id);
+      return offer ? [{ ...offerView(offer), lowest: row.lowest }] : [];
+    }),
+  };
 }
 
 function sourceDocuments(
