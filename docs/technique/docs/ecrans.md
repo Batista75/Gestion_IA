@@ -2,7 +2,7 @@
 
 Le menu est un rail à gauche : Accueil, Projets, Ventes, Achats, Référentiels, Finance, Pilotage, Administration. Administration contient Plus (`/plus`). Le tableau de cette page lit `v2Progress` dans `src/domain/v2-progress.ts` : chaque ligne a un domaine, un point, l’état `fait` ou `pas`, et `doneAt`, l’instant de livraison affiché en heure de Paris. Une ligne pas faite n’a pas de date. `ordre=recent` ou `ordre=ancien` trie les lignes datées ; les lignes sans date restent après. La barre du haut porte la raison sociale, la recherche globale, Configuration et le manuel. Sur un écran étroit, le rail s’ouvre par **Menu**.
 
-Les listes partagent la même coquille : titre, recherche, filtres, choix de 10, 25, 50 ou 100 lignes, pagination, export CSV (`GET /api/tableaux`). Les montants HT des pièces produites passent par `saleLineFigures` et `saleOperationTotals`. Un total imprimé sur un devis reçu reste le texte de la pièce. Aucune liste n’attribue de numéro.
+Les listes partagent la même coquille : titre, recherche, filtres, choix de 10, 25, 50 ou 100 lignes, pagination, export CSV (`GET /api/tableaux`). Les montants HT des pièces produites passent par `saleLineFigures` et `saleOperationTotals`. Un total imprimé sur un devis reçu reste le texte de la pièce. À côté, `statedTotalHtCents` reprend le premier montant en centimes, sans additionner les lignes. Aucune liste n’attribue de numéro.
 
 - **Devis client** (`/suivi`) est le tableau des devis du dossier, filtré par situation et par client.
 - **Projets** (`/projets`) place le tableau des dossiers en haut, avec le bouton Nouveau dossier, et le journal des modifications et des actions en bas.

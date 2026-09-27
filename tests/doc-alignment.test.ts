@@ -42,6 +42,17 @@ test("le fonctionnel et la technique disent la même chose des faits de pièce",
   assert.match(orchestration, /n’est recalculé/);
 });
 
+test("l’avancement du lot compte les points faits", () => {
+  const page = readFileSync("docs/technique/docs/modelisation.md", "utf8");
+  const block = page.split("## Avancement du lot")[1]?.split("## ")[0] ?? "";
+  const states = [...block.matchAll(/\| (Fait|Pas fait) \|/g)].map((match) => match[1]);
+  const done = states.filter((state) => state === "Fait").length;
+  const percent = Math.round((done / states.length) * 100);
+  assert.equal(states.length, 9);
+  assert.match(block, new RegExp(`${done} sur ${states.length}`));
+  assert.match(block, new RegExp(`${percent} %`));
+});
+
 test("la modélisation cite chaque modèle Prisma", () => {
   const schema = readFileSync("prisma/schema.prisma", "utf8");
   const page = readFileSync("docs/technique/docs/modelisation.md", "utf8");

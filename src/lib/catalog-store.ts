@@ -11,6 +11,7 @@ import { ensureSpokenProject } from "@/lib/business-records";
 import { prisma } from "@/lib/db";
 import { syncPrimaryAddress } from "@/lib/addresses";
 import { syncPrimaryContact } from "@/lib/contacts";
+import { fillMissingQuoteCents } from "@/lib/quote-cents";
 import { fillMissingOfferCents, recordSupplierOffer } from "@/lib/supplier-offers";
 
 export type ActionResult = { ok: boolean; summary: string };
@@ -59,6 +60,7 @@ export type SupplierDetails = {
 export async function listProducts(query: string, source: string) {
   const q = query.trim();
   await fillMissingOfferCents();
+  await fillMissingQuoteCents();
   return prisma.product.findMany({
     where: {
       ...(q

@@ -166,7 +166,7 @@ Si Configuration indique **Serveur injoignable**, le PC hôte doit faire écoute
 
 ## Listes commerciales
 
-[Documents](/listes/documents) aligne les devis, les commandes et les devis reçus : type, date, référence du dossier, client ou fournisseur, projet, montant HT, situation. Le montant d’une pièce produite additionne les lignes qui ont un coût. Le total imprimé d’un devis reçu n’est pas recalculé.
+[Documents](/listes/documents) aligne les devis, les commandes et les devis reçus : type, date, référence du dossier, client ou fournisseur, projet, montant HT, situation. Le montant d’une pièce produite additionne les lignes qui ont un coût. Le total imprimé d’un devis reçu n’est pas recalculé : le texte reste affiché, et le premier montant est lu en centimes à côté. Deux montants écrits sur la même ligne ne sont pas additionnés.
 
 [Devis client](/suivi) est la liste des devis établis depuis un dossier. Les filtres portent sur la situation et le client.
 

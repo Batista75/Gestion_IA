@@ -1,6 +1,7 @@
 import { dayKey, inDayRange, periodGap } from "@/domain/board";
 import { shownUnitCost, writtenCurrency } from "@/domain/article";
-import { figuresFromSaleUnit, formatCents, saleLineFigures, saleOperationTotals, type SaleLineFigures } from "@/domain/pricing";
+import { figuresFromSaleUnit, formatCents, saleLineFigures, saleOperationTotals, writtenAmountLabel, type SaleLineFigures } from "@/domain/pricing";
+import { fillMissingQuoteCents } from "@/lib/quote-cents";
 import { saleKindLabel, saleStatusLabel } from "@/domain/sale-line";
 import { prisma } from "@/lib/db";
 
@@ -130,6 +131,7 @@ function producedCells(document: ProducedDocument, amount: string): Cell[] {
 const producedHeaders = ["Type", "Date", "Réf.", "Client / fournisseur", "Projet", "Montant HT", "Situation"];
 
 export async function listDocuments(query: string): Promise<Listed> {
+  await fillMissingQuoteCents();
   const [produced, received] = await Promise.all([
     loadProduced(),
     prisma.quote.findMany({
@@ -159,7 +161,7 @@ export async function listDocuments(query: string): Promise<Listed> {
       { text: reference },
       { text: party },
       { text: quote.project?.name || "—" , href: quote.projectId ? `/projets/${quote.projectId}` : undefined },
-      { text: blank(quote.statedTotalHt) === "—" ? "non indiqué" : quote.statedTotalHt },
+      { text: writtenAmountLabel(quote.statedTotalHt, quote.statedTotalHtCents, quote.currency) },
       { text: "Reçu" },
       {
         text: "Télécharger",

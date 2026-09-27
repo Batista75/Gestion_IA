@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { centsFromWritten, checkAffair, formatOfferCents, quoteFromTargetMarkup } from "../src/domain/pricing.ts";
+import { centsFromWritten, checkAffair, formatOfferCents, quoteFromTargetMarkup, writtenAmountLabel } from "../src/domain/pricing.ts";
 
 test("exemple pédagogique de la spec : 700 €, marque 30 %, remise 10 %", () => {
   const quote = quoteFromTargetMarkup({
@@ -115,6 +115,8 @@ test("un montant écrit devient des centimes sans additionner deux prix", () => 
   assert.equal(centsFromWritten("10,00"), 1000);
   assert.equal(centsFromWritten("10.00"), 1000);
   assert.equal(centsFromWritten("10,00 € et 20,00 €"), 1000);
+  assert.equal(writtenAmountLabel("10,00 € et 20,00 €", 1000, "EUR"), "10,00 € et 20,00 € · 10,00 EUR");
+  assert.equal(writtenAmountLabel("", null), "non indiqué");
   assert.equal(centsFromWritten(""), null);
   assert.equal(centsFromWritten("sans montant"), null);
   assert.equal(formatOfferCents(125430, "EUR"), "1 254,30 EUR");

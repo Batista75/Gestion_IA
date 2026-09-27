@@ -10,6 +10,7 @@ import {
 import { datasheetProduct } from "@/domain/offer-versions";
 import {
   centsFromStated,
+  centsFromWritten,
   checkAffair,
   vatRule,
   type MoneyCurrency,
@@ -321,8 +322,11 @@ async function saveQuote(
       vatZone: quote.vatZone,
       vatMention: mention,
       statedTotalHt: quote.statedTotalHt.slice(0, 80),
+      statedTotalHtCents: centsFromWritten(quote.statedTotalHt),
       statedVat: quote.statedVat.slice(0, 80),
+      statedVatCents: centsFromWritten(quote.statedVat),
       statedTotalTtc: quote.statedTotalTtc.slice(0, 80),
+      statedTotalTtcCents: centsFromWritten(quote.statedTotalTtc),
       conditions: quote.conditions.slice(0, 500),
     },
   });
@@ -335,6 +339,7 @@ async function saveQuote(
         productId,
         quantity: `${line.quantity} ${line.unit}`.trim().slice(0, 40),
         statedPrice: line.statedAmount.slice(0, 80),
+        statedPriceCents: centsFromWritten(line.statedAmount),
         conditions: [
           discounted && quote.discountRate > 0 ? `Remise indiquée ${Math.round(quote.discountRate * 100)} %.` : "",
           quote.conditions,

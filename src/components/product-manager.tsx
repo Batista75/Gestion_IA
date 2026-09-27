@@ -28,6 +28,7 @@ export type ProductVersionView = {
   issuedOn: string;
   supplierName: string;
   statedPrice: string;
+  centsLabel: string;
   conditions: string;
   fileId: string;
   fileName: string;
@@ -226,7 +227,7 @@ export function ProductManager({
                             {version.supplierName ? <p>{version.supplierName}</p> : null}
                             <p>
                               {version.statedPrice
-                                ? `Coût unitaire ${version.statedPrice}`
+                                ? `Coût unitaire ${version.statedPrice}${version.centsLabel ? ` · ${version.centsLabel}` : ""}`
                                 : "Coût unitaire non indiqué"}
                             </p>
                             {version.conditions ? <p>Conditions : {version.conditions}</p> : null}

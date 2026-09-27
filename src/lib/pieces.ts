@@ -5,6 +5,7 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { articleFromQuoteLine } from "@/domain/article";
+import { centsFromWritten } from "@/domain/pricing";
 import { nameKey } from "@/domain/catalog";
 import { composeExtraction, doclingExtension, documentBody } from "@/domain/document-chunks";
 import { readOfferFile, statedLineQuantity, type OfferLine, type OfferVersion } from "@/domain/offer-versions";
@@ -159,8 +160,11 @@ export async function recordOfferVersion(
           currency: (offer.currency ?? "").slice(0, 8),
           vatMention: (offer.vatMention ?? "").slice(0, 500),
           statedTotalHt: (offer.statedTotalHt ?? "").slice(0, 80),
+          statedTotalHtCents: centsFromWritten(offer.statedTotalHt ?? ""),
           statedVat: (offer.statedVat ?? "").slice(0, 80),
+          statedVatCents: centsFromWritten(offer.statedVat ?? ""),
           statedTotalTtc: (offer.statedTotalTtc ?? "").slice(0, 80),
+          statedTotalTtcCents: centsFromWritten(offer.statedTotalTtc ?? ""),
           conditions: (offer.conditions ?? "").slice(0, 500),
         },
       });
@@ -171,6 +175,7 @@ export async function recordOfferVersion(
             quoteId: quote.id,
             productId,
             statedPrice: line.statedPrice,
+            statedPriceCents: centsFromWritten(line.statedPrice),
             quantity: statedLineQuantity(line.conditions),
             conditions: line.conditions.slice(0, 500),
           },

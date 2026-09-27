@@ -235,7 +235,8 @@ Devis ou offre reçue, pas une pièce de vente du dossier. Les totaux sont recop
 - `fingerprint` unique et facultatif, pour reconnaître la même offre.
 - `fileId` vers `StoredFile`, `projectId` vers `Project`.
 - `clientName`, `currency`, `vatZone`, `vatMention`.
-- `statedTotalHt`, `statedVat`, `statedTotalTtc`, `conditions`.
+- `statedTotalHt`, `statedVat`, `statedTotalTtc`, `conditions` : textes recopiés.
+- `statedTotalHtCents`, `statedVatCents`, `statedTotalTtcCents` : le premier montant de chaque texte, en centimes entiers. Un texte sans montant laisse la colonne vide. Ces entiers ne sont pas une somme des lignes.
 - La confirmation d’un devis ou d’un tarif recopie ces textes depuis la pièce. `vatZone` reste vide : la zone n’est pas déduite. Un total absent reste vide. Les lignes ne sont pas additionnées.
 - `createdAt`.
 - Enfants : `QuoteLine`.
@@ -244,6 +245,7 @@ Devis ou offre reçue, pas une pièce de vente du dossier. Les totaux sont recop
 
 - `quoteId` vers `Quote`, `productId` vers `Product`. Les deux suppressions sont en cascade.
 - `statedPrice`, `conditions`, `quantity` : textes.
+- `statedPriceCents` : le premier montant de `statedPrice`, en centimes. Vide si le texte n’a pas de montant.
 
 ## Propositions
 
@@ -357,6 +359,22 @@ Journal des créations, mises à jour et suppressions de `Client`, `Supplier`, `
 
 Les faits de page et de zone affichés dans le fil sont calculés à la lecture. Ils ne sont pas enregistrés.
 
+## Avancement du lot
+
+5 sur 9, soit 56 %.
+
+| Point | État |
+| --- | --- |
+| Offre fournisseur distincte du produit | Fait |
+| Identité du fournisseur alignée sur le client | Fait |
+| Plusieurs interlocuteurs | Fait |
+| Plusieurs adresses | Fait |
+| Centimes à côté du texte, sans addition | Fait |
+| Organisation unique, client et fournisseur | Pas fait |
+| Pièce commerciale reliée à sa parente, sans numéro de facture | Pas fait |
+| Comparaison de l’historique de prix | Pas fait |
+| Confiance, version du modèle et validation | Pas fait |
+
 ## Cible encore non construite
 
 Le lot suivant est retenu. Ces noms ne sont pas des tables.
@@ -365,7 +383,6 @@ Priorité haute, pas encore faites :
 
 - Une `Organization` unique, à la fois client et fournisseur. `Client` et `Supplier` restent deux fiches, avec les mêmes attributs d’identité.
 - `SaleDocument` comme pièce commerciale reliée à sa pièce parente : devis, commande, livraison, facture, avoir. L’application n’émet toujours pas de facture et n’attribue pas de numéro.
-- Montants métier en centimes sur `Quote` et `QuoteLine`, à côté des textes extraits. `SupplierOffer.unitCostCents` est le premier pas. Les prix de vente du dossier passent déjà par `src/domain/pricing.ts`.
 
 Priorité suivante :
 

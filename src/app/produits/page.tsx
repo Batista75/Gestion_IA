@@ -126,6 +126,7 @@ export default async function ProductsPage({
             issuedOn: line.quote.issuedOn,
             supplierName: line.quote.supplierName,
             statedPrice: line.statedPrice,
+            centsLabel: line.statedPriceCents === null ? "" : formatOfferCents(line.statedPriceCents, line.quote.currency),
             conditions: line.conditions,
             fileId: line.quote.file?.id ?? "",
             fileName: line.quote.file?.originalName ?? "",

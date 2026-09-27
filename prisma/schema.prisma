@@ -391,9 +391,12 @@ model Quote {
   currency       String      @default("")
   vatZone        String      @default("")
   vatMention     String      @default("")
-  statedTotalHt  String      @default("")
-  statedVat      String      @default("")
-  statedTotalTtc String      @default("")
+  statedTotalHt      String      @default("")
+  statedTotalHtCents Int?
+  statedVat          String      @default("")
+  statedVatCents     Int?
+  statedTotalTtc     String      @default("")
+  statedTotalTtcCents Int?
   conditions     String      @default("")
   createdAt      DateTime    @default(now())
   lines          QuoteLine[]
@@ -421,8 +424,9 @@ model QuoteLine {
   id          String  @id @default(cuid())
   quoteId     String
   productId   String
-  statedPrice String  @default("")
-  conditions  String  @default("")
+  statedPrice      String  @default("")
+  statedPriceCents Int?
+  conditions       String  @default("")
   quantity    String  @default("")
   quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)

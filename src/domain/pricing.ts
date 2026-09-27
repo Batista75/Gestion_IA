@@ -91,6 +91,14 @@ export function centsFromWritten(raw: string): number | null {
   return Number.isSafeInteger(cents) ? cents : null;
 }
 
+/** Le texte écrit reste visible. Les centimes sont ceux du premier montant, jamais une somme. */
+export function writtenAmountLabel(written: string, cents: number | null, currency = ""): string {
+  const text = written.trim();
+  if (!text) return "non indiqué";
+  if (cents === null) return text;
+  return `${text} · ${formatOfferCents(cents, currency)}`;
+}
+
 export function formatOfferCents(cents: number, currency = ""): string {
   const sign = cents < 0 ? "-" : "";
   const absolute = Math.abs(Math.trunc(cents));

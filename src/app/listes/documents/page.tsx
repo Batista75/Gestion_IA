@@ -13,7 +13,7 @@ export default async function DocumentsPage({
   return (
     <DataBoard
       title="Liste des documents"
-      intro="Devis, commandes et devis reçus. Le montant d’une pièce produite est le total HT des lignes chiffrées. Le total imprimé d’un devis reçu reste celui de la pièce."
+      intro="Devis, commandes et devis reçus. Le montant d’une pièce produite est le total HT des lignes chiffrées. Le total imprimé d’un devis reçu reste celui de la pièce, avec à côté la lecture en centimes du premier montant. Les lignes ne sont pas additionnées."
       basePath="/listes/documents"
       query={query}
       headers={listed.headers}
