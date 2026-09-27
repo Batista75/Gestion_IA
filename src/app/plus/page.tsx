@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -7,17 +8,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { v2Progress, v2ProgressCounts } from "@/domain/v2-progress";
 import { cn } from "cn";
 
-const later = [
-  "Historique daté des prix d’achat et de vente.",
-  "Export documentaire et export comptable, puis sauvegarde restaurable.",
-  "Connecteur vers une plateforme agréée, désactivable.",
-];
-
 export default function MorePage() {
+  const counts = v2ProgressCounts();
   return (
-    <div className="mx-auto grid w-full max-w-3xl gap-6">
+    <div className="mx-auto grid w-full max-w-5xl gap-6">
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Plus</h1>
         <p className="text-sm leading-6 text-muted-foreground">
@@ -81,22 +78,40 @@ export default function MorePage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Pas encore dans ce socle</CardTitle>
-          <CardDescription>
-            Ces capacités sont dans la spécification. Elles ne sont pas
-            simulées ici.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="grid list-disc gap-2 pl-5 text-sm leading-6">
-            {later.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+      <section className="grid gap-3">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold tracking-tight">Cible V2</h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {counts.done} faits, {counts.open} pas faits. Ce tableau est la liste tenue à jour :
+            une capacité livrée passe de Pas fait à Fait.
+          </p>
+        </div>
+        <div className="overflow-x-auto rounded-lg border border-border bg-card">
+          <table className="w-full min-w-[36rem] border-collapse text-sm">
+            <caption className="sr-only">Avancement de la cible V2</caption>
+            <thead>
+              <tr className="border-b border-border bg-muted/60 text-left text-xs tracking-wide text-muted-foreground uppercase">
+                <th className="px-3 py-2 font-medium">Domaine</th>
+                <th className="px-3 py-2 font-medium">Point</th>
+                <th className="w-28 px-3 py-2 font-medium">État</th>
+              </tr>
+            </thead>
+            <tbody>
+              {v2Progress.map((row) => (
+                <tr key={row.point} className="border-b border-border last:border-0">
+                  <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">{row.domain}</td>
+                  <td className="px-3 py-1.5">{row.point}</td>
+                  <td className="px-3 py-1.5">
+                    <Badge variant={row.status === "fait" ? "secondary" : "outline"}>
+                      {row.status === "fait" ? "Fait" : "Pas fait"}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

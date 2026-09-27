@@ -52,6 +52,7 @@ const sections = [
       { href: "/listes/textes", label: "Modèles" },
       { href: "/configuration", label: "Configuration" },
       { href: "/documentation/v2", label: "Cible V2" },
+      { href: "/plus", label: "Plus" },
     ],
   },
 ] as const;

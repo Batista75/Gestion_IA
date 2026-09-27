@@ -100,7 +100,7 @@ La fiche projet montre les produits et les devis dans la colonne principale, et 
 
 ## Ergonomie des rubriques
 
-Le menu est un rail à gauche, sur le modèle d’un logiciel de devis et de factures. Cinq groupes : Actions, Suivi de devis, Liste, Pilotage, Comptabilité. La barre du haut porte la raison sociale, la recherche de documents, Configuration, le manuel et Plus. Sur un écran étroit, le rail s’ouvre par **Menu**.
+Le menu est un rail à gauche : Accueil, Projets, Ventes, Achats, Référentiels, Finance, Pilotage, Administration. Administration contient Plus (`/plus`). Le tableau de cette page lit `v2Progress` dans `src/domain/v2-progress.ts` : chaque ligne a un domaine, un point et l’état `fait` ou `pas`. La barre du haut porte la raison sociale, la recherche globale, Configuration et le manuel. Sur un écran étroit, le rail s’ouvre par **Menu**.
 
 Les listes partagent la même coquille : titre, recherche, filtres, choix de 10, 25, 50 ou 100 lignes, pagination, export CSV (`GET /api/tableaux`). Les montants HT des pièces produites passent par `saleLineFigures` et `saleOperationTotals`. Un total imprimé sur un devis reçu reste le texte de la pièce. Aucune liste n’attribue de numéro.
 

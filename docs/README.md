@@ -1,6 +1,6 @@
 # Documentation
 
-Trois documents décrivent Gestion IA. Ils sont accessibles depuis Plus. Le manuel est aussi dans l’en-tête.
+Trois documents décrivent Gestion IA. Ils sont accessibles depuis Plus, avec le tableau d’avancement de la cible V2. Le manuel est aussi dans l’en-tête.
 
 ## Spécification fonctionnelle
 

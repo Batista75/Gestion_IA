@@ -17,7 +17,7 @@ Le menu est à gauche.
 - **Référentiels** : clients, fournisseurs, produits et services.
 - **Finance** : échéances, banque, journal.
 - **Pilotage** : tableau de bord, analyses.
-- **Administration** : documents, modèles de textes, configuration, cible V2.
+- **Administration** : documents, modèles de textes, configuration, cible V2, Plus.
 
 Les regroupements et l’historique des lignes restent accessibles par leur adresse, ils ne sont plus dans le menu. La barre du haut porte le nom de l’entreprise, une recherche globale, Configuration et le manuel. Sur un téléphone, **Menu** ouvre le rail. Chaque liste a une recherche, un nombre de lignes (10, 25, 50 ou 100), une pagination et, pour les tableaux commerciaux, un export CSV.
 
@@ -197,7 +197,7 @@ Ces deux écrans décrivent le comportement prévu. Ils ne saisissent pas encore
 
 ## Plus
 
-**Plus** ouvre ce manuel, la spécification fonctionnelle et la spécification technique. Les versions de devis d’un produit, avec le prix indiqué et les conditions, sont sur la vue Produits. L’historique des prix de vente calculés, les exports, la sauvegarde et le connecteur de facturation électronique ne sont pas encore disponibles.
+**Plus** ouvre ce manuel, la spécification fonctionnelle et la spécification technique. Le tableau **Cible V2** y tient la liste de ce qui est fait et de ce qui ne l’est pas : domaine, point, état Fait ou Pas fait. Une capacité livrée change d’état dans ce tableau. Les versions de devis d’un produit, avec le prix indiqué et les conditions, sont sur la vue Produits.
 
 ## Ce que vous ne pouvez pas faire ici
 

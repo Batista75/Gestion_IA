@@ -1,6 +1,6 @@
 # Spécification fonctionnelle cible — Gestion IA V2
 
-Ce document est la cible. Il ne décrit pas tout le socle déjà en service. Le [manuel](/manuel) dit ce qui fonctionne aujourd’hui. La [spécification technique](/documentation/technique) décrit le moteur livré.
+Ce document est la cible. Il ne décrit pas tout le socle déjà en service. Le [manuel](/manuel) dit ce qui fonctionne aujourd’hui. La [spécification technique](/documentation/technique) décrit le moteur livré. L’avancement, fait ou pas fait, est le tableau de [Plus](/plus).
 
 Le premier écran de cette cible est en place : l’accueil demande ce qu’il faut faire, liste ce qui attend une confirmation, montre les projets récents et les alertes calculées à partir des fiches. Le menu regroupe Accueil, Projets, Ventes, Achats, Référentiels, Finance, Pilotage et Administration. Les listes techniques ne sont plus au premier niveau.
 
