@@ -98,6 +98,22 @@ export async function loadConversation(id: string): Promise<{
   return row ? presentConversation(row) : null;
 }
 
+export async function latestProjectConversation(projectId: string): Promise<{
+  id: string;
+  projectName: string;
+  messages: StoredTurn[];
+} | null> {
+  const row = await prisma.conversation.findFirst({
+    where: { projectId },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      project: { select: { name: true } },
+      messages: { orderBy: { createdAt: "asc" }, take: 40 },
+    },
+  });
+  return row ? presentConversation(row) : null;
+}
+
 export async function latestConversation(): Promise<{
   id: string;
   projectName: string;

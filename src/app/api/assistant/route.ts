@@ -29,7 +29,9 @@ import { conversationIdOrNew, rememberTurn } from "@/lib/conversations";
 import type { UIMessage } from "ai";
 import { withGpuLane } from "@/lib/gpu-lane";
 import { mentionedNames } from "@/domain/knowledge";
+import { contextBrief, contextLine, readHint, withContext } from "@/domain/context-envelope";
 import { absentReply, decideFree } from "@/domain/intent-catalog";
+import { attachConversationProject, resolveContext } from "@/lib/context-envelope";
 import { asksHybridQuote } from "@/domain/hybrid-quote";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
 import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
@@ -73,6 +75,10 @@ export async function POST(request: Request) {
     content: parsed.text,
     linkText: parsed.text,
   });
+  const snapshot = await resolveContext(
+    readHint(payload && typeof payload === "object" && "context" in payload ? payload.context : null),
+  );
+  await attachConversationProject(conversationId, snapshot.projectId);
 
   const direct = await answerDirectly(parsed.text);
   if (direct) {
@@ -86,11 +92,11 @@ export async function POST(request: Request) {
     });
   }
 
-  const free = decideFree(parsed.text);
+  const free = withContext(decideFree(parsed.text), snapshot);
   if (free.execution === "absente") {
     return streamDirect({
       conversationId,
-      reply: absentReply(free),
+      reply: `${absentReply(free)}\n${contextLine(snapshot)}`,
       source: "regle-metier",
       step: "Catalogue",
     });
@@ -120,6 +126,7 @@ export async function POST(request: Request) {
     text: parsed.text,
     messages: parsed.uiMessages,
     model,
+    context: contextBrief(snapshot),
   });
 }
 

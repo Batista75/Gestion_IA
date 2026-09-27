@@ -30,6 +30,8 @@ S’il ne reste rien de tout cela, `decideFree` dans `src/domain/intent-catalog.
 
 Le modèle ne dispose plus que d’outils de lecture : `search_records`, `search_client_agreements`, `get_product_info`. Il ne propose plus de fiche et ne crée plus de brouillon. Le brouillon de devis reste la règle `prépare un devis pour …`, exécutée avant lui. Il a au plus trois pas. Il ne numérote pas de facture et ne calcule pas de montant.
 
+Chaque appel porte une enveloppe construite par l’application, dans `resolveContext`. Le client envoie seulement le chemin de la page et les noms des pièces jointes. Le serveur vérifie le projet et le document dans PostgreSQL, puis ajoute l’opérateur J Smith, le rôle opérateur, les actions déjà autorisées par le catalogue, et les trois dernières modifications de fiche. Un identifiant de projet inconnu est ignoré. La réponse d’une action encore absente rappelle ce contexte. Le modèle le reçoit aussi, sans pouvoir le réécrire.
+
 ## Devis hybride
 
 La préparation d’un devis sépare les conditions écrites et les montants. Le détail est dans [Assistant devis hybride](/documentation/devis-hybride).
@@ -120,10 +122,10 @@ Les listes partagent la même coquille : titre, recherche, filtres, choix de 10,
 
 La chaîne décrite dans la spécification V2 n’est pas le chemin par défaut. Aujourd’hui :
 
-- l’enveloppe de contexte (page ouverte, objet sélectionné, actions récentes, rôle, droits) n’est pas construite avant le modèle ;
-- l’analyse d’une pièce dépend encore du message et ne cite pas la page ni la zone ;
+- l’enveloppe cite la page, le projet, le document ouvert et les noms de pièces, pas encore la zone dans la page ;
+- l’analyse d’une pièce dépend encore du message ;
 - le rapprochement mélange mots, vecteurs et reranker, sans faire primer l’identifiant métier ni appliquer les droits avant la recherche ;
-- le modèle peut encore expliquer une question libre, sans écrire ; l’enveloppe de contexte et l’interpréteur JSON ne sont pas en place ;
+- le modèle peut encore expliquer une question libre, sans écrire ; l’interpréteur JSON n’est pas en place ;
 - la confiance n’est pas évaluée champ par champ ;
 - la question de clarification n’est pas limitée au choix fermé, à la confirmation ou à la valeur manquante ;
 - il n’y a pas de parcours d’états suspendu puis repris, ni de fiche de compréhension corrigeable ;

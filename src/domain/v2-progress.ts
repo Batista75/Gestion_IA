@@ -28,7 +28,7 @@ export const v2Progress: V2ProgressRow[] = [
   { domain: "Pilotage", point: "Tableau de bord et comparaison de deux périodes, chiffres en base", status: "fait" },
   { domain: "Administration", point: "Journal des changements de fiche, avec l’auteur", status: "fait" },
   { domain: "Chaîne", point: "Phrase déjà reconnue traitée par une règle, avant le modèle", status: "fait" },
-  { domain: "Chaîne", point: "Enveloppe de contexte : page, sélection, actions récentes, rôle, droits", status: "pas" },
+  { domain: "Chaîne", point: "Enveloppe de contexte : page, sélection, actions récentes, rôle, droits", status: "fait" },
   { domain: "Chaîne", point: "Faits du document sourcés, page et zone, indépendants du message", status: "pas" },
   { domain: "Chaîne", point: "Résolveur SQL, lexique, vecteurs et récence, droits avant la recherche", status: "pas" },
   { domain: "Chaîne", point: "Catalogue fermé : intention structurée, pas une action libre", status: "fait" },
@@ -73,8 +73,8 @@ export const v2Phases: V2Phase[] = [
   {
     order: 2,
     title: "Enveloppe de contexte",
-    state: "pas",
-    summary: "La page, le projet ouvert et l’objet sélectionné accompagnent le message.",
+    state: "fait",
+    summary: "La page, le projet ouvert, la pièce ouverte, les pièces jointes, les actions récentes et l’opérateur accompagnent le message.",
   },
   {
     order: 3,

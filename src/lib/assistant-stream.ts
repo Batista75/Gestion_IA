@@ -83,6 +83,7 @@ export async function streamModel(input: {
   text: string;
   messages: UIMessage[];
   model: string;
+  context?: string;
 }): Promise<Response> {
   const config = await loadTechnicalConfig();
   const baseUrl = config.serverUrl || process.env.OLLAMA_BASE_URL || "http://192.168.1.5:11434";
@@ -137,7 +138,7 @@ export async function streamModel(input: {
         writer.write({ type: "finish-step" });
         const result = streamText({
           model: openai.chat(input.model),
-          system: `${SYSTEM_PROMPT}\n\nInstruction métier :\n${readTradeInstruction()}\n\n${retrievalContext(docs)}\nTu ne proposes pas d’enregistrement : le catalogue a déjà traité les écritures avant cet appel.`,
+          system: `${SYSTEM_PROMPT}\n\nInstruction métier :\n${readTradeInstruction()}\n\n${input.context ?? ""}\n\n${retrievalContext(docs)}\nTu ne proposes pas d’enregistrement : le catalogue a déjà traité les écritures avant cet appel.`,
           messages: textMessages(input.messages),
           stopWhen: stepCountIs(3),
           temperature: 0.1,

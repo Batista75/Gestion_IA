@@ -4,8 +4,8 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createInboxItemAction, recordExchangeAction } from "@/app/actions";
+import { usePathname, useRouter } from "next/navigation";
+import { createInboxItemAction } from "@/app/actions";
 import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,11 +35,27 @@ export function AssistantChat({
   proposals?: PendingProposal[];
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const hint = useRef({ view: "/", attachments: [] as string[] });
+  hint.current.view = pathname || "/";
   const transport = useMemo(
-    () => new DefaultChatTransport<ChatMessage>({ api: "/api/assistant" }),
+    () =>
+      new DefaultChatTransport<ChatMessage>({
+        api: "/api/assistant",
+        prepareSendMessagesRequest: ({ id, messages }) => ({
+          body: {
+            id,
+            messages,
+            context: {
+              view: hint.current.view,
+              attachments: hint.current.attachments,
+            },
+          },
+        }),
+      }),
     [],
   );
-  const { messages, sendMessage, setMessages, status, error } = useChat<ChatMessage>({
+  const { messages, sendMessage, status, error } = useChat<ChatMessage>({
     id: conversationId,
     messages: toUi(initialMessages),
     transport,
@@ -67,6 +83,7 @@ export function AssistantChat({
     if (!text || pending) return;
     setDraft("");
     setFileError(null);
+    hint.current.attachments = [];
     await sendMessage({ text });
   }
 
@@ -90,39 +107,15 @@ export function AssistantChat({
       const data = new FormData();
       data.set("body", text);
       for (const file of attached) data.append("files", file);
-      const result = await createInboxItemAction({ message: null }, data);
+      const saved = await createInboxItemAction({ message: null }, data);
+      if (saved.message && /pas été enregistré|Au plus|Décrivez l’information/.test(saved.message)) {
+        setFileError(saved.message);
+        return;
+      }
       const userText = text || attached.map((file) => file.name).join(", ");
-      const assistantText = result.message ?? "Pièce enregistrée.";
-      await recordExchangeAction({
-        conversationId,
-        userText,
-        assistantText,
-      });
-      setMessages((current) => [
-        ...current,
-        {
-          id: crypto.randomUUID(),
-          role: "user",
-          parts: [{ type: "text", text: userText }],
-        },
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          metadata: { source: "action" },
-          parts: [
-            {
-              type: "dynamic-tool",
-              toolName: "notice",
-              toolCallId: "files",
-              title: "Pièces enregistrées",
-              state: "output-available",
-              input: {},
-              output: "Pièces enregistrées",
-            },
-            { type: "text", text: assistantText },
-          ],
-        },
-      ]);
+      hint.current.attachments = attached.map((file) => file.name);
+      await sendMessage({ text: userText });
+      hint.current.attachments = [];
       router.refresh();
     } catch {
       setFileError("La pièce n’a pas pu être enregistrée.");
@@ -136,11 +129,10 @@ export function AssistantChat({
   return (
     <div className="grid gap-4" id="assistant">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {projectName ? (
-          <p className="text-sm text-muted-foreground">Fil du projet {projectName}</p>
-        ) : (
-          <p className="text-sm text-muted-foreground">Fil conservé sur cette machine</p>
-        )}
+        <p className="text-sm text-muted-foreground">
+          {projectName ? `Fil du projet ${projectName}. ` : "Fil conservé sur cette machine. "}
+          La page ouverte est jointe à la demande.
+        </p>
         <Link
           href="/?nouveau=1"
           className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}

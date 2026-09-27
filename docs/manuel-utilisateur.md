@@ -126,7 +126,7 @@ Exemple de la spécification : coût `700`, marque `30`, remise `10`. Le prix af
 
 ## Assistant
 
-L’assistant est l’accueil, [au même endroit](/#assistant). Les phrases déjà reconnues suivent une règle métier : consulter, lister, corriger, préparer un devis. Une demande plus libre est encore transmise au modèle. Cette transmission libre n’est pas la cible : la [spécification V2](/documentation/v2) décrit la chaîne où le modèle interprète et les règles exécutent. L’assistant n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
+L’assistant est l’accueil, [au même endroit](/#assistant), et en bas de chaque dossier projet. La page ouverte, le projet, le document ouvert et les noms des pièces jointes partent avec le message. Les phrases déjà reconnues suivent une règle métier : consulter, lister, corriger, préparer un devis. Une demande plus libre est encore transmise au modèle. Cette transmission libre n’est pas la cible : la [spécification V2](/documentation/v2) décrit la chaîne où le modèle interprète et les règles exécutent. L’assistant n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
 
 Il distingue cinq demandes :
 
