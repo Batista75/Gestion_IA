@@ -1,0 +1,15 @@
+site_name: Gestion IA — Spécification technique
+site_description: Socle en service de Gestion IA, aligné sur les réalisations.
+docs_dir: docs
+use_directory_urls: true
+theme:
+  name: mkdocs
+nav:
+  - Accueil: index.md
+  - Orchestration: orchestration.md
+  - Devis hybride: devis-hybride.md
+  - Recherche et modèles: recherche.md
+  - Données et projet: donnees.md
+  - Écrans: ecrans.md
+  - Écart: ecart.md
+  - Réalisations: realisations.md

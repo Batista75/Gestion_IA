@@ -153,6 +153,16 @@ model AssistantTask {
   updatedAt      DateTime     @updatedAt
 }
 
+/** Correction retenue pour une pièce, jamais pour une règle du répertoire. */
+model DocumentMemory {
+  id          String   @id @default(cuid())
+  documentKey String   @unique
+  projet      String   @default("")
+  type        String   @default("")
+  societe     String   @default("")
+  updatedAt   DateTime @updatedAt
+}
+
 model ConversationMessage {
   id             String       @id @default(cuid())
   conversationId String

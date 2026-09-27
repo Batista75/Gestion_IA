@@ -38,7 +38,7 @@ export const v2Progress: V2ProgressRow[] = [
   { domain: "Chaîne", point: "Question minimale : choix fermé, confirmation, ou valeur manquante", status: "fait", doneAt: "2026-09-27T14:05:21Z" },
   { domain: "Chaîne", point: "Parcours borné, suspendu puis repris après la réponse", status: "fait", doneAt: "2026-09-27T14:48:14Z" },
   { domain: "Chaîne", point: "Fiche de compréhension corrigeable sans reformuler le message", status: "fait", doneAt: "2026-09-27T14:20:23Z" },
-  { domain: "Chaîne", point: "Quatre mémoires ; une correction ne devient pas une règle globale", status: "pas", doneAt: "" },
+  { domain: "Chaîne", point: "Quatre mémoires ; une correction ne devient pas une règle globale", status: "fait", doneAt: "2026-09-27T15:00:15Z" },
   { domain: "Chaîne", point: "Journal d’audit : entrée, contexte, proposition, validation, résultat", status: "pas", doneAt: "" },
   { domain: "Projets", point: "Filtres statut, client, montant, et statuts contrôlés", status: "pas", doneAt: "" },
   { domain: "Projets", point: "Fiche à onglets : synthèse, activité, ventes, achats, produits, documents, exécution, finance", status: "pas", doneAt: "" },
@@ -119,9 +119,9 @@ export const v2Phases: V2Phase[] = [
   {
     order: 8,
     title: "Mémoire des corrections",
-    state: "pas",
+    state: "fait",
     summary: "Une correction vaut pour le document concerné, pas pour une règle globale.",
-    doneAt: "",
+    doneAt: "2026-09-27T15:00:15Z",
   },
   {
     order: 9,

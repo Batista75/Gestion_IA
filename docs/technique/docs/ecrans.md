@@ -1,0 +1,19 @@
+# Écrans
+
+Le menu est un rail à gauche : Accueil, Projets, Ventes, Achats, Référentiels, Finance, Pilotage, Administration. Administration contient Plus (`/plus`). Le tableau de cette page lit `v2Progress` dans `src/domain/v2-progress.ts` : chaque ligne a un domaine, un point, l’état `fait` ou `pas`, et `doneAt`, l’instant de livraison affiché en heure de Paris. Une ligne pas faite n’a pas de date. `ordre=recent` ou `ordre=ancien` trie les lignes datées ; les lignes sans date restent après. La barre du haut porte la raison sociale, la recherche globale, Configuration et le manuel. Sur un écran étroit, le rail s’ouvre par **Menu**.
+
+Les listes partagent la même coquille : titre, recherche, filtres, choix de 10, 25, 50 ou 100 lignes, pagination, export CSV (`GET /api/tableaux`). Les montants HT des pièces produites passent par `saleLineFigures` et `saleOperationTotals`. Un total imprimé sur un devis reçu reste le texte de la pièce. Aucune liste n’attribue de numéro.
+
+- **Devis client** (`/suivi`) est le tableau des devis du dossier, filtré par situation et par client.
+- **Projets** (`/projets`) place le tableau des dossiers en haut, avec le bouton Nouveau dossier, et le journal des modifications et des actions en bas.
+- **Documents** (`/listes/documents`) mêle devis, commandes client, commandes fournisseur et devis reçus. Colonnes : type, date, référence du dossier, client ou fournisseur, projet, montant HT, situation. Chaque ligne a un téléchargement : HTML pour une pièce produite (`GET /api/ventes/[id]`), fichier d’origine pour un devis reçu qui en a un.
+- **Clients, fournisseurs, articles** gardent la saisie sous le tableau. Un article fournisseur est un produit ou un service. La pièce jointe d’un devis confirme référence, désignation, famille, coût unitaire écrit, devise et fournisseur. La date de saisie est la création. Le montant n’est pas recalculé.
+- **Regroupements** (`/listes/regroupements`) groupe le catalogue par fournisseur. Un pack au prix ajusté n’existe pas.
+- **Historiques lignes** (`/listes/lignes`) donne une ligne de tableau par ligne de pièce.
+- **Échéances** (`/listes/echeances`) liste les commandes client. La facturation est « À facturer » ou « Référence enregistrée ». Le paiement est « Non suivi ». Aucune date d’échéance et aucun coût de retard ne sont calculés.
+- **Textes** (`/listes/textes`) reprend les conditions de devis reçu, les descriptions d’articles et les consignes de livraison.
+- **Tableau de bord** (`/pilotage`) compte les devis en attente, les commandes client, le chiffre d’affaires HT de ces commandes et les projets. Il classe les articles et les clients des commandes. Les impayés sont le nombre de commandes sans référence de facture.
+- **Tableau d’analyse** (`/pilotage/analyse`) compare deux périodes : chiffre d’affaires HT, nombre de commandes, nombre de devis, marge HT. L’écart est la seconde période moins la première. `periodGap` dans `src/domain/board.ts` calcule le pourcentage. Si la première valeur est nulle et la seconde ne l’est pas, le pourcentage reste « — ».
+- **Journal des ventes** (`/comptabilite/journal`) filtre par dates et par cases : ventes, paiements, TVA sur encaissements, paiements en attente. Seule la case Ventes alimente le tableau. Les trois autres rappellent que le paiement et la TVA ne sont pas tenus.
+
+La page Plus ouvre aussi ces deux sites : les demandes dans `docs/fonctionnel`, le socle dans `docs/technique`.

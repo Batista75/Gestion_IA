@@ -1,23 +1,41 @@
 # Documentation
 
-Trois documents décrivent Gestion IA. Ils sont accessibles depuis Plus, avec le tableau d’avancement de la cible V2. Le manuel est aussi dans l’en-tête.
+Deux sites, plus le manuel et le PDF conservé. Le fonctionnel, la technique et les réalisations portent les mêmes demandes et les mêmes états. Le tableau de Plus est la source de ces états.
 
-## Spécification fonctionnelle
+## Demandes fonctionnelles
 
-[Spécification fonctionnelle et cadre de pilotage](specifications-gestion-ia.pdf), version 8 du 26 septembre 2026. Vingt pages. Cible d’origine : TPE et PME françaises, déploiement sur site. Le fichier est conservé. La base de revue est désormais la [spécification V2](specification-fonctionnelle-v2.md) : chaîne hybride, catalogue fermé d’intentions, règles métier pour l’exécution.
+Répertoire `docs/fonctionnel`. Pages : chaîne, catalogue, périmètre, réalisations.
 
-Dans l’application, le même PDF s’ouvre par [Spécification fonctionnelle](/documentation/specification).
+```bash
+cd docs/fonctionnel
+mkdocs serve -a 127.0.0.1:8765
+```
+
+Dans l’application : [Demandes fonctionnelles](/documentation/v2).
 
 ## Spécification technique
 
-[Spécification technique](specification-technique.md). Elle décrit le socle qui tourne : orchestration de l’assistant, fil conservé, confirmation, recherche dans les fiches, lecture des pièces par Docling, journal des modifications, vue projet, instruction métier, modèles et usage du GPU. Elle ne remplace pas le PDF. Quand ce fonctionnement change, ce fichier est mis à jour dans le même changement.
+Répertoire `docs/technique`. Pages : orchestration, devis hybride, recherche, données, écrans, écart, réalisations.
+
+```bash
+cd docs/technique
+mkdocs serve -a 127.0.0.1:8766
+```
 
 Dans l’application : [Spécification technique](/documentation/technique).
 
-## Manuel utilisateur
+Les fichiers `realisations.md` des deux sites sont produits par :
 
-[Manuel utilisateur](manuel-utilisateur.md). C’est le texte affiché à l’écran Manuel. Quand un écran, un libellé ou une règle change, ce fichier est mis à jour dans le même changement.
+```bash
+node --experimental-strip-types scripts/render-realisations.mjs
+```
+
+Un test refuse un écart avec `src/domain/v2-progress.ts`.
+
+## Manuel et PDF
+
+[Manuel utilisateur](manuel-utilisateur.md), affiché à l’écran Manuel. [PDF du 26 septembre 2026](specifications-gestion-ia.pdf), conservé, plus la base de revue.
 
 ## Instruction métier
 
-[Achat et revente — technologies](../instructions/metiers/achat-revente-technologies.md). Ordre des preuves commerciales pour les dossiers de technologies. L’assistant et la fiche projet s’y réfèrent. Dans l’application : [Instruction métier](/documentation/metier).
+[Achat et revente — technologies](../instructions/metiers/achat-revente-technologies.md). Dans l’application : [Instruction métier](/documentation/metier).

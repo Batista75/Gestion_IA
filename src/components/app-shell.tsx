@@ -51,7 +51,7 @@ const sections = [
       { href: "/listes/documents", label: "Documents" },
       { href: "/listes/textes", label: "Modèles" },
       { href: "/configuration", label: "Configuration" },
-      { href: "/documentation/v2", label: "Cible V2" },
+      { href: "/documentation/v2", label: "Demandes" },
       { href: "/plus", label: "Plus" },
     ],
   },

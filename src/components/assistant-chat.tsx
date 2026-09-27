@@ -393,7 +393,7 @@ function UnderstandingPanel({
             Corriger la fiche
           </Button>
           <p className="text-xs leading-5 text-muted-foreground">
-            La correction vaut pour cette demande. Le message d’origine n’est pas réécrit.
+            La correction vaut pour ce document. Elle ne devient pas une règle. Le message d’origine n’est pas réécrit.
           </p>
         </>
       ) : null}

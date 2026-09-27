@@ -24,10 +24,15 @@ export default async function MorePage({
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Plus</h1>
         <p className="text-sm leading-6 text-muted-foreground">
-          Le manuel décrit les écrans en service. L’instruction métier fixe
-          l’ordre des preuves de l’achat-revente. La spécification fonctionnelle
-          décrit le produit visé, la spécification technique décrit le socle
-          livré. Les listes sont dans le menu de gauche. Le serveur, les modèles
+          Le manuel décrit les écrans en service. Les demandes sont dans{" "}
+          <Link href="/documentation/v2" className="font-medium text-foreground underline-offset-4 hover:underline">
+            docs/fonctionnel
+          </Link>
+          , le socle dans{" "}
+          <Link href="/documentation/technique" className="font-medium text-foreground underline-offset-4 hover:underline">
+            docs/technique
+          </Link>
+          . Les deux affichent les mêmes réalisations que le tableau ci-dessous. Les listes sont dans le menu de gauche. Le serveur, les modèles
           et la clé d’API sont dans{" "}
           <Link href="/configuration" className="font-medium text-foreground underline-offset-4 hover:underline">
             Configuration
@@ -40,8 +45,8 @@ export default async function MorePage({
         <CardHeader>
           <CardTitle>Documentation</CardTitle>
           <CardDescription>
-            Le manuel et les spécifications sont dans docs. L’instruction métier
-            est dans instructions/metiers.
+            Demandes : docs/fonctionnel. Technique : docs/technique. Publication : mkdocs serve dans chaque répertoire. L’instruction métier
+            est dans instructions/metiers. Le PDF du 26 septembre est conservé.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -61,7 +66,7 @@ export default async function MorePage({
             href="/documentation/specification"
             className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
           >
-            Spécification fonctionnelle
+            PDF d’origine
           </a>
           <Link
             href="/documentation/technique"
@@ -79,7 +84,7 @@ export default async function MorePage({
             href="/documentation/v2"
             className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
           >
-            Cible V2
+            Demandes fonctionnelles
           </Link>
         </CardContent>
       </Card>

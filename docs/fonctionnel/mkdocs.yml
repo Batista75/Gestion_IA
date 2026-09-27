@@ -1,0 +1,12 @@
+site_name: Gestion IA — Demandes fonctionnelles
+site_description: Demandes fonctionnelles de Gestion IA, alignées sur les réalisations.
+docs_dir: docs
+use_directory_urls: true
+theme:
+  name: mkdocs
+nav:
+  - Accueil: index.md
+  - Chaîne: chaine.md
+  - Catalogue: catalogue.md
+  - Périmètre: perimetre.md
+  - Réalisations: realisations.md

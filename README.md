@@ -1,6 +1,6 @@
 # Gestion IA
 
-Application locale de gestion pour une petite entreprise : dossiers projet, informations à classer, et calcul déterministe du prix de vente. La documentation est dans [`docs/README.md`](docs/README.md) : la spécification fonctionnelle ([`docs/specifications-gestion-ia.pdf`](docs/specifications-gestion-ia.pdf)) et le manuel utilisateur ([`docs/manuel-utilisateur.md`](docs/manuel-utilisateur.md)), affiché dans l’application.
+Application locale de gestion pour une petite entreprise : dossiers projet, informations à classer, et calcul déterministe du prix de vente. La documentation est dans [`docs/README.md`](docs/README.md) : les demandes dans [`docs/fonctionnel`](docs/fonctionnel/mkdocs.yml), le socle dans [`docs/technique`](docs/technique/mkdocs.yml), le manuel ([`docs/manuel-utilisateur.md`](docs/manuel-utilisateur.md)) et le PDF conservé ([`docs/specifications-gestion-ia.pdf`](docs/specifications-gestion-ia.pdf)).
 
 Ce socle couvre l’accueil, la création d’un projet, le simulateur de taux de marque et l’assistant. L’assistant envoie le texte à Ollama sur le PC hôte. Les achats, la banque et le pilotage chiffré restent décrits dans l’interface, sans données inventées.
 

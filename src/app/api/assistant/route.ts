@@ -53,6 +53,13 @@ import {
   type StoredTask,
 } from "@/domain/task-path";
 import { loadTask, saveTask } from "@/lib/task-path";
+import {
+  documentKey,
+  documentLabel,
+  memoryNotice,
+  type DocumentMemory,
+} from "@/domain/document-memory";
+import { loadDocumentMemory, saveDocumentMemory } from "@/lib/document-memory";
 import { attachConversationProject, resolveContext } from "@/lib/context-envelope";
 import { asksHybridQuote } from "@/domain/hybrid-quote";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
@@ -132,6 +139,7 @@ export async function POST(request: Request) {
           ? `Parcours repris. La réponse « ${kept.accepted} » continue la même demande.`
           : "Ce point n’est pas retenu.",
         prior: stored,
+        learned: kept ? learnedField(stored.field, kept.accepted) : null,
       });
     }
   }
@@ -160,22 +168,39 @@ export async function POST(request: Request) {
     });
   }
   if (free.execution === "absente" && free.id) {
+    const label = documentLabel(snapshot);
+    const samePiece =
+      Boolean(correction) ||
+      !label ||
+      Boolean(stored?.attachments.some((name) => documentKey(name) === documentKey(label)));
+    const carried = samePiece ? stored : null;
+    const memory = label ? await loadDocumentMemory(label) : null;
+    const learned = learnedFromCorrection(correction);
     return publishBlocked({
       conversationId,
       request: baseText,
       decision: free,
       snapshot,
       view: hint.view,
-      overrides: fieldOverrides(
-        {
-          projet: correction?.projet || stored?.overrides.projet || "",
-          type: correction?.type || stored?.overrides.type || "",
-          societe: correction?.société || stored?.overrides.societe || "",
-        },
-        { ...(stored?.valeurs ?? {}), ...(correction?.valeurs ?? {}) },
+      overrides: withMemory(
+        fieldOverrides(
+          {
+            projet: correction?.projet || carried?.overrides.projet || "",
+            type: correction?.type || carried?.overrides.type || "",
+            societe: correction?.société || carried?.overrides.societe || "",
+          },
+          { ...(carried?.valeurs ?? {}), ...(correction?.valeurs ?? {}) },
+        ),
+        memory,
       ),
-      preface: correction && stored?.status === "suspendue" ? "Parcours repris. La fiche continue la même demande." : "",
+      preface: [
+        learned ? "" : memory ? memoryNotice(memory) : "",
+        correction && stored?.status === "suspendue" ? "Parcours repris. La fiche continue la même demande." : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
       prior: stored,
+      learned,
     });
   }
 
@@ -190,6 +215,7 @@ export async function POST(request: Request) {
       overrides: correction,
       preface: interpretationLine(interpreted),
       prior: null,
+      learned: null,
     });
   }
   if (free.execution === "absente") {
@@ -425,6 +451,38 @@ async function resumeSnapshot(snapshot: ContextSnapshot, task: StoredTask): Prom
   return next;
 }
 
+function learnedField(field: string, value: string): { projet: string; type: string; societe: string } | null {
+  const kept = value.trim();
+  if (!kept) return null;
+  if (field === "projet") return { projet: kept, type: "", societe: "" };
+  if (field === "type") return { projet: "", type: kept, societe: "" };
+  if (field === "société") return { projet: "", type: "", societe: kept };
+  return null;
+}
+
+function learnedFromCorrection(
+  correction: FieldOverrides | null,
+): { projet: string; type: string; societe: string } | null {
+  if (!correction) return null;
+  const projet = correction.projet.trim();
+  const type = correction.type.trim();
+  const societe = correction.société.trim();
+  if (!projet && !type && !societe) return null;
+  return { projet, type, societe };
+}
+
+function withMemory(base: FieldOverrides, memory: DocumentMemory | null): FieldOverrides {
+  if (!memory) return base;
+  return fieldOverrides(
+    {
+      projet: base.projet || memory.projet,
+      type: base.type || memory.type,
+      societe: base.société || memory.societe,
+    },
+    base.valeurs ?? {},
+  );
+}
+
 async function publishBlocked(input: {
   conversationId: string;
   request: string;
@@ -434,7 +492,21 @@ async function publishBlocked(input: {
   overrides: FieldOverrides | null;
   preface: string;
   prior: StoredTask | null;
+  learned?: { projet: string; type: string; societe: string } | null;
 }): Promise<Response> {
+  const learned = input.learned ?? null;
+  const label = documentLabel(input.snapshot);
+  let preface = input.preface;
+  if (learned && (learned.projet || learned.type || learned.societe)) {
+    if (label) {
+      const saved = await saveDocumentMemory(label, learned);
+      if (saved && !preface.includes("ne devient pas une règle")) {
+        preface = [preface, memoryNotice(saved)].filter(Boolean).join("\n");
+      }
+    } else if (!preface.includes("Aucune pièce")) {
+      preface = [preface, "Aucune pièce n’est nommée : la correction reste sur cette demande."].filter(Boolean).join("\n");
+    }
+  }
   const blocked = await blockedTurn(input.request, input.decision, input.snapshot, input.overrides);
   const ready = blocked.card?.confirm === "";
   const steps = taskSteps({ ready, simulated: Boolean(blocked.card?.simulation) });
@@ -463,7 +535,7 @@ async function publishBlocked(input: {
   }
   return streamDirect({
     conversationId: input.conversationId,
-    reply: blockedReply(input.decision, { question: blocked.question, card }, input.snapshot, [input.preface, path].filter(Boolean).join("\n")),
+    reply: blockedReply(input.decision, { question: blocked.question, card }, input.snapshot, [preface, path].filter(Boolean).join("\n")),
     source: "regle-metier",
     step: card ? "Parcours" : "Catalogue",
     understanding: card,
