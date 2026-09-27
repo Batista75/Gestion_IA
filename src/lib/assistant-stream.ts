@@ -22,6 +22,7 @@ type FieldList = { fields: Array<{ label: string; value: string }> };
 
 type Meta = {
   source: string;
+  modelVersion: string;
   proposal: FieldList | null;
   sources: Array<{ label: string; title: string }>;
   understanding: UnderstandingCard | null;
@@ -40,6 +41,7 @@ type DirectTurn = {
 export function streamDirect(input: DirectTurn): Response {
   const metadata: Meta = {
     source: input.source,
+    modelVersion: input.source === "ollama" ? "ollama" : "regle",
     proposal: input.proposal ?? null,
     sources: input.sources ?? [],
     understanding: input.understanding ?? null,
@@ -71,6 +73,7 @@ export function streamDirect(input: DirectTurn): Response {
         role: "assistant",
         content: input.reply,
         source: input.source,
+        modelVersion: metadata.modelVersion,
         steps: [input.step],
         proposal: input.proposal,
         sources: input.sources,
@@ -97,7 +100,13 @@ export async function streamModel(input: {
     apiKey: config.apiKey || "ollama",
     name: "ollama",
   });
-  const side: Meta = { source: "ollama", proposal: null, sources: [], understanding: null };
+  const side: Meta = {
+    source: "ollama",
+    modelVersion: input.model.trim() || "ollama",
+    proposal: null,
+    sources: [],
+    understanding: null,
+  };
 
   const stream = createUIMessageStream({
     originalMessages: input.messages,
@@ -155,6 +164,7 @@ export async function streamModel(input: {
             part.type === "finish"
               ? {
                   source: side.source,
+                  modelVersion: side.modelVersion,
                   proposal: side.proposal,
                   sources: side.sources,
                   understanding: null,
@@ -189,6 +199,7 @@ async function pumpModelStream(
       role: "assistant",
       content,
       source: side.source,
+      modelVersion: side.modelVersion,
       steps,
       proposal: side.proposal,
       sources: side.sources,
@@ -237,7 +248,7 @@ async function writePlainReply(
   writer.write({ type: "text-start", id });
   writer.write({ type: "text-delta", id, delta: reply });
   writer.write({ type: "text-end", id });
-  await rememberTurn({ conversationId, role: "assistant", content: reply, source, steps });
+  await rememberTurn({ conversationId, role: "assistant", content: reply, source, modelVersion: "regle", steps });
   writer.write({ type: "finish" });
 }
 

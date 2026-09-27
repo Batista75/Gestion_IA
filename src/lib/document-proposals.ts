@@ -1,4 +1,5 @@
 import { nameKey } from "@/domain/catalog";
+import { stampProvenance } from "@/domain/provenance";
 import {
   proposeFromReading,
   type DirectorySnapshot,
@@ -31,6 +32,7 @@ export async function queueDocumentProposals(
         title: draft.title,
         summary: draft.summary,
         payload: draft,
+        ...stampProvenance("lecture", draft.fields),
       },
     });
     count += 1;
@@ -57,12 +59,12 @@ export async function confirmDocumentProposal(id: string): Promise<{ ok: boolean
   }
   await prisma.documentProposal.update({
     where: { id },
-    data: { status: "confirmee" },
+    data: { status: "confirmee", validatedAt: new Date() },
   });
   const done = notes.filter(Boolean);
   return {
     ok: true,
-    message: done.length > 0 ? done.join(" ") : "Pièce confirmée. Aucune fiche nouvelle.",
+    message: `${done.length > 0 ? done.join(" ") : "Pièce confirmée. Aucune fiche nouvelle."} Validation enregistrée.`,
   };
 }
 
@@ -73,9 +75,9 @@ export async function dismissDocumentProposal(id: string): Promise<{ ok: boolean
   }
   await prisma.documentProposal.update({
     where: { id },
-    data: { status: "ecartee" },
+    data: { status: "ecartee", validatedAt: new Date() },
   });
-  return { ok: true, message: "Proposition écartée. Le fichier reste dans À classer." };
+  return { ok: true, message: "Proposition écartée. Le fichier reste dans À classer. Validation enregistrée." };
 }
 
 async function applyAction(
@@ -263,6 +265,20 @@ async function ragHits(
     return found.map((doc) => ({ label: sourceLabel(doc.sourceType), title: doc.title }));
   } catch {
     return [];
+  }
+}
+
+export async function fillDocumentProvenance(): Promise<void> {
+  const rows = await prisma.documentProposal.findMany({
+    where: { modelVersion: "" },
+    take: 40,
+  });
+  for (const row of rows) {
+    const draft = readDraft(row.payload);
+    await prisma.documentProposal.update({
+      where: { id: row.id },
+      data: stampProvenance("lecture", draft?.fields ?? []),
+    });
   }
 }
 

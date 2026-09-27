@@ -177,25 +177,34 @@ model ConversationMessage {
   steps          Json?
   proposal       Json?
   sources        Json?
+  modelVersion   String       @default("")
+  confidence     Json         @default("[]")
+  validatedAt    DateTime?
   createdAt      DateTime     @default(now())
 
   @@index([conversationId])
 }
 
 model CatalogProposal {
-  id        String   @id @default(cuid())
-  status    String   @default("en_attente")
-  payload   Json
-  createdAt DateTime @default(now())
+  id           String    @id @default(cuid())
+  status       String    @default("en_attente")
+  payload      Json
+  modelVersion String    @default("")
+  confidence   Json      @default("[]")
+  validatedAt  DateTime?
+  createdAt    DateTime  @default(now())
 
   @@index([status])
 }
 
 model ClientProposal {
-  id        String   @id @default(cuid())
-  status    String   @default("en_attente")
-  payload   Json
-  createdAt DateTime @default(now())
+  id           String    @id @default(cuid())
+  status       String    @default("en_attente")
+  payload      Json
+  modelVersion String    @default("")
+  confidence   Json      @default("[]")
+  validatedAt  DateTime?
+  createdAt    DateTime  @default(now())
 
   @@index([status])
 }
@@ -380,11 +389,14 @@ model DocumentProposal {
   status    String      @default("en_attente")
   fileId    String?
   file      StoredFile? @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  kind      String
-  title     String
-  summary   String
-  payload   Json
-  createdAt DateTime    @default(now())
+  kind         String
+  title        String
+  summary      String
+  payload      Json
+  modelVersion String      @default("")
+  confidence   Json        @default("[]")
+  validatedAt  DateTime?
+  createdAt    DateTime    @default(now())
 
   @@index([status])
   @@index([fileId])

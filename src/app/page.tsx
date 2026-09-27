@@ -3,6 +3,7 @@ import { deleteFileAction, deleteInboxAction, updateInboxAction } from "@/app/ca
 import { AssistantChat } from "@/components/assistant-chat";
 import { ConfirmDelete, NoteEditor } from "@/components/record-actions";
 import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
+import { fillDocumentProvenance } from "@/lib/document-proposals";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -66,6 +67,7 @@ export default async function HomePage({
       ? await loadConversation(requested)
       : await latestConversation();
   const conversationId = thread?.id ?? (requested && !fresh ? requested : crypto.randomUUID());
+  await fillDocumentProvenance();
   const [projects, inbox, proposals, alerts] = await Promise.all([
     recentProjectCards(),
     prisma.inboxItem.findMany({
@@ -92,6 +94,8 @@ export default async function HomePage({
       fileId: proposal.fileId ?? "",
       fields: view.fields,
       sources: view.sources,
+      modelVersion: proposal.modelVersion,
+      confidence: confidenceOf(proposal.confidence),
     };
   });
 
@@ -253,4 +257,15 @@ export default async function HomePage({
       </section>
     </div>
   );
+}
+
+function confidenceOf(value: unknown): Array<{ field: string; confidence: number }> {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const field = "field" in item && typeof item.field === "string" ? item.field : "";
+    const confidence = "confidence" in item && typeof item.confidence === "number" ? item.confidence : null;
+    if (!field || confidence === null || confidence < 0 || confidence > 1) return [];
+    return [{ field, confidence }];
+  });
 }

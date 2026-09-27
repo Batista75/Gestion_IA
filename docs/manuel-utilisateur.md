@@ -25,7 +25,7 @@ Les données restent sur cette machine. L’assistant envoie le texte à Ollama 
 
 ## Accueil
 
-L’accueil répond à trois questions : que traiter, où en sont les projets, que demander à l’assistant. Le champ s’intitule **Que souhaitez-vous faire ?** En dessous : les propositions à confirmer ou à ignorer, les alertes, puis les cartes des projets récents. Le montant d’un devis n’apparaît que s’il est chiffré. L’assistant reste l’expert de l’activité, en achat-revente ou en fourniture de services.
+L’accueil répond à trois questions : que traiter, où en sont les projets, que demander à l’assistant. Le champ s’intitule **Que souhaitez-vous faire ?** En dessous : les propositions à confirmer ou à ignorer, les alertes, puis les cartes des projets récents. Une proposition issue d’une pièce indique **Lecture de la pièce**, la confiance de chaque champ recopié, et **en attente de validation**. Confirmer ou ignorer enregistre la validation. Rien n’est écrit avant. Le montant d’un devis n’apparaît que s’il est chiffré. L’assistant reste l’expert de l’activité, en achat-revente ou en fourniture de services.
 
 Le même bloc sert à écrire, à joindre des fichiers et à poser une question. Le bouton **Envoyer** lance la lecture. Jusqu’à 8 fichiers de 20 Mo. Docling, sur cette machine, lit un PDF, un document Word, un tableur, une présentation ou une image : les titres et les tableaux deviennent des extraits recherchables. Un texte simple est lu directement. Si Docling n’est pas disponible, un PDF ou un Word dont le texte peut être extrait reste indexé. Si aucun texte n’est lu, le fichier est quand même enregistré.
 

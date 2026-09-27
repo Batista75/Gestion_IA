@@ -270,6 +270,9 @@ Proposition tirée d’un fichier.
 - `fileId` vers `StoredFile`.
 - `kind`, `title`, `summary`.
 - `payload` : brouillon `DocumentProposalDraft` (`kind`, `title`, `summary`, `fields`, `actions`, `sources`).
+- `modelVersion` : `lecture` pour une pièce relue sans modèle.
+- `confidence` : un nombre entre 0 et 1 par champ recopié. Un champ vide n’a pas de score. Les montants ne sont pas additionnés.
+- `validatedAt` : date de la confirmation ou du rejet. Tant qu’elle est vide, rien n’est écrit.
 - `createdAt`.
 
 ### CatalogProposal
@@ -278,6 +281,7 @@ Commande de catalogue encore à confirmer.
 
 - `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
 - `payload` : `CatalogCommand` (`create_client`, `update_client`, `create_supplier`, `update_supplier`, `create_product`, `update_product`, `create_project`, `record_quote`).
+- `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.
 
 ### ClientProposal
@@ -286,6 +290,7 @@ Fiche client encore à confirmer.
 
 - `status` : `en_attente`, `remplacee`, `confirmee`.
 - `payload` : `ClientDraft` (mode `create` ou `update`, `kind`, `scope`, identité, adresse, immatriculation, contact, `notes`, `missing`).
+- `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.
 
 ## Assistant
@@ -305,6 +310,9 @@ Fil de discussion.
 - `steps` : liste de textes du parcours, JSON.
 - `proposal` : champs `{ label, value }` et, le cas échéant, la carte de compréhension.
 - `sources` : liste `{ label, title }`.
+- `modelVersion` : `saisie` pour l’utilisateur, le nom du modèle pour une réponse Ollama, `regle` pour une réponse déjà reconnue.
+- `confidence` : champs de la proposition, entre 0 et 1. Vide s’il n’y a pas de proposition.
+- `validatedAt` reste vide : la validation d’une écriture est celle de la proposition, pas celle du message.
 - `createdAt`.
 
 ### AssistantTask
@@ -372,7 +380,7 @@ Les faits de page et de zone affichés dans le fil sont calculés à la lecture.
 
 ## Avancement du lot
 
-8 sur 9, soit 89 %.
+9 sur 9, soit 100 %.
 
 | Point | État |
 | --- | --- |
@@ -384,7 +392,7 @@ Les faits de page et de zone affichés dans le fil sont calculés à la lecture.
 | Organisation unique, client et fournisseur | Fait |
 | Pièce commerciale reliée à sa parente, sans numéro de facture | Fait |
 | Comparaison de l’historique de prix | Fait |
-| Confiance, version du modèle et validation | Pas fait |
+| Confiance, version du modèle et validation | Fait |
 
 ## Cible encore non construite
 
@@ -393,10 +401,6 @@ Le lot suivant est retenu. Ces noms ne sont pas des tables.
 Priorité haute, pas encore faites :
 
 - Livraison, facture et avoir reliés à leur pièce parente. L’application n’émet toujours pas de facture et n’attribue pas de numéro.
-
-Priorité suivante :
-
-- Confiance par champ, version du modèle et validation sur `DocumentProposal`, `CatalogProposal` et `ConversationMessage`. `DocumentProposal` reste le sas : rien n’est écrit avant confirmation.
 
 À terme, trois couches restent séparées. La vérité métier est confirmée. La preuve est le fichier et le texte extrait. L’interprétation de l’assistant est une proposition, jamais une fiche implicite.
 

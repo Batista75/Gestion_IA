@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { UnderstandingCard } from "@/domain/completeness";
+import { provenanceLabel } from "@/domain/provenance";
 import type { StoredTurn } from "@/lib/conversations";
 import { cn } from "cn";
 
@@ -20,6 +21,7 @@ type Field = { label: string; value: string };
 type SourceRef = { label: string; title: string };
 type ChatMeta = {
   source?: string;
+  modelVersion?: string;
   proposal?: { fields: Field[] } | null;
   sources?: SourceRef[];
   understanding?: UnderstandingCard | null;
@@ -254,6 +256,9 @@ function MessageRow({
   return (
     <li className="grid gap-1 rounded-lg border border-border px-3 py-2">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      {provenanceLabel(message.metadata?.modelVersion ?? "") ? (
+        <span className="text-xs text-muted-foreground">{provenanceLabel(message.metadata?.modelVersion ?? "")}</span>
+      ) : null}
       {steps.length > 0 ? (
         <ul className="grid gap-1">
           {steps.map((step, index) => (
@@ -303,6 +308,7 @@ function toUi(turns: StoredTurn[]): ChatMessage[] {
     role: turn.role,
     metadata: {
       source: turn.source,
+      modelVersion: turn.modelVersion,
       proposal: turn.proposal,
       sources: turn.sources,
       understanding: turn.understanding,

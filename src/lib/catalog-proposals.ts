@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { presentCommand, type CatalogCommand } from "@/domain/catalog";
+import { stampProvenance } from "@/domain/provenance";
 import { proposalFields } from "@/domain/client-file";
 import { confirmCurrentProposal, currentProposal, proposeFromParty, type ProposalView } from "@/lib/client-proposals";
 import { applyCatalogCommand } from "@/lib/catalog-store";
@@ -18,7 +19,7 @@ export async function openCatalogProposal(
     data: { status: "remplacee" },
   });
   await prisma.catalogProposal.create({
-    data: { status: "en_attente", payload: command },
+    data: { status: "en_attente", payload: command, ...stampProvenance("regle", presented.fields) },
   });
   revalidatePath("/");
   return { reply: presented.reply, proposal: { fields: presented.fields } };
@@ -35,7 +36,7 @@ export async function confirmCatalogProposal(): Promise<{ ok: boolean; summary: 
   if (!saved.ok) return saved;
   await prisma.catalogProposal.update({
     where: { id: row.id },
-    data: { status: "confirmee" },
+    data: { status: "confirmee", validatedAt: new Date() },
   });
   return saved;
 }
@@ -59,7 +60,7 @@ export async function rejectLatestWrite(): Promise<{
   if (catalogFirst && catalog) {
     await prisma.catalogProposal.update({
       where: { id: catalog.id },
-      data: { status: "rejetee" },
+      data: { status: "rejetee", validatedAt: new Date() },
     });
     revalidatePath("/");
     return { reply: "Rien n’est enregistré. Reformulez la fiche si besoin." };

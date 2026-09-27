@@ -22,6 +22,7 @@ import { withChangeSource } from "@/lib/change-source";
 import { syncPrimaryAddress } from "@/lib/addresses";
 import { attachOrganization } from "@/lib/organizations";
 import { syncPrimaryContact } from "@/lib/contacts";
+import { stampProvenance } from "@/domain/provenance";
 import { prisma } from "@/lib/db";
 
 const PATHS = [
@@ -51,7 +52,7 @@ export async function openClientProposal(draft: ClientDraft): Promise<ProposalVi
     data: { status: "remplacee" },
   });
   await prisma.clientProposal.create({
-    data: { status: "en_attente", payload: ready },
+    data: { status: "en_attente", payload: ready, ...stampProvenance("regle", proposalFields(ready)) },
   });
   return view(ready);
 }
@@ -76,7 +77,7 @@ export async function confirmCurrentProposal(): Promise<{
   if (!saved.ok) return saved;
   await prisma.clientProposal.updateMany({
     where: { status: "en_attente" },
-    data: { status: "confirmee" },
+    data: { status: "confirmee", validatedAt: new Date() },
   });
   return saved;
 }

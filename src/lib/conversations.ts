@@ -1,4 +1,5 @@
 import { readUnderstanding, type UnderstandingCard } from "@/domain/completeness";
+import { stampProvenance } from "@/domain/provenance";
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { prisma } from "@/lib/db";
 
@@ -11,6 +12,7 @@ export type StoredTurn = {
   proposal: { fields: Array<{ label: string; value: string }> } | null;
   sources: Array<{ label: string; title: string }>;
   understanding: UnderstandingCard | null;
+  modelVersion: string;
 };
 
 const ID_RE = /^[\w-]{8,80}$/;
@@ -33,6 +35,7 @@ export async function rememberTurn(input: {
   sources?: Array<{ label: string; title: string }>;
   understanding?: UnderstandingCard | null;
   linkText?: string;
+  modelVersion?: string;
 }): Promise<void> {
   const content = input.content.trim();
   if (!content && (input.steps?.length ?? 0) === 0) return;
@@ -65,6 +68,7 @@ export async function rememberTurn(input: {
       steps: input.steps ?? [],
       proposal: storedProposal(input.proposal, input.understanding),
       sources: input.sources ?? [],
+      ...stampProvenance(messageVersion(input), input.proposal?.fields ?? []),
     },
   });
   if (input.linkText) await linkConversation(input.conversationId, input.linkText);
@@ -144,6 +148,7 @@ function presentConversation(row: {
     steps: unknown;
     proposal: unknown;
     sources: unknown;
+    modelVersion: string;
   }>;
 }): { id: string; projectName: string; messages: StoredTurn[] } {
   return {
@@ -158,12 +163,20 @@ function presentConversation(row: {
       proposal: proposalOf(message.proposal),
       sources: sourceList(message.sources),
       understanding: readUnderstanding(message.proposal),
+      modelVersion: message.modelVersion,
     })),
   };
 }
 
 function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function messageVersion(input: { role: string; source?: string; modelVersion?: string }): string {
+  if (input.modelVersion?.trim()) return input.modelVersion.trim();
+  if (input.role === "user") return "saisie";
+  if (input.source === "ollama") return "ollama";
+  return "regle";
 }
 
 function storedProposal(

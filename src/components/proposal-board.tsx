@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { kindLabel } from "@/domain/offer-versions";
+import { confidenceLabel, provenanceLabel } from "@/domain/provenance";
 
 export type PendingProposal = {
   id: string;
@@ -18,6 +19,8 @@ export type PendingProposal = {
   fileId: string;
   fields: Array<{ label: string; value: string }>;
   sources: Array<{ label: string; title: string }>;
+  modelVersion: string;
+  confidence: Array<{ field: string; confidence: number }>;
 };
 
 export function ProposalBoard({ proposals }: { proposals: PendingProposal[] }) {
@@ -66,14 +69,23 @@ export function ProposalBoard({ proposals }: { proposals: PendingProposal[] }) {
                 <span className="text-sm font-medium">{proposal.title}</span>
               )}
             </div>
+            <p className="text-xs text-muted-foreground">
+              {provenanceLabel(proposal.modelVersion) || "Origine non indiquée"} · en attente de validation
+            </p>
             <p className="text-sm leading-6 whitespace-pre-wrap break-words">{proposal.summary}</p>
             <dl className="grid gap-1 text-sm">
-              {proposal.fields.map((field) => (
-                <div key={field.label} className="grid gap-1 sm:grid-cols-[8rem_1fr]">
-                  <dt className="text-muted-foreground">{field.label}</dt>
-                  <dd className="whitespace-pre-wrap break-words">{field.value}</dd>
-                </div>
-              ))}
+              {proposal.fields.map((field) => {
+                const score = proposal.confidence.find((item) => item.field === field.label);
+                return (
+                  <div key={field.label} className="grid gap-1 sm:grid-cols-[8rem_1fr]">
+                    <dt className="text-muted-foreground">{field.label}</dt>
+                    <dd className="whitespace-pre-wrap break-words">
+                      {field.value}
+                      {score ? ` · confiance ${confidenceLabel(score.confidence)}` : ""}
+                    </dd>
+                  </div>
+                );
+              })}
             </dl>
             {proposal.sources.length > 0 ? (
               <p className="text-xs leading-5 text-muted-foreground">
