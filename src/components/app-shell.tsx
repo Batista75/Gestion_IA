@@ -2,59 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useState, type ReactNode } from "react";
+import { Search } from "lucide-react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { cn } from "cn";
 
-const sections = [
-  {
-    title: "Accueil",
-    links: [{ href: "/", label: "Tableau personnel" }],
-  },
-  {
-    title: "Projets",
-    links: [{ href: "/projets", label: "Tous les projets" }],
-  },
-  {
-    title: "Ventes",
-    links: [{ href: "/suivi", label: "Devis" }],
-  },
-  {
-    title: "Achats",
-    links: [{ href: "/achats", label: "Achats" }],
-  },
-  {
-    title: "Référentiels",
-    links: [
-      { href: "/clients", label: "Clients" },
-      { href: "/fournisseurs", label: "Fournisseurs" },
-      { href: "/produits", label: "Produits et services" },
-    ],
-  },
-  {
-    title: "Finance",
-    links: [
-      { href: "/listes/echeances", label: "Échéances" },
-      { href: "/banque", label: "Banque" },
-      { href: "/comptabilite/journal", label: "Journal" },
-    ],
-  },
-  {
-    title: "Pilotage",
-    links: [
-      { href: "/pilotage", label: "Tableau de bord" },
-      { href: "/pilotage/analyse", label: "Analyses" },
-    ],
-  },
-  {
-    title: "Administration",
-    links: [
-      { href: "/listes/documents", label: "Documents" },
-      { href: "/listes/textes", label: "Modèles" },
-      { href: "/configuration", label: "Configuration" },
-      { href: "/documentation/v2", label: "Demandes" },
-      { href: "/plus", label: "Plus" },
-    ],
-  },
+const daily = [
+  { href: "/", label: "Accueil" },
+  { href: "/projets", label: "Projets" },
+  { href: "/clients", label: "Clients" },
+  { href: "/fournisseurs", label: "Fournisseurs" },
+  { href: "/produits", label: "Produits" },
+] as const;
+
+const more = [
+  { href: "/suivi", label: "Devis" },
+  { href: "/achats", label: "Achats" },
+  { href: "/listes/echeances", label: "Échéances" },
+  { href: "/banque", label: "Banque" },
+  { href: "/comptabilite/journal", label: "Journal" },
+  { href: "/pilotage", label: "Pilotage" },
+  { href: "/pilotage/analyse", label: "Analyses" },
+  { href: "/listes/documents", label: "Documents" },
+  { href: "/listes/textes", label: "Modèles" },
+  { href: "/configuration", label: "Configuration" },
+  { href: "/manuel", label: "Manuel" },
+  { href: "/plus", label: "Plus" },
+  { href: "/recherche", label: "Recherche" },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -64,8 +37,51 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function placeLabel(pathname: string): string {
+  if (pathname.startsWith("/documentation")) return "Documentation";
+  if (pathname.startsWith("/repertoire")) return "Répertoire";
+  const match = [...daily, ...more]
+    .filter((link) => isActive(pathname, link.href))
+    .sort((left, right) => right.href.length - left.href.length)[0];
+  return match?.label ?? "Gestion IA";
+}
+
+function NavLink({
+  href,
+  label,
+  active,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  onNavigate: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      onClick={onNavigate}
+      className={cn(
+        "flex min-h-11 items-center rounded-lg px-3 text-sm",
+        active ? "bg-primary font-medium text-primary-foreground" : "hover:bg-muted",
+      )}
+    >
+      {label}
+    </Link>
+  );
+}
+
 function SideBar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
   const pathname = usePathname();
+  const inMore = more.some((link) => link.href !== "/recherche" && isActive(pathname, link.href));
+  const [expanded, setExpanded] = useState(false);
+  const showMore = expanded || inMore;
+
+  useEffect(() => {
+    if (!inMore) setExpanded(false);
+  }, [inMore, pathname]);
+
   return (
     <aside
       className={cn(
@@ -78,32 +94,44 @@ function SideBar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
           Gestion IA
         </Link>
       </div>
-      <nav aria-label="Rubriques" className="grid gap-4 px-3 pb-8">
-        {sections.map((section) => (
-          <div key={section.title} className="grid gap-1">
-            <p className="px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">{section.title}</p>
-            <ul className="grid">
-              {section.links.map((link) => {
-                const active = isActive(pathname, link.href);
-                return (
-                  <li key={`${section.title}-${link.href}-${link.label}`}>
-                    <Link
-                      href={link.href}
-                      aria-current={active ? "page" : undefined}
-                      onClick={onNavigate}
-                      className={cn(
-                        "flex min-h-10 items-center rounded-lg px-2 text-sm",
-                        active ? "bg-primary font-medium text-primary-foreground" : "hover:bg-muted",
-                      )}
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+      <nav aria-label="Rubriques" className="grid gap-1 px-3 pb-8">
+        <ul className="grid gap-1">
+          {daily.map((link) => (
+            <li key={link.href}>
+              <NavLink
+                href={link.href}
+                label={link.label}
+                active={isActive(pathname, link.href)}
+                onNavigate={onNavigate}
+              />
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          className="mt-3 flex min-h-11 items-center justify-between rounded-lg px-3 text-sm font-medium hover:bg-muted"
+          aria-expanded={showMore}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          Autres
+          <span aria-hidden="true">{showMore ? "–" : "+"}</span>
+        </button>
+        {showMore ? (
+          <ul className="grid gap-1">
+            {more
+              .filter((link) => link.href !== "/recherche")
+              .map((link) => (
+                <li key={link.href}>
+                  <NavLink
+                    href={link.href}
+                    label={link.label}
+                    active={isActive(pathname, link.href)}
+                    onNavigate={onNavigate}
+                  />
+                </li>
+              ))}
+          </ul>
+        ) : null}
       </nav>
     </aside>
   );
@@ -116,7 +144,34 @@ export function AppShell({
   company: string;
   children: ReactNode;
 }) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const place = placeLabel(pathname);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      event.preventDefault();
+      document.getElementById("global-search")?.focus();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <div className="min-h-full lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
       <Suspense fallback={<div className="hidden border-r border-border lg:block" />}>
@@ -131,31 +186,36 @@ export function AppShell({
         />
       ) : null}
       <div className="min-w-0">
-        <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border bg-card px-4 print:hidden">
+        <header className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-border bg-card px-3 print:hidden sm:px-4">
           <button
             type="button"
-            className="inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium lg:hidden"
+            className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium lg:hidden"
+            aria-expanded={open}
             onClick={() => setOpen(true)}
           >
             Menu
           </button>
-          <form action="/recherche" className="hidden min-w-0 flex-1 md:block">
-            <input
-              name="q"
-              placeholder="Rechercher un projet, un tiers, un produit, une pièce"
-              className="h-10 w-full max-w-md rounded-lg border border-input bg-background px-3 text-sm"
+          <p className="hidden min-w-0 max-w-40 truncate text-sm font-medium sm:block">{place}</p>
+          <form action="/recherche" className="relative min-w-0 flex-1">
+            <label htmlFor="global-search" className="sr-only">
+              Rechercher un projet, un tiers, un produit ou une pièce
+            </label>
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
             />
+            <input
+              id="global-search"
+              name="q"
+              placeholder="Rechercher"
+              autoComplete="off"
+              className="h-11 w-full rounded-lg border border-input bg-background pr-10 pl-9 text-sm"
+            />
+            <kbd className="pointer-events-none absolute top-1/2 right-2 hidden -translate-y-1/2 rounded border border-border px-1.5 text-xs text-muted-foreground sm:inline">
+              /
+            </kbd>
           </form>
-          <div className="ml-auto flex items-center gap-3 text-sm">
-            <span className="hidden max-w-48 truncate text-muted-foreground sm:inline">{company}</span>
-            <span className="hidden text-muted-foreground md:inline">J Smith</span>
-            <Link href="/configuration" className="inline-flex min-h-11 items-center hover:underline">
-              Configuration
-            </Link>
-            <Link href="/manuel" className="inline-flex min-h-11 items-center hover:underline">
-              Manuel
-            </Link>
-          </div>
+          <span className="hidden max-w-40 truncate text-sm text-muted-foreground xl:inline">{company}</span>
         </header>
         <main className="px-4 py-6 sm:px-6">{children}</main>
       </div>

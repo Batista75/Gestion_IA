@@ -77,7 +77,7 @@ Si cette commande échoue et que l’Ubuntu est une machine virtuelle VirtualBox
 OLLAMA_BASE_URL="http://10.0.2.2:11434"
 ```
 
-L’accueil affiche alors si Ollama répond et quels modèles sont installés. Une question de prix chiffrée n’est pas envoyée au modèle : le calcul reste dans Ventes. `prépare un devis pour …` lit les conditions du client nommé, le prix catalogue et le stock, puis enregistre un brouillon. Le menu de gauche regroupe Accueil, Projets, Ventes, Achats, Référentiels, Finance, Pilotage et Administration. Plus, sous Administration, tient le tableau de ce qui est fait et de ce qui ne l’est pas.
+L’accueil affiche alors si Ollama répond et quels modèles sont installés. Une question de prix chiffrée n’est pas envoyée au modèle : le calcul reste dans Ventes. `prépare un devis pour …` lit les conditions du client nommé, le prix catalogue et le stock, puis enregistre un brouillon. Le menu du quotidien est Accueil, Projets, Clients, Fournisseurs et Produits. Autres mène au reste, dont Plus, le tableau de ce qui est fait et de ce qui ne l’est pas.
 
 ## Vérifier
 

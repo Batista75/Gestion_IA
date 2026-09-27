@@ -8,24 +8,15 @@ Dernière mise à jour : 27 septembre 2026. Le menu Configuration règle le serv
 
 Sur la machine Ubuntu, ouvrez [l’accueil](/). L’adresse locale est `http://127.0.0.1:3847`.
 
-Le menu est à gauche.
+Le menu du quotidien est à gauche : **Accueil**, **Projets**, **Clients**, **Fournisseurs**, **Produits**. **Autres** ouvre le reste : devis, achats, échéances, banque, journal, pilotage, analyses, documents, modèles, configuration, manuel, Plus. La page en cours est indiquée dans la barre et par le lien surligné.
 
-- **Accueil** : le tableau personnel.
-- **Projets** : tous les projets. Le bouton **Nouveau dossier** est sur cette page.
-- **Ventes** : devis.
-- **Achats**.
-- **Référentiels** : clients, fournisseurs, produits et services.
-- **Finance** : échéances, banque, journal.
-- **Pilotage** : tableau de bord, analyses.
-- **Administration** : documents, modèles de textes, configuration, cible V2, Plus.
-
-Les regroupements et l’historique des lignes restent accessibles par leur adresse, ils ne sont plus dans le menu. La barre du haut porte le nom de l’entreprise, une recherche globale, Configuration et le manuel. Sur un téléphone, **Menu** ouvre le rail. Chaque liste a une recherche, un nombre de lignes (10, 25, 50 ou 100), une pagination et, pour les tableaux commerciaux, un export CSV.
+**Nouveau dossier** est sur la page Projets. Les regroupements et l’historique des lignes restent accessibles par leur adresse. La barre du haut porte la recherche, avec une loupe. La touche **/** y place le curseur, sauf quand vous écrivez déjà dans un champ. Sur un grand écran, le nom de l’entreprise est à droite. Sur un téléphone, **Menu** ouvre le rail ; **Échap** le referme. Chaque liste a une recherche, un nombre de lignes (10, 25, 50 ou 100), une pagination et, pour les tableaux commerciaux, un export CSV.
 
 Les données restent sur cette machine. L’assistant envoie le texte à Ollama sur le PC hôte du réseau local, pas à un service d’IA public.
 
 ## Accueil
 
-L’accueil répond à trois questions : que traiter, où en sont les projets, que demander à l’assistant. Le champ s’intitule **Que souhaitez-vous faire ?** En dessous : les propositions à confirmer ou à ignorer, les alertes, puis les cartes des projets récents. Une proposition issue d’une pièce indique **Lecture de la pièce**, la confiance de chaque champ recopié, et **en attente de validation**. Confirmer ou ignorer enregistre la validation. Rien n’est écrit avant. Le montant d’un devis n’apparaît que s’il est chiffré. L’assistant reste l’expert de l’activité, en achat-revente ou en fourniture de services.
+L’accueil commence par ce qui attend une décision, puis le champ **Que souhaitez-vous faire ?** **Envoyer** reste grisé tant que le champ et les pièces jointes sont vides. **Annuler** vide la saisie. **Ctrl+Entrée** envoie. Pendant la lecture, le bouton indique **Lecture…**. Les deux derniers messages restent visibles ; les plus anciens sont sous **Messages précédents**. Une proposition de pièce indique **Lecture de la pièce**, **en attente de validation**, et la confiance. Le détail des champs s’ouvre avec **Détail**. **Confirmer** ou **Ignorer** retire la ligne dès que la validation est enregistrée. Rien n’est écrit avant. Les projets récents sont une liste. **Pièces reçues** reste replié, avec le nombre de notes. Le montant d’un devis n’apparaît que s’il est chiffré.
 
 Le même bloc sert à écrire, à joindre des fichiers et à poser une question. Le bouton **Envoyer** lance la lecture. Jusqu’à 8 fichiers de 20 Mo. Docling, sur cette machine, lit un PDF, un document Word, un tableur, une présentation ou une image : les titres et les tableaux deviennent des extraits recherchables. Un texte simple est lu directement. Si Docling n’est pas disponible, un PDF ou un Word dont le texte peut être extrait reste indexé. Si aucun texte n’est lu, le fichier est quand même enregistré.
 
@@ -59,7 +50,7 @@ Trois listes reprennent les modèles annoncés par le serveur : **Modèle conver
 
 ## Répertoire
 
-Le groupe **Liste** ouvre directement [Clients](/clients), [Fournisseurs](/fournisseurs) et [Articles](/produits). Le [répertoire](/repertoire) reste une porte d’entrée vers ces trois fiches.
+[Clients](/clients), [Fournisseurs](/fournisseurs) et [Produits](/produits) sont dans le menu du quotidien. Le [répertoire](/repertoire) reste une porte d’entrée vers ces trois fiches.
 
 ## Clients
 

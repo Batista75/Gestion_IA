@@ -2,9 +2,9 @@
 
 Le projet reste l’unité centrale : clients, contacts, besoins, produits et services, devis, commandes, achats, fournisseurs, livraisons, factures, documents, activité, échéances, situation financière.
 
-Le menu reste Accueil, Projets, Ventes, Achats, Référentiels, Finance, Pilotage, Administration. La recherche globale est dans la barre du haut. Les historiques de lignes, les regroupements et les textes restent hors du premier niveau.
+Le menu du quotidien est Accueil, Projets, Clients, Fournisseurs, Produits. Les autres rubriques s’ouvrent depuis Autres. La recherche globale est dans la barre du haut. Les historiques de lignes, les regroupements et les textes restent hors du premier niveau.
 
-L’accueil garde quatre zones : la demande, à traiter, les projets récents, les alertes. Un montant absent reste « non indiqué ».
+L’accueil garde la demande, les pièces à traiter et les projets récents. Les notes reçues restent repliées. Un montant absent reste « non indiqué ».
 
 Les pièces se classent en devis client ou fournisseur, commande, facture, bon de livraison, demande de prix, document technique, contrat ou information libre.
 

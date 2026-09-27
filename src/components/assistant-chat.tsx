@@ -130,13 +130,41 @@ export function AssistantChat({
   }
 
   const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+  const older = messages.slice(0, -2);
+  const recent = messages.slice(-2);
+  const canSend = draft.trim().length > 0 || files.length > 0;
+
+  function clearDraft() {
+    setDraft("");
+    setFiles([]);
+    setFileError(null);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function renderMessage(message: ChatMessage) {
+    return (
+      <MessageRow
+        key={message.id}
+        message={message}
+        pending={pending}
+        confirm={message.id === lastAssistant?.id && hasProposal(message)}
+        editable={message.id === lastAssistant?.id}
+        onConfirm={() => void send("Je confirme.")}
+        onCorrect={(line, attachments) => {
+          hint.current.attachments = attachments;
+          void sendMessage({ text: line }).finally(() => {
+            hint.current.attachments = [];
+          });
+        }}
+      />
+    );
+  }
 
   return (
     <div className="grid gap-4" id="assistant">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {projectName ? `Fil du projet ${projectName}. ` : "Fil conservé sur cette machine. "}
-          La page ouverte est jointe à la demande.
+          {projectName ? `Fil du projet ${projectName}.` : "Le fil reste sur cette machine."}
         </p>
         <Link
           href="/?nouveau=1"
@@ -147,48 +175,24 @@ export function AssistantChat({
       </div>
       <Card>
         <CardContent className="grid gap-4">
-          {proposals.length > 0 ? (
-            <div className="grid gap-2">
-              <h2 className="text-sm font-medium">À confirmer</h2>
-              <ProposalBoard proposals={proposals} />
-            </div>
-          ) : null}
-          {messages.length > 0 ? (
-            <ol className="grid gap-3">
-              {messages.map((message) => (
-                <MessageRow
-                  key={message.id}
-                  message={message}
-                  pending={pending}
-                  confirm={message.id === lastAssistant?.id && hasProposal(message)}
-                  editable={message.id === lastAssistant?.id}
-                  onConfirm={() => void send("Je confirme.")}
-                  onCorrect={(line, attachments) => {
-                    hint.current.attachments = attachments;
-                    void sendMessage({ text: line }).finally(() => {
-                      hint.current.attachments = [];
-                    });
-                  }}
-                />
-              ))}
-            </ol>
-          ) : null}
-
-          <form onSubmit={onSubmit} className="grid gap-3">
+          <form onSubmit={onSubmit} aria-busy={pending} className="grid gap-3">
             <Label htmlFor="assistant-draft">Que souhaitez-vous faire ?</Label>
             <Textarea
               id="assistant-draft"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="J’ai reçu le devis de Durand. Ajoute cette facture au projet Atlas. Prépare un devis pour le projet Horizon."
+              onKeyDown={(event) => {
+                if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+              placeholder="Exemple : j’ai reçu le devis de Durand pour le projet Atlas."
               maxLength={4000}
-              className="min-h-28"
+              className="min-h-24"
             />
             <div className="grid gap-2">
-              <Label htmlFor="assistant-files">Pièces jointes</Label>
-              <p className="text-sm leading-6 text-muted-foreground">
-                La pièce est lue sans la phrase. Les montants restent ceux qui sont écrits.
-              </p>
+              <Label htmlFor="assistant-files">Joindre une pièce</Label>
               <input
                 ref={fileRef}
                 id="assistant-files"
@@ -201,24 +205,56 @@ export function AssistantChat({
                 <p className="text-sm text-muted-foreground break-words">
                   {files.map((file) => file.name).join(", ")}
                 </p>
-              ) : null}
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  La pièce est lue telle quelle. Les montants ne sont pas recalculés.
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                type="submit"
-                disabled={pending || (draft.trim().length === 0 && files.length === 0)}
-                className="min-h-11 px-4"
-              >
+              <Button type="submit" disabled={pending || !canSend} className="min-h-11 px-4">
                 {pending ? "Lecture…" : "Envoyer"}
               </Button>
+              {canSend && !pending ? (
+                <Button type="button" variant="outline" className="min-h-11 px-4" onClick={clearDraft}>
+                  Annuler
+                </Button>
+              ) : null}
+              <p className="text-xs text-muted-foreground">Ctrl+Entrée envoie.</p>
             </div>
+            {pending ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                Lecture en cours. L’étape s’affiche dans le fil.
+              </p>
+            ) : null}
             {error ? (
-              <p className="text-sm leading-6 text-destructive">{error.message}</p>
+              <p role="alert" className="text-sm leading-6 text-destructive">
+                {error.message || "La réponse n’est pas arrivée. Reformulez la demande, ou réessayez dans un instant."}
+              </p>
             ) : null}
             {fileError ? (
-              <p className="text-sm leading-6 text-destructive">{fileError}</p>
+              <p role="alert" className="text-sm leading-6 text-destructive">
+                {fileError}
+              </p>
             ) : null}
           </form>
+          {proposals.length > 0 ? (
+            <div className="grid gap-2">
+              <h2 className="text-sm font-medium">À confirmer</h2>
+              <ProposalBoard proposals={proposals} />
+            </div>
+          ) : null}
+          {recent.length > 0 ? (
+            <ol className="grid gap-3">{recent.map((message) => renderMessage(message))}</ol>
+          ) : null}
+          {older.length > 0 ? (
+            <details>
+              <summary className="min-h-11 cursor-pointer text-sm font-medium">
+                Messages précédents ({older.length})
+              </summary>
+              <ol className="grid gap-3 pt-3">{older.map((message) => renderMessage(message))}</ol>
+            </details>
+          ) : null}
         </CardContent>
       </Card>
     </div>

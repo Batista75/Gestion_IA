@@ -5,13 +5,7 @@ import { ConfirmDelete, NoteEditor } from "@/components/record-actions";
 import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
 import { fillDocumentProvenance } from "@/lib/document-proposals";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { kindLabel } from "@/domain/offer-versions";
 import { homeAlerts, recentProjectCards } from "@/lib/home-board";
 import { isConversationId, latestConversation, loadConversation } from "@/lib/conversations";
@@ -101,15 +95,33 @@ export default async function HomePage({
 
   return (
     <div className="grid gap-6">
-      <div className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Déposez une information, un document ou une intention. Rien d’important n’est écrit sans confirmation.
-        </p>
+      <div className="grid gap-3">
+        <div className="grid gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
+          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            Confirmez une pièce, ou décrivez ce qu’il faut faire. Rien n’est écrit sans votre accord.
+          </p>
+        </div>
+        {alerts.length > 0 ? (
+          <ul className="flex flex-wrap gap-2">
+            {alerts.map((alert) => (
+              <li key={alert.text}>
+                <Link
+                  href={alert.href}
+                  className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 text-sm font-medium"
+                >
+                  {alert.text}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">Rien n’attend de décision.</p>
+        )}
       </div>
 
       <section id="assistant" className="grid scroll-mt-6 gap-3">
-        <h2 className="text-lg font-semibold">Assistant</h2>
+        <h2 className="text-lg font-semibold">Demande</h2>
         <AssistantChat
           key={conversationId}
           conversationId={conversationId}
@@ -123,29 +135,12 @@ export default async function HomePage({
         <ProposalBoard proposals={pending} />
       </section>
 
-      <section id="alertes" className="grid scroll-mt-6 gap-3">
-        <h2 className="text-lg font-semibold">Alertes</h2>
-        {alerts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucune alerte. Les pièces hors projet et les brouillons apparaîtront ici.</p>
-        ) : (
-          <ul className="grid gap-2">
-            {alerts.map((alert) => (
-              <li key={alert.text}>
-                <Link href={alert.href} className="text-sm font-medium underline-offset-4 hover:underline">
-                  {alert.text}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
       <section className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Projets récents</h2>
           <Link
             href="/projets"
-            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
             Tous les projets
           </Link>
@@ -153,7 +148,7 @@ export default async function HomePage({
         {projects.length === 0 ? (
           <Card>
             <CardContent className="text-sm text-muted-foreground">
-              Aucun dossier. Créez le premier depuis{" "}
+              Aucun dossier. Le premier se crée dans{" "}
               <Link href="/projets" className="font-medium text-foreground">
                 Projets
               </Link>
@@ -161,34 +156,33 @@ export default async function HomePage({
             </CardContent>
           </Card>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
             {projects.map((project) => (
               <li key={project.id}>
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle>
-                      <Link href={`/projets/${project.id}`} className="underline-offset-4 hover:underline">
-                        {project.name}
-                      </Link>
-                    </CardTitle>
-                    <CardDescription>{project.client}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-2">
+                <Link href={`/projets/${project.id}`} className="grid gap-1 px-3 py-3 hover:bg-muted/60">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{project.name}</span>
                     <Badge variant="secondary">{project.status}</Badge>
-                    <p className="text-sm">{project.nextAction}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Devis {project.quoted} · coûts {project.cost} · marge {project.margin}
-                    </p>
-                  </CardContent>
-                </Card>
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {project.client || "Client non indiqué"}
+                    {project.nextAction ? ` · ${project.nextAction}` : ""}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Devis {project.quoted} · coûts {project.cost} · marge {project.margin}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <section id="pieces" className="grid scroll-mt-6 gap-3">
-        <h2 className="text-lg font-semibold">Pièces reçues</h2>
+      <details id="pieces" className="scroll-mt-6 rounded-lg border border-border bg-card">
+        <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm font-semibold">
+          Pièces reçues{inbox.length > 0 ? ` · ${inbox.length}` : ""}
+        </summary>
+        <div className="grid gap-3 px-4 pb-4">
         {inbox.length === 0 ? (
           <Card>
             <CardContent className="text-sm text-muted-foreground">
@@ -254,7 +248,8 @@ export default async function HomePage({
             ))}
           </ul>
         )}
-      </section>
+        </div>
+      </details>
     </div>
   );
 }
