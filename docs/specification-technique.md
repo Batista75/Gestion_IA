@@ -26,7 +26,7 @@ Les prix, la TVA et les numéros de pièce ne sont pas calculés par le modèle.
 10. Un commentaire sur une fiche client en attente produit une nouvelle proposition.
 11. Un nom seul déjà connu, sans verbe d’action, demande s’il faut consulter ou modifier.
 
-S’il ne reste rien de tout cela, `decideFree` dans `src/domain/intent-catalog.ts` tranche. Une intention du catalogue encore sans exécution, ou une phrase d’écriture hors liste, répond tout de suite : la donnée manquante, ou l’absence d’action. Rien n’est écrit. Une question libre, si Ollama répond, part au modèle. S’il ne répond pas, le fil affiche l’indisponibilité. La consultation des fiches continue par les mots.
+S’il ne reste rien de tout cela, `decideFree` dans `src/domain/intent-catalog.ts` tranche. Une intention du catalogue encore sans exécution passe par `blockingQuestion` dans `src/domain/completeness.ts` : le premier champ sous son seuil produit une seule question, un choix fermé, une confirmation, ou une valeur manquante. Rien n’est écrit. Si tous les champs passent le seuil, la réponse dit que l’action n’est pas encore exécutée. Une phrase d’écriture hors liste dit qu’aucune action ne correspond. Une question libre, si Ollama répond, part au modèle. S’il ne répond pas, le fil affiche l’indisponibilité. La consultation des fiches continue par les mots.
 
 Le modèle ne dispose plus que d’outils de lecture : `search_records`, `search_client_agreements`, `get_product_info`. Il ne propose plus de fiche et ne crée plus de brouillon. Le brouillon de devis reste la règle `prépare un devis pour …`, exécutée avant lui. Il a au plus trois pas. Il ne numérote pas de facture et ne calcule pas de montant.
 
@@ -126,8 +126,7 @@ La chaîne décrite dans la spécification V2 n’est pas le chemin par défaut.
 - l’analyse d’une pièce dépend encore du message ;
 - le rapprochement mélange mots, vecteurs et reranker, sans faire primer l’identifiant métier ni appliquer les droits avant la recherche ;
 - le modèle peut encore expliquer une question libre, sans écrire ; l’interpréteur JSON n’est pas en place ;
-- la confiance n’est pas évaluée champ par champ ;
-- la question de clarification n’est pas limitée au choix fermé, à la confirmation ou à la valeur manquante ;
+- la confiance champ par champ et la question unique s’appliquent aux actions du catalogue encore sans exécution ; elles ne s’affichent pas encore dans une fiche de compréhension ;
 - il n’y a pas de parcours d’états suspendu puis repris, ni de fiche de compréhension corrigeable ;
 - une correction n’est pas isolée dans la mémoire du document ;
 - le journal trace les changements de fiche, pas encore l’entrée, le contexte, la proposition, la validation et le résultat.

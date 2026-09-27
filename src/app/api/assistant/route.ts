@@ -29,8 +29,9 @@ import { conversationIdOrNew, rememberTurn } from "@/lib/conversations";
 import type { UIMessage } from "ai";
 import { withGpuLane } from "@/lib/gpu-lane";
 import { mentionedNames } from "@/domain/knowledge";
-import { contextBrief, contextLine, readHint, withContext } from "@/domain/context-envelope";
-import { absentReply, decideFree } from "@/domain/intent-catalog";
+import { blockingQuestion } from "@/domain/completeness";
+import { contextBrief, contextLine, readHint, type ContextSnapshot } from "@/domain/context-envelope";
+import { absentReply, decideFree, intentCatalog, type IntentDecision } from "@/domain/intent-catalog";
 import { attachConversationProject, resolveContext } from "@/lib/context-envelope";
 import { asksHybridQuote } from "@/domain/hybrid-quote";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
@@ -92,13 +93,16 @@ export async function POST(request: Request) {
     });
   }
 
-  const free = withContext(decideFree(parsed.text), snapshot);
+  const free = decideFree(parsed.text);
   if (free.execution === "absente") {
+    const question = await blockingQuestionFor(parsed.text, free, snapshot);
     return streamDirect({
       conversationId,
-      reply: `${absentReply(free)}\n${contextLine(snapshot)}`,
+      reply: question
+        ? `${question}\nRien n’est écrit.\n${contextLine(snapshot)}`
+        : `${absentReply(free.id ? { ...free, missing: [] } : free)}\n${contextLine(snapshot)}`,
       source: "regle-metier",
-      step: "Catalogue",
+      step: question ? "Question" : "Catalogue",
     });
   }
 
@@ -299,6 +303,27 @@ function proposalResponse(opened: ProposalView) {
     source: "proposition" as const,
     proposal: opened.proposal,
   };
+}
+
+async function blockingQuestionFor(
+  text: string,
+  decision: IntentDecision,
+  snapshot: ContextSnapshot,
+): Promise<string | null> {
+  const row = intentCatalog.find((item) => item.id === decision.id);
+  if (!row) return null;
+  const projects = await prisma.project.findMany({ select: { name: true }, take: 500 });
+  const question = blockingQuestion({
+    required: row.required,
+    text,
+    projectName: snapshot.projectName,
+    projectClient: snapshot.projectClient,
+    attachments: snapshot.attachments,
+    selectedLabel: snapshot.selectedLabel,
+    selectedKind: snapshot.selectedKind,
+    projectChoices: mentionedNames(text, projects.map((project) => project.name)),
+  });
+  return question ? `${row.label}. ${question.text}` : null;
 }
 
 async function directoryNames(): Promise<string[]> {

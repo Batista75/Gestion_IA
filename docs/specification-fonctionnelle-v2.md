@@ -186,8 +186,8 @@ Un second serveur, un autre moteur d’inférence, un orchestrateur externe ou u
 1. Catalogue fermé d’intentions et d’actions. Cette phase est en service : les écritures connues passent par les règles, le modèle ne fait que chercher et expliquer. Le détail est le tableau des phases de [Plus](/plus).
 2. Enveloppe de contexte transmise par l’interface. Cette phase est en service : la page, le projet vérifié, le document ouvert, les pièces annoncées, les actions récentes et l’opérateur accompagnent la demande.
 3. Sorties JSON contraintes.
-4. Complétude champ par champ.
-5. Questions ciblées.
+4. Complétude champ par champ. Cette phase est en service pour une action du catalogue encore sans exécution : chaque champ a un seuil, sans score global.
+5. Questions ciblées. Cette phase est en service : une seule question, choix fermé, confirmation, ou valeur manquante. Rien n’est écrit.
 6. Simulation avant écriture.
 7. Parcours persistant, avec reprise.
 8. Mémoire des corrections validées.

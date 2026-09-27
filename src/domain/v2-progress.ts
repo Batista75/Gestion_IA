@@ -32,8 +32,8 @@ export const v2Progress: V2ProgressRow[] = [
   { domain: "Chaîne", point: "Faits du document sourcés, page et zone, indépendants du message", status: "pas" },
   { domain: "Chaîne", point: "Résolveur SQL, lexique, vecteurs et récence, droits avant la recherche", status: "pas" },
   { domain: "Chaîne", point: "Catalogue fermé : intention structurée, pas une action libre", status: "fait" },
-  { domain: "Chaîne", point: "Complétude de chaque champ, seuil selon la criticité", status: "pas" },
-  { domain: "Chaîne", point: "Question minimale : choix fermé, confirmation, ou valeur manquante", status: "pas" },
+  { domain: "Chaîne", point: "Complétude de chaque champ, seuil selon la criticité", status: "fait" },
+  { domain: "Chaîne", point: "Question minimale : choix fermé, confirmation, ou valeur manquante", status: "fait" },
   { domain: "Chaîne", point: "Parcours borné, suspendu puis repris après la réponse", status: "pas" },
   { domain: "Chaîne", point: "Fiche de compréhension corrigeable sans reformuler le message", status: "pas" },
   { domain: "Chaîne", point: "Quatre mémoires ; une correction ne devient pas une règle globale", status: "pas" },
@@ -79,8 +79,8 @@ export const v2Phases: V2Phase[] = [
   {
     order: 3,
     title: "Complétude et question unique",
-    state: "pas",
-    summary: "Chaque champ a un seuil. Une seule question porte sur la donnée bloquante.",
+    state: "fait",
+    summary: "Chaque champ a un seuil. Une action encore absente pose une seule question : choix, confirmation, ou valeur manquante.",
   },
   {
     order: 4,
