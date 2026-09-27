@@ -16,7 +16,7 @@ Le fonctionnel, la technique et ce tableau utilisent les mêmes libellés et les
 | 6 | Simulation avant écriture | Fait | 27/09/2026 16:39 |
 | 7 | Parcours repris après réponse | Fait | 27/09/2026 16:48 |
 | 8 | Mémoire des corrections | Fait | 27/09/2026 17:00 |
-| 9 | Évaluation sur messages courts | Pas fait | — |
+| 9 | Évaluation sur messages courts | Fait | 27/09/2026 17:08 |
 
 ## Demandes
 

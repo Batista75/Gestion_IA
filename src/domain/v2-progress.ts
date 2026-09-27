@@ -126,9 +126,9 @@ export const v2Phases: V2Phase[] = [
   {
     order: 9,
     title: "Évaluation sur messages courts",
-    state: "pas",
-    summary: "Des phrases du type « Enregistre ça » servent à vérifier la chaîne.",
-    doneAt: "",
+    state: "fait",
+    summary: "Des phrases du type « Enregistre ça » servent à vérifier la chaîne. Rien n’est écrit.",
+    doneAt: "2026-09-27T15:08:22Z",
   },
 ];
 

@@ -28,7 +28,7 @@ test("les réalisations publiées sont celles du tableau de l’application", ()
     assert.match(functional, row.status === "fait" ? /Fait/ : /Pas fait/);
   }
   assert.match(functional, /\| 8 \| Mémoire des corrections \| Fait \|/);
-  assert.match(functional, /\| 9 \| Évaluation sur messages courts \| Pas fait \|/);
+  assert.match(functional, /\| 9 \| Évaluation sur messages courts \| Fait \|/);
 });
 
 test("le fonctionnel et la technique disent la même chose de la mémoire de pièce", () => {

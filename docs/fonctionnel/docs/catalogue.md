@@ -45,3 +45,7 @@ Pour une action encore sans exécution, les quatre étapes sont l’intention, l
 L’IA comprend une formulation imprécise, identifie un document, extrait des lignes, propose un projet, rapproche des désignations, suggère une TVA, prépare la matière d’un devis, suggère un rapprochement, explique un résultat.
 
 Le moteur vérifie les préconditions, attribue l’identifiant définitif, recalcule les totaux, contrôle les droits, relie les produits, applique la TVA validée, calcule prix, marge et taxes, empêche le double comptage, et exécute la transaction. Le modèle n’est pas la source de vérité financière. Il n’a pas d’accès SQL libre : il ne voit que les outils du catalogue.
+
+## Messages courts
+
+Des phrases comme « Enregistre ça », « Durand » ou « prépare un devis pour … » servent de contrôle. Le résultat attendu est une question, une reprise, une lecture ou une simulation. Aucune écriture n’est lancée par ce contrôle.

@@ -45,7 +45,7 @@ test("le tableau sépare ce qui est livré de la cible restante", () => {
   assert.equal(v2Phases.find((item) => item.order === 6)?.state, "fait");
   assert.equal(v2Phases.find((item) => item.order === 7)?.state, "fait");
   assert.equal(v2Phases.find((item) => item.order === 8)?.state, "fait");
-  assert.equal(v2Phases.find((item) => item.order === 9)?.state, "pas");
+  assert.equal(v2Phases.find((item) => item.order === 9)?.state, "fait");
   assert.equal(byPoint.get("Quatre mémoires ; une correction ne devient pas une règle globale"), "fait");
   assert.equal(byPoint.get("Parcours borné, suspendu puis repris après la réponse"), "fait");
 });

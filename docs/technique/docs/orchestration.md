@@ -26,6 +26,8 @@ Une phrase d’écriture hors liste, et une phrase qui n’est ni une règle ni 
 
 Le modèle ne dispose plus que d’outils de lecture : `search_records`, `search_client_agreements`, `get_product_info`. Il ne propose plus de fiche et ne crée plus de brouillon. Il a au plus trois pas.
 
+`evaluateShortMessages` dans `src/domain/short-eval.ts` rejoue des phrases courtes sur ces fonctions, sans modèle et sans base. Le tableau est sur Plus. Une phrase qui ne tient pas est un écart. Le contrôle n’écrit rien.
+
 Chaque appel porte une enveloppe construite par l’application, dans `resolveContext`. Le client envoie seulement le chemin de la page et les noms des pièces jointes. Le serveur vérifie le projet et le document dans PostgreSQL, puis ajoute l’opérateur J Smith, le rôle opérateur, les actions déjà autorisées par le catalogue, et les trois dernières modifications de fiche. Un identifiant de projet inconnu est ignoré.
 
 ## Fil et confirmation

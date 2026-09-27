@@ -8,7 +8,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { shortEvaluationHolds } from "@/domain/short-eval";
 import { formatDoneAt, orderByDoneAt, readDoneOrder, v2Phases, v2Progress, v2ProgressCounts, type DoneOrder } from "@/domain/v2-progress";
+import { runShortEvaluation } from "@/lib/short-messages";
 import { cn } from "cn";
 
 export default async function MorePage({
@@ -19,6 +21,8 @@ export default async function MorePage({
   const order = readDoneOrder((await searchParams).ordre);
   const rows = order ? orderByDoneAt(v2Progress, order) : v2Progress;
   const counts = v2ProgressCounts();
+  const shorts = runShortEvaluation();
+  const shortsHold = shortEvaluationHolds(shorts);
   return (
     <div className="mx-auto grid w-full max-w-5xl gap-6">
       <div className="grid gap-2">
@@ -122,6 +126,40 @@ export default async function MorePage({
                   </td>
                   <td className="px-3 py-1.5 whitespace-nowrap text-muted-foreground">
                     {formatDoneAt(phase.doneAt) || "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="grid gap-3">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold tracking-tight">Messages courts</h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {shortsHold
+              ? `${shorts.length} phrases tiennent. Le contrôle rejoue la chaîne sur ces textes. Rien n’est écrit.`
+              : "Une phrase ne tient pas. Le contrôle n’a rien écrit."}
+          </p>
+        </div>
+        <div className="overflow-x-auto rounded-lg border border-border bg-card">
+          <table className="w-full min-w-[36rem] border-collapse text-sm">
+            <caption className="sr-only">Contrôle des messages courts</caption>
+            <thead>
+              <tr className="border-b border-border bg-muted/60 text-left text-xs tracking-wide text-muted-foreground uppercase">
+                <th className="px-3 py-2 font-medium">Phrase</th>
+                <th className="px-3 py-2 font-medium">Contrôle</th>
+                <th className="w-28 px-3 py-2 font-medium">Résultat</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shorts.map((item) => (
+                <tr key={`${item.phrase}-${item.check}`} className="border-b border-border last:border-0">
+                  <td className="px-3 py-1.5 font-medium whitespace-nowrap">{item.phrase}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground">{item.check}</td>
+                  <td className="px-3 py-1.5">
+                    <Badge variant={item.ok ? "secondary" : "outline"}>{item.ok ? "Tient" : "Écart"}</Badge>
                   </td>
                 </tr>
               ))}
