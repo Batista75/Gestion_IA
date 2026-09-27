@@ -42,6 +42,21 @@ test("le fonctionnel et la technique disent la même chose des faits de pièce",
   assert.match(orchestration, /n’est recalculé/);
 });
 
+test("la modélisation cite chaque modèle Prisma", () => {
+  const schema = readFileSync("prisma/schema.prisma", "utf8");
+  const page = readFileSync("docs/technique/docs/modelisation.md", "utf8");
+  const names = [...schema.matchAll(/^model (\w+)/gm)].map((match) => match[1]!);
+  assert.ok(names.length >= 20);
+  for (const name of names) {
+    assert.match(page, new RegExp(`\\b${name}\\b`));
+  }
+  assert.match(readFileSync("src/lib/spec-books.ts", "utf8"), /"modelisation"/);
+  assert.match(readFileSync("docs/technique/mkdocs.yml", "utf8"), /modelisation\.md/);
+  assert.match(readFileSync("docs/technique/docs/index.md", "utf8"), /modelisation\.md/);
+  assert.match(page, /Aucune table ne les conserve/);
+  assert.match(page, /numéro de facture/);
+});
+
 test("le fonctionnel et la technique disent la même chose de la mémoire de pièce", () => {
   const chaine = readFileSync("docs/fonctionnel/docs/chaine.md", "utf8");
   const ecart = readFileSync("docs/technique/docs/ecart.md", "utf8");

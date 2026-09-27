@@ -1,6 +1,6 @@
 # Demandes fonctionnelles
 
-Ce site rassemble les demandes du produit. Le PDF du 26 septembre 2026, `docs/specifications-gestion-ia.pdf`, est conservé ; il n’est plus la base de revue. Le manuel d’utilisation reste `docs/manuel-utilisateur.md`. Le socle qui tourne est le site technique, dans `docs/technique`.
+Ce site rassemble les demandes du produit. Le PDF du 26 septembre 2026, `docs/specifications-gestion-ia.pdf`, est conservé ; il n’est plus la base de revue. Le manuel d’utilisation reste `docs/manuel-utilisateur.md`. Le socle qui tourne est le site technique, dans `docs/technique`. La modélisation de ce qui est enregistré y est décrite, page Modélisation des données.
 
 Les états fait ou pas fait sont sur la page [Réalisations](realisations.md). Cette page est produite depuis le tableau de l’application. Le fonctionnel, la technique et ce tableau portent les mêmes libellés.
 

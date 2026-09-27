@@ -18,6 +18,7 @@ Les prix, la TVA et les numéros de pièce ne sont pas calculés par le modèle.
 - [Devis hybride](devis-hybride.md)
 - [Recherche et modèles](recherche.md)
 - [Données et projet](donnees.md)
+- [Modélisation des données](modelisation.md)
 - [Écrans](ecrans.md)
 - [Écart](ecart.md)
 - [Réalisations](realisations.md)
