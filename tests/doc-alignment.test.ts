@@ -55,6 +55,8 @@ test("la modélisation cite chaque modèle Prisma", () => {
   assert.match(readFileSync("docs/technique/docs/index.md", "utf8"), /modelisation\.md/);
   assert.match(page, /Aucune table ne les conserve/);
   assert.match(page, /numéro de facture/);
+  assert.match(page, /ne crée pas de `SaleDocument`/);
+  assert.match(page, /Les lignes ne sont pas additionnées/);
 });
 
 test("le fonctionnel et la technique disent la même chose de la mémoire de pièce", () => {

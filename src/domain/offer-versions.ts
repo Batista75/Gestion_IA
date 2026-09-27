@@ -7,6 +7,17 @@ export type OfferLine = {
   conditions: string;
 };
 
+/** Montants et mentions recopiés tels qu’ils sont écrits. Jamais additionnés. */
+export type WrittenCommercial = {
+  clientName: string;
+  currency: string;
+  statedTotalHt: string;
+  statedVat: string;
+  statedTotalTtc: string;
+  vatMention: string;
+  conditions: string;
+};
+
 export type OfferVersion = {
   title: string;
   issuedOn: string;
@@ -14,7 +25,7 @@ export type OfferVersion = {
   versionLabel: string;
   fingerprint: string;
   lines: OfferLine[];
-};
+} & WrittenCommercial;
 
 export type DocumentKind =
   | "rfq"
@@ -71,6 +82,7 @@ function readSingle(text: string, filename: string): DocumentReading {
     .map((offer) => ({
       ...offer,
       supplierName: offer.supplierName || parties.supplierName,
+      clientName: offer.clientName || parties.clientName,
     }));
   const kind = documentKind(text, filename);
   const offers = keepsCommercialVersion(kind) ? parsed : [];
@@ -104,6 +116,23 @@ export function datasheetProduct(
 
 export function keepsCommercialVersion(kind: DocumentKind): boolean {
   return kind === "devis" || kind === "tarif";
+}
+
+/** Tables que la confirmation d’une pièce a le droit d’écrire. Jamais une pièce de vente du dossier. */
+export function documentWriteTargets(kind: DocumentKind): Array<
+  "fichier" | "client" | "supplier" | "product" | "quote" | "demand"
+> {
+  switch (kind) {
+    case "autre":
+      return ["fichier"];
+    case "rfq":
+      return ["fichier", "client", "supplier", "demand"];
+    case "devis":
+    case "tarif":
+      return ["fichier", "client", "supplier", "product", "quote", "demand"];
+    default:
+      return ["fichier", "client", "supplier", "product"];
+  }
 }
 
 export function kindLabel(kind: string): string {
@@ -159,7 +188,7 @@ function parseOffer(text: string, filename: string): OfferVersion | null {
       ].join("\n"),
     )
     .digest("hex");
-  return { ...header, fingerprint, lines };
+  return { ...header, ...writtenCommercial(text), fingerprint, lines };
 }
 
 function parseLines(text: string): OfferLine[] {
@@ -365,7 +394,10 @@ function parseOfferLine(line: string): OfferLine | null {
   };
 }
 
-function headerOf(text: string, filename: string): Omit<OfferVersion, "fingerprint" | "lines"> {
+function headerOf(
+  text: string,
+  filename: string,
+): Pick<OfferVersion, "title" | "issuedOn" | "supplierName" | "versionLabel"> {
   const number = offerNumber(text, filename);
   const date = offerDate(text);
   const supplier = text.match(/(?:fournisseur|[ée]metteur|vendeur|supplier)\s*[:]\s*([^\n]+)/i);
@@ -499,24 +531,82 @@ function isStreet(line: string): boolean {
 }
 
 function statedCommercialNotes(text: string): string[] {
+  const written = writtenCommercial(text);
   const notes: string[] = [];
-  const horsTaxes = text.match(
-    /Prix\s+Hors\s+Taxes[\s\S]{0,80}?EUR\s*(\d{1,3}(?:\.\d{3})*,\d{2})/i,
-  )?.[1];
-  if (horsTaxes) notes.push(`Total HT indiqué ${horsTaxes} EUR`);
-  const total = text.match(/\bTotal\s+EUR\s+(\d{1,3}(?: \d{3})+\.\d{2})/i)?.[1];
-  if (total) notes.push(`Total HT indiqué ${total} EUR`);
-  const vatRate = text.match(/\bVAT\s+(\d+(?:[.,]\d+)?)\s*%/i)?.[1];
-  if (vatRate) notes.push(`TVA indiquée ${vatRate} %`);
-  const withVat = text.match(/Total\s+with\s+VAT\s+EUR\s+(\d{1,3}(?: \d{3})+\.\d{2})/i)?.[1];
-  if (withVat) notes.push(`Total TTC indiqué ${withVat} EUR`);
-  const until = text.match(/\b(?:active until|valable jusqu['’]au)\s+(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})/i)?.[1];
+  if (written.statedTotalHt) notes.push(amountNote("Total HT indiqué", written.statedTotalHt));
+  const rate = written.vatMention.match(/VAT\s+(\d+(?:[.,]\d+)?)\s*%/i)?.[1];
+  if (rate) notes.push(`TVA indiquée ${rate} %`);
+  else if (written.statedVat) notes.push(amountNote("TVA indiquée", written.statedVat));
+  if (written.statedTotalTtc) notes.push(amountNote("Total TTC indiqué", written.statedTotalTtc));
+  const until = written.conditions.match(/Offre valable jusqu’au\s+(\S+)/)?.[1];
   if (until) notes.push(`Offre valable jusqu’au ${until}`);
-  const incoterm = text.match(/\b(EXW\s+[^\n.]+)/i)?.[1];
+  const incoterm = written.conditions.match(/EXW\s+[^.]*/)?.[0];
   if (incoterm) notes.push(`Conditions indiquées : ${clean(incoterm)}`);
-  const vatNote = text.match(/TVA en Supplément[^\n]+/i)?.[0];
-  if (vatNote) notes.push(clean(vatNote));
+  const vatSentence = written.vatMention
+    .split(". ")
+    .map((part) => part.trim())
+    .find((part) => /^TVA en Supplément/i.test(part));
+  if (vatSentence) notes.push(vatSentence);
   return notes;
+}
+
+function writtenCommercial(text: string): WrittenCommercial {
+  const horsTaxes = text.match(/Prix\s+Hors\s+Taxes[\s\S]{0,80}?EUR\s*(\d{1,3}(?:\.\d{3})*,\d{2})/i)?.[1];
+  const total = text.match(/\bTotal\s+EUR\s+(\d{1,3}(?: \d{3})+\.\d{2})/i)?.[1];
+  const statedTotalHt = horsTaxes
+    ? `EUR ${horsTaxes}`
+    : total
+      ? `EUR ${total}`
+      : ownLineAmount(text, "total\\s+ht|montant\\s+ht|sous-total\\s+ht");
+  const vatAmount = text.match(/\bVAT\s+\d+(?:[.,]\d+)?\s*%\s+EUR\s+(\d{1,3}(?: \d{3})*(?:\.\d{2})?)/i)?.[1];
+  const statedVat = vatAmount ? `EUR ${vatAmount}` : ownLineAmount(text, "montant\\s+tva|tva|vat");
+  const withVat = text.match(/Total\s+with\s+VAT\s+EUR\s+(\d{1,3}(?: \d{3})+\.\d{2})/i)?.[1];
+  const statedTotalTtc = withVat ? `EUR ${withVat}` : ownLineAmount(text, "total\\s+ttc|montant\\s+ttc|net\\s+[àa]\\s+payer");
+  const vatRate = text.match(/\bVAT\s+(\d+(?:[.,]\d+)?)\s*%/i)?.[1];
+  const vatNote = text.match(/TVA en Supplément[^\n]+/i)?.[0];
+  const vatMention = [vatRate ? `VAT ${vatRate} %` : "", vatNote ? clean(vatNote) : ""]
+    .filter(Boolean)
+    .join(". ")
+    .slice(0, 500);
+  const until = text.match(/\b(?:active until|valable jusqu['’]au)\s+(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})/i)?.[1];
+  const incoterm = text.match(/\b(EXW\s+[^\n.]+)/i)?.[1];
+  const conditions = [until ? `Offre valable jusqu’au ${until}` : "", incoterm ? clean(incoterm) : ""]
+    .filter(Boolean)
+    .join(". ")
+    .slice(0, 500);
+  const sample = `${statedTotalHt}\n${text.slice(0, 4000)}`;
+  const currency = /\$|\bUSD\b/i.test(sample) && !/€|\bEUR\b/i.test(sample) ? "USD" : /€|\bEUR\b/i.test(sample) ? "EUR" : "";
+  return {
+    clientName: "",
+    currency,
+    statedTotalHt: statedTotalHt.slice(0, 80),
+    statedVat: statedVat.slice(0, 80),
+    statedTotalTtc: statedTotalTtc.slice(0, 80),
+    vatMention,
+    conditions,
+  };
+}
+
+function amountNote(label: string, value: string): string {
+  if (value.startsWith("EUR ")) return `${label} ${value.slice(4)} EUR`;
+  return `${label} ${value}`;
+}
+
+function ownLineAmount(text: string, label: string): string {
+  for (const raw of text.split(/\n/)) {
+    const match = raw.trim().match(new RegExp(`^(?:${label})\\s*[:\\-]?\\s*(.+)$`, "i"));
+    if (!match) continue;
+    const phrase = amountPhrase(match[1] ?? "");
+    if (phrase) return phrase;
+  }
+  return "";
+}
+
+function amountPhrase(raw: string): string {
+  const match = clean(raw).match(/(\d{1,3}(?:[ \u00a0.]\d{3})*(?:[,.]\d{2}))\s*(€|eur|usd)?/i);
+  if (!match?.[1]) return "";
+  const unit = !match[2] ? "" : match[2] === "€" || /eur/i.test(match[2]) ? " €" : " USD";
+  return `${match[1]}${unit}`.trim().slice(0, 80);
 }
 
 function labeled(text: string, labels: string): string {
@@ -611,7 +701,16 @@ export type DirectorySnapshot = {
 export type ProposedAction =
   | { type: "create_client"; name: string }
   | { type: "create_supplier"; name: string }
-  | { type: "create_product"; name: string; reference: string; supplierName: string; source: string }
+  | {
+      type: "create_product";
+      name: string;
+      reference: string;
+      supplierName: string;
+      source: string;
+      costStated: string;
+      currency: string;
+      kind: "produit" | "service";
+    }
   | { type: "add_quote_version"; offer: OfferVersion }
   | { type: "record_demand"; title: string; reference: string; clientName: string; supplierName: string }
   | { type: "mark_demand"; title: string; status: "offre reçue" };
@@ -683,6 +782,9 @@ export function proposeFromReading(
         reference: sheet.reference,
         supplierName,
         source: "fiche",
+        costStated: "",
+        currency: "",
+        kind: "produit",
       });
     }
   } else if (reading.kind === "rfq") {
@@ -700,15 +802,7 @@ export function proposeFromReading(
     }
   } else {
     for (const line of reading.pricedLines) {
-      if (!matchProduct(line, directory.products)) {
-        actions.push({
-          type: "create_product",
-          name: line.product,
-          reference: line.reference,
-          supplierName,
-          source: reading.kind,
-        });
-      }
+      if (!matchProduct(line, directory.products)) actions.push(productFromLine(line, supplierName, reading.kind));
     }
   }
 
@@ -822,13 +916,9 @@ function summaryOf(
   );
   for (const line of reading.pricedLines) {
     const known = matchProduct(line, directory.products);
-    const family = /\b(services?|prestations?|forfaits?|abonnements?|maintenances?|assistances?|formations?)\b/i.test(
-      `${line.product}\n${line.conditions}`,
-    )
-      ? "Service"
-      : "Produit";
+    const family = lineFamily(line) === "service" ? "Service" : "Produit";
     const cost = line.statedPrice ? `, coût unitaire ${line.statedPrice}` : "";
-    const devise = /\$|\busd\b/i.test(line.statedPrice) ? "USD" : /€|\beur\b/i.test(line.statedPrice) ? "EUR" : "";
+    const devise = lineCurrency(line.statedPrice);
     lines.push(
       known
         ? `Article déjà au catalogue : ${known.name}, famille ${family}${cost}${devise ? `, devise ${devise}` : ""}.`
@@ -842,7 +932,7 @@ function summaryOf(
       );
     }
   }
-  if (reading.kind === "facture" || reading.kind === "commande" || reading.kind === "avoir") {
+  if (!keepsCommercialVersion(reading.kind) && reading.kind !== "rfq" && reading.kind !== "fiche" && reading.pricedLines.length > 0) {
     lines.push("Les montants restent ceux de la pièce. Aucune version de devis n’est créée.");
   }
   if ((reading.kind === "devis" || reading.kind === "tarif") && reading.offers.length > 0) {
@@ -861,6 +951,38 @@ function summaryOf(
   );
   lines.push("Rien n’est écrit tant que la proposition n’est pas confirmée.");
   return lines.join("\n");
+}
+
+function productFromLine(line: OfferLine, supplierName: string, source: string): ProposedAction {
+  return {
+    type: "create_product",
+    name: line.product,
+    reference: line.reference,
+    supplierName,
+    source,
+    costStated: line.statedPrice.slice(0, 80),
+    currency: lineCurrency(line.statedPrice),
+    kind: lineFamily(line),
+  };
+}
+
+function lineFamily(line: OfferLine): "produit" | "service" {
+  return /\b(services?|prestations?|forfaits?|abonnements?|maintenances?|assistances?|formations?)\b/i.test(
+    `${line.product}\n${line.conditions}`,
+  )
+    ? "service"
+    : "produit";
+}
+
+function lineCurrency(raw: string): "" | "EUR" | "USD" {
+  if (/\$|\busd\b/i.test(raw)) return "USD";
+  if (/€|\beur\b/i.test(raw)) return "EUR";
+  return "";
+}
+
+export function statedLineQuantity(conditions: string): string {
+  const match = conditions.match(/\bquantité\s+([^,]{1,40})/i);
+  return match?.[1]?.trim().slice(0, 40) ?? "";
 }
 
 export function cycleSentence(kind: DocumentKind): string {

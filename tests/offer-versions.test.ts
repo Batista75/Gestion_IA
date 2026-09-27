@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { recordFocus } from "../src/domain/knowledge.ts";
-import { proposeFromReading, readOfferFile, type DirectorySnapshot } from "../src/domain/offer-versions.ts";
+import {
+  documentWriteTargets,
+  proposeFromReading,
+  readOfferFile,
+  statedLineQuantity,
+  type DirectorySnapshot,
+  type DocumentKind,
+} from "../src/domain/offer-versions.ts";
 
 const march = `Devis Quincaillerie Durand n° D-2024-03 du 12/03/2024
 Fournisseur : Quincaillerie Durand
@@ -292,6 +299,125 @@ Vis à bois VIS-01 | 0,18 € HT | franco 50 pièces`,
     "dossier Horizon 2",
   );
   assert.match(precise?.summary ?? "", /Projet déjà ouvert : Horizon 2/);
+});
+
+test("chaque type de pièce écrit seulement les tables du modèle", () => {
+  const kinds: DocumentKind[] = [
+    "rfq",
+    "devis",
+    "commande",
+    "facture",
+    "tarif",
+    "avoir",
+    "livraison",
+    "contrat",
+    "fiche",
+    "document",
+    "autre",
+  ];
+  for (const kind of kinds) {
+    const targets = documentWriteTargets(kind);
+    assert.equal(targets.includes("fichier"), true);
+    assert.equal(targets.includes("quote"), kind === "devis" || kind === "tarif");
+    assert.equal(targets.includes("demand"), kind === "rfq" || kind === "devis" || kind === "tarif");
+  }
+  assert.deepEqual(documentWriteTargets("autre"), ["fichier"]);
+  assert.deepEqual(documentWriteTargets("facture"), ["fichier", "client", "supplier", "product"]);
+  assert.deepEqual(documentWriteTargets("avoir"), documentWriteTargets("facture"));
+  assert.deepEqual(documentWriteTargets("livraison"), documentWriteTargets("facture"));
+  assert.deepEqual(documentWriteTargets("contrat"), documentWriteTargets("facture"));
+  assert.deepEqual(documentWriteTargets("commande"), documentWriteTargets("facture"));
+});
+
+test("les totaux écrits sont recopiés et les lignes ne sont pas additionnées", () => {
+  const plain = readOfferFile(
+    `Devis n° D-1 du 01/03/2026
+Fournisseur : Atelier Nord
+Vis | 10,00 € HT
+Écrou | 20,00 € HT`,
+    "sans-total.txt",
+  );
+  assert.equal(plain.offers[0]?.statedTotalHt, "");
+  assert.equal(plain.offers[0]?.statedTotalTtc, "");
+  assert.equal(plain.offers[0]?.currency, "EUR");
+  assert.equal(plain.pricedLines.some((line) => line.statedPrice.includes("30")), false);
+
+  const labeled = readOfferFile(
+    `Facture n° F-9 du 01/02/2026
+Client : Atelier Cèdre
+Fournisseur : Fournitures Helios
+Vis à bois VIS-01 | 10,00 € HT
+Total HT : 99,99 €
+TVA : 19,99 €
+Total TTC : 119,98 €`,
+    "facture-totaux.txt",
+  );
+  assert.equal(labeled.kind, "facture");
+  assert.equal(labeled.offers.length, 0);
+  assert.equal(labeled.pricedLines.length, 1);
+  assert.equal(labeled.pricedLines[0]?.statedPrice, "10,00 € HT");
+  const proposal = proposeFromReading(labeled, "facture-totaux.txt", emptyDirectory, []);
+  const product = proposal?.actions.find((action) => action.type === "create_product");
+  assert.equal(product?.type, "create_product");
+  if (product?.type === "create_product") {
+    assert.equal(product.costStated, "10,00 € HT");
+    assert.equal(product.currency, "EUR");
+    assert.equal(product.source, "facture");
+    assert.equal(product.kind, "produit");
+  }
+  assert.equal(proposal?.actions.some((action) => action.type === "add_quote_version"), false);
+  assert.match(labeled.enrichment, /Total HT indiqué 99,99 €/);
+  assert.match(labeled.enrichment, /19,99 €/);
+  assert.match(labeled.enrichment, /119,98 €/);
+  assert.equal(labeled.enrichment.includes("30"), false);
+});
+
+test("un devis confirmable porte le total écrit, le client et la quantité", () => {
+  const reading = readOfferFile(lauterbach, "230249_N.pdf");
+  const offer = reading.offers[0];
+  assert.equal(offer?.statedTotalHt, "EUR 23.790,00");
+  assert.equal(offer?.statedVat, "");
+  assert.match(offer?.vatMention ?? "", /TVA en Supplément/);
+  assert.equal(offer?.currency, "EUR");
+  assert.equal(offer?.clientName, "NTECHNOLOGIES Réseaux");
+  const grouped = readOfferFile(serversimply, "Quotation_NO_2300017.pdf");
+  const servers = grouped.offers[0];
+  assert.equal(servers?.statedTotalHt, "EUR 480 520.97");
+  assert.equal(servers?.statedVat, "EUR 0.00");
+  assert.equal(servers?.statedTotalTtc, "EUR 480 520.97");
+  assert.match(servers?.conditions ?? "", /10\.03\.2023/);
+  assert.match(servers?.conditions ?? "", /EXW Tallinn/);
+  assert.equal(statedLineQuantity(servers?.lines[0]?.conditions ?? ""), "17");
+  assert.equal(documentWriteTargets("devis").includes("quote"), true);
+});
+
+test("un avoir, un bon de livraison et un contrat ne deviennent pas un devis", () => {
+  const samples = [
+    ["avoir", "Avoir n° AV-2\nFournisseur : Helios\nVis VIS-01 | 0,12 € HT", "avoir.txt"],
+    ["livraison", "Bon de livraison n° BL-3\nFournisseur : Helios\nVis VIS-01 | 0,12 € HT", "bl.txt"],
+    ["contrat", "Contrat cadre\nFournisseur : Helios\nMaintenance | 40,00 € HT", "contrat.txt"],
+  ] as const;
+  for (const [kind, text, filename] of samples) {
+    const reading = readOfferFile(text, filename);
+    assert.equal(reading.kind, kind);
+    assert.equal(reading.offers.length, 0);
+    const proposal = proposeFromReading(reading, filename, emptyDirectory, []);
+    assert.equal(proposal?.actions.some((action) => action.type === "add_quote_version"), false);
+    const product = proposal?.actions.find((action) => action.type === "create_product");
+    assert.equal(product?.type, "create_product");
+    if (product?.type === "create_product") {
+      assert.equal(product.source, kind);
+      assert.match(product.costStated, /€/);
+    }
+  }
+  const service = proposeFromReading(
+    readOfferFile("Contrat cadre\nMaintenance annuelle | 40,00 € HT", "contrat.txt"),
+    "contrat.txt",
+    emptyDirectory,
+    [],
+  );
+  const row = service?.actions.find((action) => action.type === "create_product");
+  if (row?.type === "create_product") assert.equal(row.kind, "service");
 });
 
 test("une fiche de kit n’ouvre ni devis ni projet", () => {

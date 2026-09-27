@@ -197,6 +197,7 @@ Devis ou offre reçue, pas une pièce de vente du dossier. Les totaux sont recop
 - `fileId` vers `StoredFile`, `projectId` vers `Project`.
 - `clientName`, `currency`, `vatZone`, `vatMention`.
 - `statedTotalHt`, `statedVat`, `statedTotalTtc`, `conditions`.
+- La confirmation d’un devis ou d’un tarif recopie ces textes depuis la pièce. `vatZone` reste vide : la zone n’est pas déduite. Un total absent reste vide. Les lignes ne sont pas additionnées.
 - `createdAt`.
 - Enfants : `QuoteLine`.
 
@@ -304,6 +305,18 @@ Journal des créations, mises à jour et suppressions de `Client`, `Supplier`, `
 - `data/pieces` : binaires des `StoredFile`.
 - `data/entreprise` : logo de `CompanyProfile`.
 - `data/docling` : modèles de lecture de mise en page. Ce ne sont pas des fiches métier.
+
+## Pièce lue par l’assistant
+
+`readOfferFile` qualifie `StoredFile.kind`. Confirmer une `DocumentProposal` écrit seulement les tables de ce type. Cette confirmation ne crée pas de `SaleDocument`, ne remplit pas `Project`, et n’attribue pas de numéro.
+
+- `autre` : le fichier seul. Aucune proposition.
+- `rfq` : `Demand` au statut `ouverte`, plus le client ou le fournisseur s’ils manquent au répertoire.
+- `devis` et `tarif` : `Quote` et `QuoteLine`. L’article reçoit `costStated`, `currency` et `source` (`devis` ou `tarif`). La quantité écrite va dans `QuoteLine.quantity`. Une `Demand` du même fournisseur passe à `offre reçue`.
+- `fiche` : `Product` si la référence manque, `source` `fiche`. Aucun prix n’est inventé.
+- `commande`, `facture`, `avoir`, `livraison`, `contrat` et `document` : un `Product` manquant, `source` égal au type, `costStated` égal au prix écrit sur la ligne. Pas de `Quote`. Le total imprimé reste dans `StoredFile.enrichment` et dans le texte extrait. Une facture lue ou un avoir lu ne devient pas un titre émis.
+
+Les faits de page et de zone affichés dans le fil sont calculés à la lecture. Ils ne sont pas enregistrés.
 
 ## Informations calculées, absentes des tables
 

@@ -52,7 +52,7 @@ export async function confirmDocumentProposal(id: string): Promise<{ ok: boolean
   const filename = row.file?.originalName ?? row.title;
   const notes: string[] = [];
   for (const action of draft.actions) {
-    notes.push(await applyAction(action, row.fileId, filename));
+    notes.push(await applyAction(action, row.fileId, filename, draft.kind));
   }
   await prisma.documentProposal.update({
     where: { id },
@@ -77,16 +77,21 @@ export async function dismissDocumentProposal(id: string): Promise<{ ok: boolean
   return { ok: true, message: "Proposition écartée. Le fichier reste dans À classer." };
 }
 
-async function applyAction(action: ProposedAction, fileId: string | null, filename: string): Promise<string> {
+async function applyAction(
+  action: ProposedAction,
+  fileId: string | null,
+  filename: string,
+  source: string,
+): Promise<string> {
   switch (action.type) {
     case "create_client":
       return createClient(action.name, filename);
     case "create_supplier":
       return createSupplier(action.name);
     case "create_product":
-      return createProduct(action.name, action.reference, action.supplierName, action.source);
+      return createProduct(action);
     case "add_quote_version": {
-      const inserted = await recordOfferVersion(action.offer, fileId);
+      const inserted = await recordOfferVersion(action.offer, fileId, source === "tarif" ? "tarif" : "devis");
       return inserted
         ? `Version ${action.offer.versionLabel} ajoutée.`
         : `Version ${action.offer.versionLabel} déjà enregistrée.`;
@@ -143,23 +148,34 @@ async function createSupplier(name: string): Promise<string> {
   return `Fournisseur « ${trimmed} » créé.`;
 }
 
-async function createProduct(
-  name: string,
-  reference: string,
-  supplierName: string,
-  source: string,
-): Promise<string> {
-  const trimmed = name.trim().slice(0, 120);
+async function createProduct(action: Extract<ProposedAction, { type: "create_product" }>): Promise<string> {
+  const trimmed = action.name.trim().slice(0, 120);
   const key = nameKey(trimmed);
+  const costStated = (action.costStated ?? "").slice(0, 80);
+  const currency = (action.currency ?? "").slice(0, 8);
+  const kind = action.kind === "service" ? "service" : "produit";
   const existing = await prisma.product.findUnique({ where: { nameKey: key } });
-  if (existing) return `Produit « ${existing.name} » déjà au catalogue.`;
-  const supplierId = await supplierIdOf(supplierName);
+  if (existing) {
+    const data: { costStated?: string; currency?: string; kind?: string; reference?: string } = {};
+    if (!existing.costStated && costStated) data.costStated = costStated;
+    if (!existing.currency && currency) data.currency = currency;
+    if (existing.kind !== "service" && kind === "service") data.kind = "service";
+    if (!existing.reference && action.reference) data.reference = action.reference.slice(0, 60);
+    if (Object.keys(data).length > 0) {
+      await prisma.product.update({ where: { id: existing.id }, data });
+    }
+    return `Produit « ${existing.name} » déjà au catalogue.`;
+  }
+  const supplierId = await supplierIdOf(action.supplierName);
   await prisma.product.create({
     data: {
       name: trimmed,
       nameKey: key,
-      reference: reference.slice(0, 60),
-      source: source.slice(0, 40) || "manuel",
+      reference: action.reference.slice(0, 60),
+      source: action.source.slice(0, 40) || "manuel",
+      kind,
+      costStated,
+      currency,
       supplierId,
     },
   });

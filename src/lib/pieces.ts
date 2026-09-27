@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 import { articleFromQuoteLine } from "@/domain/article";
 import { nameKey } from "@/domain/catalog";
 import { composeExtraction, doclingExtension, documentBody } from "@/domain/document-chunks";
-import { readOfferFile, type OfferLine, type OfferVersion } from "@/domain/offer-versions";
+import { readOfferFile, statedLineQuantity, type OfferLine, type OfferVersion } from "@/domain/offer-versions";
 import { convertWithDocling } from "@/lib/docling";
 import { prisma } from "@/lib/db";
 
@@ -135,7 +135,11 @@ export function resolveStoredPath(storagePath: string): string | null {
   return target;
 }
 
-export async function recordOfferVersion(offer: OfferVersion, fileId: string | null): Promise<boolean> {
+export async function recordOfferVersion(
+  offer: OfferVersion,
+  fileId: string | null,
+  source: "devis" | "tarif" = "devis",
+): Promise<boolean> {
   const existing = await prisma.quote.findUnique({
     where: { fingerprint: offer.fingerprint },
   });
@@ -150,15 +154,23 @@ export async function recordOfferVersion(offer: OfferVersion, fileId: string | n
           versionLabel: offer.versionLabel.slice(0, 160),
           fingerprint: offer.fingerprint,
           fileId: fileId ?? undefined,
+          clientName: (offer.clientName ?? "").slice(0, 160),
+          currency: (offer.currency ?? "").slice(0, 8),
+          vatMention: (offer.vatMention ?? "").slice(0, 500),
+          statedTotalHt: (offer.statedTotalHt ?? "").slice(0, 80),
+          statedVat: (offer.statedVat ?? "").slice(0, 80),
+          statedTotalTtc: (offer.statedTotalTtc ?? "").slice(0, 80),
+          conditions: (offer.conditions ?? "").slice(0, 500),
         },
       });
       for (const line of offer.lines) {
-        const productId = await ensureProduct(tx, line, offer.supplierName);
+        const productId = await ensureProduct(tx, line, offer.supplierName, source);
         await tx.quoteLine.create({
           data: {
             quoteId: quote.id,
             productId,
             statedPrice: line.statedPrice,
+            quantity: statedLineQuantity(line.conditions),
             conditions: line.conditions.slice(0, 500),
           },
         });
@@ -175,6 +187,7 @@ async function ensureProduct(
   tx: Pick<typeof prisma, "product" | "supplier">,
   line: OfferLine,
   supplierName: string,
+  source: "devis" | "tarif",
 ): Promise<string> {
   const article = articleFromQuoteLine(line);
   const key = nameKey(article.name);
@@ -203,7 +216,7 @@ async function ensureProduct(
       name: article.name,
       nameKey: key,
       reference: article.reference,
-      source: "devis",
+      source,
       kind: article.kind,
       costStated: article.costStated,
       currency: article.currency,
