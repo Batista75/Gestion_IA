@@ -102,23 +102,30 @@ export default async function HomePage({
             Confirmez une pièce, ou décrivez ce qu’il faut faire. Rien n’est écrit sans votre accord.
           </p>
         </div>
-        {alerts.length > 0 ? (
+        {alerts.some((alert) => alert.href !== "/#a-traiter") ? (
           <ul className="flex flex-wrap gap-2">
-            {alerts.map((alert) => (
-              <li key={alert.text}>
-                <Link
-                  href={alert.href}
-                  className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 text-sm font-medium"
-                >
-                  {alert.text}
-                </Link>
-              </li>
-            ))}
+            {alerts
+              .filter((alert) => alert.href !== "/#a-traiter")
+              .map((alert) => (
+                <li key={alert.text}>
+                  <Link
+                    href={alert.href}
+                    className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 text-sm font-medium"
+                  >
+                    {alert.text}
+                  </Link>
+                </li>
+              ))}
           </ul>
-        ) : (
+        ) : pending.length === 0 ? (
           <p className="text-sm text-muted-foreground">Rien n’attend de décision.</p>
-        )}
+        ) : null}
       </div>
+
+      <section id="a-traiter" className="grid scroll-mt-6 gap-3">
+        <h2 className="text-lg font-semibold">À traiter</h2>
+        <ProposalBoard proposals={pending} />
+      </section>
 
       <section id="assistant" className="grid scroll-mt-6 gap-3">
         <h2 className="text-lg font-semibold">Demande</h2>
@@ -128,11 +135,6 @@ export default async function HomePage({
           projectName={thread?.projectName ?? ""}
           initialMessages={thread?.messages ?? []}
         />
-      </section>
-
-      <section id="a-traiter" className="grid scroll-mt-6 gap-3">
-        <h2 className="text-lg font-semibold">À traiter</h2>
-        <ProposalBoard proposals={pending} />
       </section>
 
       <section className="grid gap-3">
