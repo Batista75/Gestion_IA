@@ -10,6 +10,7 @@ import {
 import { ensureSpokenProject } from "@/lib/business-records";
 import { prisma } from "@/lib/db";
 import { syncPrimaryAddress } from "@/lib/addresses";
+import { attachOrganization } from "@/lib/organizations";
 import { syncPrimaryContact } from "@/lib/contacts";
 import { fillMissingQuoteCents } from "@/lib/quote-cents";
 import { fillMissingOfferCents, recordSupplierOffer } from "@/lib/supplier-offers";
@@ -31,7 +32,11 @@ const contactOrder = [{ isPrimary: "desc" as const }, { createdAt: "asc" as cons
 export async function listClients(query: string) {
   return prisma.client.findMany({
     where: partyWhere(query),
-    include: { contacts: { orderBy: contactOrder }, addresses: { orderBy: contactOrder } },
+    include: {
+      contacts: { orderBy: contactOrder },
+      addresses: { orderBy: contactOrder },
+      organization: { include: { client: { select: { id: true, name: true } }, supplier: { select: { id: true, name: true } } } },
+    },
     orderBy: { updatedAt: "desc" },
     take: 200,
   });
@@ -40,7 +45,11 @@ export async function listClients(query: string) {
 export async function listSuppliers(query: string) {
   return prisma.supplier.findMany({
     where: partyWhere(query),
-    include: { contacts: { orderBy: contactOrder }, addresses: { orderBy: contactOrder } },
+    include: {
+      contacts: { orderBy: contactOrder },
+      addresses: { orderBy: contactOrder },
+      organization: { include: { client: { select: { id: true, name: true } }, supplier: { select: { id: true, name: true } } } },
+    },
     orderBy: { updatedAt: "desc" },
     take: 200,
   });
@@ -226,6 +235,7 @@ async function createParty(
       city: details?.city ?? "",
       country: details?.country ?? "",
     });
+    await attachOrganization({ kind: "supplier", id: created.id, name: parsed.value.name });
   }
   return { ok: true, summary: `${capitalize(label)} « ${parsed.value.name} » créé.` };
 }
@@ -287,6 +297,7 @@ async function updatePartyById(
       city: details?.city ?? "",
       country: details?.country ?? "",
     });
+    await attachOrganization({ kind: "supplier", id, name: parsed.value.name });
   }
   const label = kind === "client" ? "Client" : "Fournisseur";
   return { ok: true, summary: `${label} « ${parsed.value.name} » mis à jour.` };

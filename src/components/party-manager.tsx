@@ -60,6 +60,7 @@ export type PartyRecord = {
     isPrimary: boolean;
   }>;
   history?: Array<{ id: string; at: string; source: string; actor?: string; summary: string }>;
+  counterpart?: { label: string; href: string } | null;
 };
 
 export function PartyManager({
@@ -153,6 +154,13 @@ export function PartyManager({
                   <Card>
                     <CardHeader>
                       <CardTitle>{record.name}</CardTitle>
+                      {record.counterpart ? (
+                        <p className="text-sm">
+                          <a href={record.counterpart.href} className="font-medium underline-offset-4 hover:underline">
+                            {record.counterpart.label}
+                          </a>
+                        </p>
+                      ) : null}
                       <CardDescription>
                         {[
                           profile === "client" ? kindText(record.kind) : "",

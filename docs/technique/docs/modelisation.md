@@ -8,6 +8,8 @@ Cette page liste chaque modèle, ses champs utiles, ses liens et ce que l’appl
 
 ```
 Client 1 ── * Project
+Organization 1 ── 0..1 Client
+Organization 1 ── 0..1 Supplier
 Client 1 ── * Contact
 Client 1 ── * Address
 Supplier 1 ── * Contact
@@ -54,7 +56,15 @@ Une seule ligne, `id` = `local`. En-tête des pièces.
 
 ## Répertoire
 
-Le contact principal d’un client reste recopié dans `contactName`, `contactRole`, `email` et `phone`. Les autres personnes sont des `Contact`. L’adresse du siège reste dans `address`, `postalCode`, `city` et `country`. Les autres lieux sont des `Address`.
+Le contact principal d’un client reste recopié dans `contactName`, `contactRole`, `email` et `phone`. Les autres personnes sont des `Contact`. L’adresse du siège reste dans `address`, `postalCode`, `city` et `country`. Les autres lieux sont des `Address`. Un client et un fournisseur du même nom partagent une `Organization`. Les deux fiches restent distinctes.
+
+### Organization
+
+Tiers unique, identifié par `nameKey`.
+
+- `name` reprend le nom de la fiche rattachée.
+- Au plus un `Client` et un `Supplier`. Retirer une fiche laisse l’autre. Si plus aucune fiche n’est rattachée, l’organisation est retirée.
+- `createdAt`.
 
 ### Client
 
@@ -362,7 +372,7 @@ Les faits de page et de zone affichés dans le fil sont calculés à la lecture.
 
 ## Avancement du lot
 
-7 sur 9, soit 78 %.
+8 sur 9, soit 89 %.
 
 | Point | État |
 | --- | --- |
@@ -371,7 +381,7 @@ Les faits de page et de zone affichés dans le fil sont calculés à la lecture.
 | Plusieurs interlocuteurs | Fait |
 | Plusieurs adresses | Fait |
 | Centimes à côté du texte, sans addition | Fait |
-| Organisation unique, client et fournisseur | Pas fait |
+| Organisation unique, client et fournisseur | Fait |
 | Pièce commerciale reliée à sa parente, sans numéro de facture | Fait |
 | Comparaison de l’historique de prix | Fait |
 | Confiance, version du modèle et validation | Pas fait |
@@ -382,7 +392,6 @@ Le lot suivant est retenu. Ces noms ne sont pas des tables.
 
 Priorité haute, pas encore faites :
 
-- Une `Organization` unique, à la fois client et fournisseur. `Client` et `Supplier` restent deux fiches, avec les mêmes attributs d’identité.
 - Livraison, facture et avoir reliés à leur pièce parente. L’application n’émet toujours pas de facture et n’attribue pas de numéro.
 
 Priorité suivante :

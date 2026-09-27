@@ -135,6 +135,13 @@ export function nameKey(name: string): string {
     .replace(/\s+/g, " ");
 }
 
+/** Le même nom, une fois normalisé, désigne un seul tiers, client, fournisseur, ou les deux. */
+export function canShareOrganization(clientName: string, supplierName: string): boolean {
+  const left = nameKey(clientName);
+  const right = nameKey(supplierName);
+  return left.length > 0 && left === right;
+}
+
 export function parseCatalogCommand(text: string): CatalogCommand | null {
   const sentence = text.trim().replace(/\s+/g, " ");
   if (!sentence) return null;

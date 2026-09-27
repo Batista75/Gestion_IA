@@ -30,13 +30,16 @@ export default async function SuppliersPage({
       intro="La fiche reprend la forme, le SIRET, la TVA et l’adresse du siège, comme un client. D’autres adresses et d’autres interlocuteurs peuvent y être ajoutés. La commande, la réception et la facture fournisseur ne se saisissent pas encore."
       basePath="/fournisseurs"
       query={{ q }}
-      headers={["Nom", "Forme", "Ville", "E-mail", "Téléphone"]}
+      headers={["Nom", "Forme", "Ville", "E-mail", "Téléphone", "Aussi"]}
       rows={suppliers.map((supplier) => [
         { text: supplier.name },
         { text: supplier.legalForm || "—" },
         { text: supplier.city || "—" },
         { text: supplier.email || "—" },
         { text: supplier.phone || "—" },
+        supplier.organization?.client
+          ? { text: supplier.organization.client.name, href: `/clients?q=${encodeURIComponent(supplier.organization.client.name)}` }
+          : { text: "—" },
       ])}
       empty="Aucun fournisseur ne correspond à cette recherche."
     />
@@ -72,6 +75,12 @@ export default async function SuppliersPage({
         contactRole: primaryContact(supplier)?.role ?? "",
         contacts: supplier.contacts,
         addresses: supplier.addresses,
+        counterpart: supplier.organization?.client
+          ? {
+              label: `Aussi client · ${supplier.organization.client.name}`,
+              href: `/clients?q=${encodeURIComponent(supplier.organization.client.name)}`,
+            }
+          : null,
         updatedLabel: supplier.updatedAt.toLocaleString("fr-FR"),
         history: journal.filter((event) => event.entityId === supplier.id).slice(0, 6),
       }))}

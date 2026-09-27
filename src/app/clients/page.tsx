@@ -27,7 +27,7 @@ export default async function ClientsPage({
       intro="Particuliers et entreprises. Une fiche peut avoir plusieurs interlocuteurs et plusieurs adresses. Le contact et l’adresse du tableau restent ceux du siège. La recherche porte sur le nom, l’e-mail et le SIREN."
       basePath="/clients"
       query={{ q }}
-      headers={["Nom", "Type", "Adresse", "Code postal", "Ville", "Téléphone", "Mail", "Fonction"]}
+      headers={["Nom", "Type", "Adresse", "Code postal", "Ville", "Téléphone", "Mail", "Fonction", "Aussi"]}
       rows={clients.map((client) => [
         { text: client.name },
         { text: client.kind === "entreprise" ? "Entreprise" : client.kind === "particulier" ? "Particulier" : "Non qualifié" },
@@ -37,6 +37,9 @@ export default async function ClientsPage({
         { text: client.phone || "—" },
         { text: client.email || "—" },
         { text: client.contactRole || "—" },
+        client.organization?.supplier
+          ? { text: client.organization.supplier.name, href: `/fournisseurs?q=${encodeURIComponent(client.organization.supplier.name)}` }
+          : { text: "—" },
       ])}
       empty="Aucun client ne correspond à cette recherche."
     />
@@ -86,6 +89,12 @@ function toRecord(client: Awaited<ReturnType<typeof listClients>>[number]) {
     contactRole: client.contactRole,
     contacts: client.contacts,
     addresses: client.addresses,
+    counterpart: client.organization?.supplier
+      ? {
+          label: `Aussi fournisseur · ${client.organization.supplier.name}`,
+          href: `/fournisseurs?q=${encodeURIComponent(client.organization.supplier.name)}`,
+        }
+      : null,
     sector: client.sector,
     currency: client.currency,
   };

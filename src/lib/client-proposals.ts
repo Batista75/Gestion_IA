@@ -20,6 +20,7 @@ import {
 import { mentionedNames, sourceLabel, uniqueNameMatch } from "@/domain/knowledge";
 import { withChangeSource } from "@/lib/change-source";
 import { syncPrimaryAddress } from "@/lib/addresses";
+import { attachOrganization } from "@/lib/organizations";
 import { syncPrimaryContact } from "@/lib/contacts";
 import { prisma } from "@/lib/db";
 
@@ -211,6 +212,7 @@ export async function saveClientDraft(
     city: ready.city,
     country: ready.country,
   });
+  await attachOrganization({ kind: "client", id: saved.id, name });
   for (const path of PATHS) revalidatePath(path);
   return {
     ok: true,

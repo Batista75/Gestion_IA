@@ -1,5 +1,6 @@
 import { unlink } from "node:fs/promises";
 import { prisma } from "@/lib/db";
+import { releaseOrganization } from "@/lib/organizations";
 import { resolveStoredPath } from "@/lib/pieces";
 
 export type AdminResult = { ok: boolean; summary: string };
@@ -8,7 +9,9 @@ export async function removeClient(id: string): Promise<AdminResult> {
   const client = await prisma.client.findUnique({ where: { id } });
   if (!client) return missing("client");
   await forget("client", id);
+  const organizationId = client.organizationId;
   await prisma.client.delete({ where: { id } });
+  await releaseOrganization(organizationId);
   return { ok: true, summary: `Client « ${client.name} » supprimé.` };
 }
 
@@ -16,7 +19,9 @@ export async function removeSupplier(id: string): Promise<AdminResult> {
   const supplier = await prisma.supplier.findUnique({ where: { id } });
   if (!supplier) return missing("fournisseur");
   await forget("supplier", id);
+  const organizationId = supplier.organizationId;
   await prisma.supplier.delete({ where: { id } });
+  await releaseOrganization(organizationId);
   return {
     ok: true,
     summary: `Fournisseur « ${supplier.name} » supprimé. Les produits restent au catalogue.`,

@@ -128,9 +128,11 @@ model Client {
   currency    String    @default("")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  projects    Project[]
-  contacts    Contact[]
-  addresses   Address[]
+  projects       Project[]
+  contacts       Contact[]
+  addresses      Address[]
+  organizationId String?       @unique
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
 
 model Conversation {
@@ -232,8 +234,20 @@ model Supplier {
   updatedAt  DateTime  @updatedAt
   products   Product[]
   offers     SupplierOffer[]
-  contacts   Contact[]
-  addresses  Address[]
+  contacts       Contact[]
+  addresses      Address[]
+  organizationId String?       @unique
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+}
+
+/** Tiers unique. Une fiche client et une fiche fournisseur du même nom s’y rattachent. */
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  nameKey   String    @unique
+  createdAt DateTime  @default(now())
+  client    Client?
+  supplier  Supplier?
 }
 
 /** Interlocuteur d’un client ou d’un fournisseur. Une fiche en a plusieurs. Le principal reste recopié sur la fiche. */
