@@ -43,6 +43,7 @@ import {
   type Interpretation,
 } from "@/domain/interpreter";
 import { readModelInterpretation } from "@/lib/interpreter";
+import { simulateWrite } from "@/domain/simulation";
 import { absentReply, decideFree, intentCatalog, type IntentDecision } from "@/domain/intent-catalog";
 import { attachConversationProject, resolveContext } from "@/lib/context-envelope";
 import { asksHybridQuote } from "@/domain/hybrid-quote";
@@ -371,15 +372,18 @@ function proposalResponse(opened: ProposalView) {
 
 function blockedReply(
   decision: IntentDecision,
-  blocked: { question: string | null; card: { action: string } | null },
+  blocked: { question: string | null; card: UnderstandingCard | null },
   snapshot: ContextSnapshot,
   preface = "",
 ): string {
+  const simulation = blocked.card?.simulation ?? "";
   const body = blocked.question
     ? `${blocked.question}\nRien n’est écrit.`
-    : blocked.card
-      ? `${blocked.card.action}. Les champs de la fiche sont remplis. Cette action n’est pas encore exécutée.\nRien n’est écrit.`
-      : absentReply(decision);
+    : simulation
+      ? simulation
+      : blocked.card
+        ? `${blocked.card.action}. Les champs de la fiche sont remplis. Cette action n’est pas encore exécutée.\nRien n’est écrit.`
+        : absentReply(decision);
   return `${preface ? `${preface}\n` : ""}${body}\n${contextLine(snapshot)}`;
 }
 
@@ -433,7 +437,18 @@ async function blockedTurn(
     supplierOptions: suppliers.map((supplier) => supplier.name),
     overrides: correction ?? undefined,
   });
-  return { question: card.confirm ? `${row.label}. ${card.confirm}` : null, card };
+  const ready = card.confirm === "";
+  const simulation = simulateWrite({
+    action: row.label,
+    risk: row.risk,
+    ready,
+    document: snapshot.selectedKind === "document" ? snapshot.selectedLabel : (snapshot.attachments[0] ?? ""),
+    documentType: card.documentType,
+    project: card.project,
+    supplier: card.supplier,
+    client: card.understood.some((line) => line.startsWith("Le client facturé")) ? snapshot.projectClient : "",
+  });
+  return { question: ready ? null : `${row.label}. ${card.confirm}`, card: { ...card, simulation } };
 }
 
 async function directoryNames(): Promise<string[]> {

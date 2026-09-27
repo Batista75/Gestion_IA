@@ -188,7 +188,7 @@ Un second serveur, un autre moteur d’inférence, un orchestrateur externe ou u
 3. Sorties JSON contraintes. Cette phase est en service pour une demande qu’aucune règle n’a déjà prise : le modèle choisit une intention du catalogue dans un objet contraint, et cette sortie ne lance pas l’action.
 4. Complétude champ par champ. Cette phase est en service pour une action du catalogue encore sans exécution : chaque champ a un seuil, sans score global.
 5. Questions ciblées. Cette phase est en service : une seule question, choix fermé, confirmation, ou valeur manquante. Rien n’est écrit.
-6. Simulation avant écriture.
+6. Simulation avant écriture. Cette phase est en service : une action à risque dont la fiche est complète montre le résultat prévu. Rien n’est écrit.
 7. Parcours persistant, avec reprise.
 8. Mémoire des corrections validées.
 9. Évaluation sur de vrais messages courts.

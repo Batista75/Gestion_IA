@@ -380,6 +380,7 @@ function UnderstandingPanel({
       <p className="text-sm leading-6">
         {card.confirm ? `À confirmer : ${card.confirm}` : "Rien à confirmer sur cette fiche."}
       </p>
+      {card.simulation ? <p className="text-sm leading-6">{card.simulation}</p> : null}
       {editable ? (
         <>
           <div className="grid gap-3 sm:grid-cols-3">

@@ -54,6 +54,7 @@ export type UnderstandingCard = {
   types: string[];
   suppliers: string[];
   attachments: string[];
+  simulation: string;
 };
 
 const TYPE_WORD = /\b(devis|facture|commande|contrat|bon de livraison|rfq)\b/;
@@ -96,6 +97,7 @@ export function understandingCard(input: CompletenessInput & { action: string })
     types: listed([documentType, "devis", "facture", "commande", "contrat"]),
     suppliers: listed([supplier, ...(input.supplierOptions ?? [])]),
     attachments: input.attachments.slice(0, 8),
+    simulation: "",
   };
 }
 
@@ -130,6 +132,7 @@ export function readUnderstanding(value: unknown): UnderstandingCard | null {
     types: stringList(card.types).slice(0, 12),
     suppliers: stringList(card.suppliers).slice(0, 80),
     attachments: stringList(card.attachments).slice(0, 8),
+    simulation: typeof card.simulation === "string" ? card.simulation : "",
   };
 }
 

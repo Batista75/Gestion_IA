@@ -42,7 +42,8 @@ test("le tableau sépare ce qui est livré de la cible restante", () => {
   const phase = v2Phases.find((item) => item.order === 4);
   assert.equal(phase?.state, "fait");
   assert.equal(v2Phases.find((item) => item.order === 5)?.state, "fait");
-  assert.equal(v2Phases.find((item) => item.order === 6)?.state, "pas");
+  assert.equal(v2Phases.find((item) => item.order === 6)?.state, "fait");
+  assert.equal(v2Phases.find((item) => item.order === 7)?.state, "pas");
 });
 
 test("la date trie du plus récent au plus ancien, et l’inverse", () => {

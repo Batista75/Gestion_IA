@@ -105,9 +105,9 @@ export const v2Phases: V2Phase[] = [
   {
     order: 6,
     title: "Simulation avant écriture",
-    state: "pas",
-    summary: "Chaque action à risque montre son résultat avant d’écrire.",
-    doneAt: "",
+    state: "fait",
+    summary: "Une action à risque dont la fiche est complète montre le résultat prévu. Rien n’est écrit.",
+    doneAt: "2026-09-27T14:39:32Z",
   },
   {
     order: 7,
