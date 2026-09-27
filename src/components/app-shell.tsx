@@ -7,50 +7,60 @@ import { cn } from "cn";
 
 const sections = [
   {
-    title: "Actions",
-    links: [{ href: "/", label: "Accueil" }],
+    title: "Accueil",
+    links: [{ href: "/", label: "Tableau personnel" }],
   },
   {
-    title: "Suivi de devis",
+    title: "Projets",
+    links: [{ href: "/projets", label: "Tous les projets" }],
+  },
+  {
+    title: "Ventes",
+    links: [{ href: "/suivi", label: "Devis" }],
+  },
+  {
+    title: "Achats",
+    links: [{ href: "/achats", label: "Achats" }],
+  },
+  {
+    title: "Référentiels",
     links: [
-      { href: "/suivi", label: "Devis client" },
-      { href: "/projets", label: "Projets" },
+      { href: "/clients", label: "Clients" },
+      { href: "/fournisseurs", label: "Fournisseurs" },
+      { href: "/produits", label: "Produits et services" },
     ],
   },
   {
-    title: "Liste",
+    title: "Finance",
     links: [
-      { href: "/listes/documents", label: "Documents" },
-      { href: "/clients", label: "Clients" },
-      { href: "/fournisseurs", label: "Fournisseurs" },
-      { href: "/produits", label: "Articles" },
-      { href: "/listes/regroupements", label: "Regroupements" },
-      { href: "/listes/lignes", label: "Historiques lignes" },
-      { href: "/listes/echeances", label: "Échéances impayées" },
-      { href: "/listes/textes", label: "Textes" },
+      { href: "/listes/echeances", label: "Échéances" },
+      { href: "/banque", label: "Banque" },
+      { href: "/comptabilite/journal", label: "Journal" },
     ],
   },
   {
     title: "Pilotage",
     links: [
       { href: "/pilotage", label: "Tableau de bord" },
-      { href: "/pilotage/analyse", label: "Tableau d’analyse" },
+      { href: "/pilotage/analyse", label: "Analyses" },
     ],
   },
   {
-    title: "Comptabilité",
+    title: "Administration",
     links: [
-      { href: "/comptabilite/journal", label: "Journal des ventes" },
-      { href: "/achats", label: "Achats" },
-      { href: "/banque", label: "Banque" },
+      { href: "/listes/documents", label: "Documents" },
+      { href: "/listes/textes", label: "Modèles" },
+      { href: "/configuration", label: "Configuration" },
+      { href: "/documentation/v2", label: "Cible V2" },
     ],
   },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
-  const url = new URL(href, "http://local");
-  if (url.pathname === "/projets") return pathname === "/projets" || pathname.startsWith("/projets/");
-  return url.pathname === pathname;
+  if (href === "/") return pathname === "/";
+  if (href === "/projets") return pathname === "/projets" || pathname.startsWith("/projets/");
+  if (href === "/pilotage") return pathname === "/pilotage";
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function SideBar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
@@ -128,10 +138,10 @@ export function AppShell({
           >
             Menu
           </button>
-          <form action="/listes/documents" className="hidden min-w-0 flex-1 md:block">
+          <form action="/recherche" className="hidden min-w-0 flex-1 md:block">
             <input
               name="q"
-              placeholder="Rechercher un document"
+              placeholder="Rechercher un projet, un tiers, un produit, une pièce"
               className="h-10 w-full max-w-md rounded-lg border border-input bg-background px-3 text-sm"
             />
           </form>
@@ -143,9 +153,6 @@ export function AppShell({
             </Link>
             <Link href="/manuel" className="inline-flex min-h-11 items-center hover:underline">
               Manuel
-            </Link>
-            <Link href="/plus" className="inline-flex min-h-11 items-center hover:underline">
-              Plus
             </Link>
           </div>
         </header>

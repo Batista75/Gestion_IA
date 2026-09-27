@@ -1,6 +1,6 @@
 # Spécification technique
 
-Ce document décrit le socle qui tourne au 27 septembre 2026. Il ne remplace pas la [spécification fonctionnelle (PDF)](/documentation/specification), qui reste le cadre du produit visé. Le [manuel](/manuel) dit ce que l’on fait à l’écran. Ici, c’est le fonctionnement.
+Ce document décrit le socle qui tourne au 27 septembre 2026. La cible de refonte est la [spécification V2](/documentation/v2). Le [PDF d’origine](/documentation/specification) reste conservé. Le [manuel](/manuel) dit ce que l’on fait à l’écran. Ici, c’est le fonctionnement.
 
 ## Socle
 

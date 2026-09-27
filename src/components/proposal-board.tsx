@@ -96,7 +96,7 @@ export function ProposalBoard({ proposals }: { proposals: PendingProposal[] }) {
                 disabled={pendingId === proposal.id}
                 onClick={() => void run(proposal.id, dismissDocumentAction)}
               >
-                Écarter
+                Ignorer
               </Button>
             </div>
           </li>

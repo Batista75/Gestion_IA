@@ -2,7 +2,7 @@ import Link from "next/link";
 import { deleteFileAction, deleteInboxAction, updateInboxAction } from "@/app/catalog-actions";
 import { AssistantChat } from "@/components/assistant-chat";
 import { ConfirmDelete, NoteEditor } from "@/components/record-actions";
-import { type PendingProposal } from "@/components/proposal-board";
+import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { kindLabel } from "@/domain/offer-versions";
+import { homeAlerts, recentProjectCards } from "@/lib/home-board";
 import { isConversationId, latestConversation, loadConversation } from "@/lib/conversations";
 import { prisma } from "@/lib/db";
 
@@ -65,11 +66,8 @@ export default async function HomePage({
       ? await loadConversation(requested)
       : await latestConversation();
   const conversationId = thread?.id ?? (requested && !fresh ? requested : crypto.randomUUID());
-  const [projects, inbox, proposals] = await Promise.all([
-    prisma.project.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 6,
-    }),
+  const [projects, inbox, proposals, alerts] = await Promise.all([
+    recentProjectCards(),
     prisma.inboxItem.findMany({
       orderBy: { createdAt: "desc" },
       take: 8,
@@ -81,6 +79,7 @@ export default async function HomePage({
       take: 12,
       include: { file: true },
     }),
+    homeAlerts(),
   ]);
   const pending: PendingProposal[] = proposals.map((proposal) => {
     const view = proposalView(proposal.payload);
@@ -98,15 +97,44 @@ export default async function HomePage({
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
+      <div className="grid gap-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
+        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+          Déposez une information, un document ou une intention. Rien d’important n’est écrit sans confirmation.
+        </p>
+      </div>
 
-      <AssistantChat
-        key={conversationId}
-        conversationId={conversationId}
-        projectName={thread?.projectName ?? ""}
-        initialMessages={thread?.messages ?? []}
-        proposals={pending}
-      />
+      <section id="assistant" className="grid scroll-mt-6 gap-3">
+        <h2 className="text-lg font-semibold">Assistant</h2>
+        <AssistantChat
+          key={conversationId}
+          conversationId={conversationId}
+          projectName={thread?.projectName ?? ""}
+          initialMessages={thread?.messages ?? []}
+        />
+      </section>
+
+      <section id="a-traiter" className="grid scroll-mt-6 gap-3">
+        <h2 className="text-lg font-semibold">À traiter</h2>
+        <ProposalBoard proposals={pending} />
+      </section>
+
+      <section id="alertes" className="grid scroll-mt-6 gap-3">
+        <h2 className="text-lg font-semibold">Alertes</h2>
+        {alerts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Aucune alerte. Les pièces hors projet et les brouillons apparaîtront ici.</p>
+        ) : (
+          <ul className="grid gap-2">
+            {alerts.map((alert) => (
+              <li key={alert.text}>
+                <Link href={alert.href} className="text-sm font-medium underline-offset-4 hover:underline">
+                  {alert.text}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
@@ -139,16 +167,14 @@ export default async function HomePage({
                         {project.name}
                       </Link>
                     </CardTitle>
-                    <CardDescription>{project.primaryClient}</CardDescription>
+                    <CardDescription>{project.client}</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-2">
                     <Badge variant="secondary">{project.status}</Badge>
                     <p className="text-sm">{project.nextAction}</p>
-                    {project.purpose ? (
-                      <p className="text-sm text-muted-foreground">
-                        Le projet consiste à {project.purpose}.
-                      </p>
-                    ) : null}
+                    <p className="text-sm text-muted-foreground">
+                      Devis {project.quoted} · coûts {project.cost} · marge {project.margin}
+                    </p>
                   </CardContent>
                 </Card>
               </li>
@@ -157,7 +183,7 @@ export default async function HomePage({
         )}
       </section>
 
-      <section className="grid gap-3">
+      <section id="pieces" className="grid scroll-mt-6 gap-3">
         <h2 className="text-lg font-semibold">Pièces reçues</h2>
         {inbox.length === 0 ? (
           <Card>

@@ -1,6 +1,6 @@
 # Manuel utilisateur
 
-Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La spécification du produit visé est un document à part : [Spécification fonctionnelle (PDF)](/documentation/specification). Le fonctionnement du socle livré est dans la [spécification technique](/documentation/technique).
+Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La cible de refonte est la [spécification V2](/documentation/v2). Le PDF d’origine reste la [spécification fonctionnelle](/documentation/specification). Le fonctionnement du socle livré est dans la [spécification technique](/documentation/technique).
 
 Dernière mise à jour : 27 septembre 2026. Le menu Configuration règle le serveur, les modèles et la clé d’API.
 
@@ -8,21 +8,24 @@ Dernière mise à jour : 27 septembre 2026. Le menu Configuration règle le serv
 
 Sur la machine Ubuntu, ouvrez [l’accueil](/). L’adresse locale est `http://127.0.0.1:3847`.
 
-Le menu est à gauche, en cinq groupes.
+Le menu est à gauche.
 
-- **Actions** : Accueil.
-- **Suivi de devis** : Devis client, et les projets. Le bouton **Nouveau dossier** est sur la page Projets.
-- **Liste** : Documents, Clients, Fournisseurs, Articles, Regroupements, Historiques lignes, Échéances impayées, Textes.
-- **Pilotage** : Tableau de bord, Tableau d’analyse.
-- **Comptabilité** : Journal des ventes, Achats, Banque.
+- **Accueil** : le tableau personnel.
+- **Projets** : tous les projets. Le bouton **Nouveau dossier** est sur cette page.
+- **Ventes** : devis.
+- **Achats**.
+- **Référentiels** : clients, fournisseurs, produits et services.
+- **Finance** : échéances, banque, journal.
+- **Pilotage** : tableau de bord, analyses.
+- **Administration** : documents, modèles de textes, configuration, cible V2.
 
-La barre du haut porte le nom de l’entreprise, une recherche de documents, Configuration, le manuel et Plus. Sur un téléphone, **Menu** ouvre le rail. Chaque liste a une recherche, un nombre de lignes (10, 25, 50 ou 100), une pagination et, pour les tableaux commerciaux, un export CSV.
+Les regroupements et l’historique des lignes restent accessibles par leur adresse, ils ne sont plus dans le menu. La barre du haut porte le nom de l’entreprise, une recherche globale, Configuration et le manuel. Sur un téléphone, **Menu** ouvre le rail. Chaque liste a une recherche, un nombre de lignes (10, 25, 50 ou 100), une pagination et, pour les tableaux commerciaux, un export CSV.
 
 Les données restent sur cette machine. L’assistant envoie le texte à Ollama sur le PC hôte du réseau local, pas à un service d’IA public.
 
 ## Accueil
 
-L’accueil est l’assistant, et il n’y en a qu’un. C’est l’expert de l’activité, en achat-revente ou en fourniture de services. Il suit le fil : demande de devis reçue, offre, commande, puis fourniture du produit ou du service dans un projet.
+L’accueil répond à trois questions : que traiter, où en sont les projets, que demander à l’assistant. Le champ s’intitule **Que souhaitez-vous faire ?** En dessous : les propositions à confirmer ou à ignorer, les alertes, puis les cartes des projets récents. Le montant d’un devis n’apparaît que s’il est chiffré. L’assistant reste l’expert de l’activité, en achat-revente ou en fourniture de services.
 
 Le même bloc sert à écrire, à joindre des fichiers et à poser une question. Le bouton **Envoyer** lance la lecture. Jusqu’à 8 fichiers de 20 Mo. Docling, sur cette machine, lit un PDF, un document Word, un tableur, une présentation ou une image : les titres et les tableaux deviennent des extraits recherchables. Un texte simple est lu directement. Si Docling n’est pas disponible, un PDF ou un Word dont le texte peut être extrait reste indexé. Si aucun texte n’est lu, le fichier est quand même enregistré.
 
@@ -36,7 +39,7 @@ Une phrase explicite est enregistrée tout de suite. Exemple : `Créer le projet
 
 Un tableau collé de clients, de produits, de services, de projets ou de devis est lu de la même façon. Les prix, les devises et les mentions de TVA sont conservés tels qu’ils sont écrits. Le contrôle des lignes confirme ou non les totaux indiqués, sans les remplacer. Un montant en dollars reste en dollars tant qu’un taux vers l’euro n’est pas indiqué. La marge brute d’une affaire n’est calculée que si un coût de revient est indiqué.
 
-**À confirmer**, dans le même bloc, propose de créer un client, un fournisseur ou un produit, d’ouvrir une demande, d’ajouter une version de devis, ou de marquer une demande comme offre reçue. **Confirmer** écrit ces fiches. **Écarter** laisse le fichier dans Pièces reçues.
+**À traiter** propose de créer un client, un fournisseur ou un produit, d’ouvrir une demande, d’ajouter une version de devis, ou de marquer une demande comme offre reçue. **Confirmer** écrit ces fiches. **Ignorer** laisse le fichier dans Pièces reçues.
 
 Un devis ou un tarif confirmé ajoute l’article au catalogue : référence, désignation, famille, coût unitaire écrit, devise et fournisseur. La date de saisie est celle de la création. Une version ajoute : numéro, date, fournisseur, coût unitaire et conditions. Un PDF qui contient déjà du texte est lu sur place, sans modèle : références, quantités et prix sont repris tels qu’ils sont écrits, y compris un montant en `EUR 2.170,00` ou `21 109.75`. Le total imprimé est conservé, il n’est pas recalculé. Un composant sans prix n’est pas transformé en ligne chiffrée. Un scan sans texte passe par Docling. Une version déjà enregistrée n’est pas dupliquée. Une facture, une commande ou un avoir peut créer une fiche manquante, sans devenir une version de devis. Les prix restent ceux écrits dans la pièce. Ils ne sont pas calculés et ils ne sont pas additionnés.
 

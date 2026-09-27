@@ -171,12 +171,12 @@ export function AssistantChat({
           ) : null}
 
           <form onSubmit={onSubmit} className="grid gap-3">
-            <Label htmlFor="assistant-draft">Message</Label>
+            <Label htmlFor="assistant-draft">Que souhaitez-vous faire ?</Label>
             <Textarea
               id="assistant-draft"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder="Demande de devis, pièce reçue, question sur un client ou un projet."
+              placeholder="J’ai reçu le devis de Durand. Ajoute cette facture au projet Atlas. Prépare un devis pour le projet Horizon."
               maxLength={4000}
               className="min-h-28"
             />

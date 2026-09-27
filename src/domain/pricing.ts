@@ -200,6 +200,25 @@ export function saleOperationTotals(lines: SaleLineFigures[]): {
   };
 }
 
+export function homeMoneyLabel(lines: SaleLineFigures[]): {
+  quoted: string;
+  cost: string;
+  margin: string;
+} {
+  if (lines.length === 0) {
+    return { quoted: "aucun devis", cost: "non indiqué", margin: "non indiqué" };
+  }
+  if (lines.some((line) => line.lineNetCents === null)) {
+    return { quoted: "non indiqué", cost: "non indiqué", margin: "non indiqué" };
+  }
+  const net = lines.reduce((sum, line) => sum + (line.lineNetCents ?? 0), 0);
+  if (lines.some((line) => line.lineCostCents === null)) {
+    return { quoted: formatCents(net), cost: "non indiqué", margin: "non indiqué" };
+  }
+  const cost = lines.reduce((sum, line) => sum + (line.lineCostCents ?? 0), 0);
+  return { quoted: formatCents(net), cost: formatCents(cost), margin: formatCents(net - cost) };
+}
+
 export function formatCents(cents: number | null): string {
   if (cents === null) return "non indiqué";
   return euroFormat.format(cents / 100);

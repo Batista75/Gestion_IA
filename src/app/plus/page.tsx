@@ -72,6 +72,12 @@ export default function MorePage() {
           >
             Devis hybride
           </Link>
+          <Link
+            href="/documentation/v2"
+            className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
+          >
+            Cible V2
+          </Link>
         </CardContent>
       </Card>
 
