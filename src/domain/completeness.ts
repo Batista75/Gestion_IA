@@ -27,6 +27,8 @@ export type FieldOverrides = {
   projet: string;
   type: string;
   société: string;
+  /** Valeur acceptée pour un champ, y compris hors projet, type et société. */
+  valeurs?: Record<string, string>;
 };
 
 export type CompletenessInput = {
@@ -55,6 +57,9 @@ export type UnderstandingCard = {
   suppliers: string[];
   attachments: string[];
   simulation: string;
+  field: string;
+  proposed: string;
+  path: string;
 };
 
 const TYPE_WORD = /\b(devis|facture|commande|contrat|bon de livraison|rfq)\b/;
@@ -98,6 +103,9 @@ export function understandingCard(input: CompletenessInput & { action: string })
     suppliers: listed([supplier, ...(input.supplierOptions ?? [])]),
     attachments: input.attachments.slice(0, 8),
     simulation: "",
+    field: question?.field ?? "",
+    proposed: question ? (readings.get(question.field)?.value ?? "") : "",
+    path: "",
   };
 }
 
@@ -133,6 +141,9 @@ export function readUnderstanding(value: unknown): UnderstandingCard | null {
     suppliers: stringList(card.suppliers).slice(0, 80),
     attachments: stringList(card.attachments).slice(0, 8),
     simulation: typeof card.simulation === "string" ? card.simulation : "",
+    field: typeof card.field === "string" ? card.field : "",
+    proposed: typeof card.proposed === "string" ? card.proposed : "",
+    path: typeof card.path === "string" ? card.path : "",
   };
 }
 
@@ -234,10 +245,11 @@ function missingText(field: string): string {
 
 function chosenValue(field: string, overrides: FieldOverrides | undefined): string {
   if (!overrides) return "";
-  if (field === "projet") return overrides.projet.trim();
-  if (field === "type") return overrides.type.trim();
-  if (field === "société") return overrides.société.trim();
-  return "";
+  if (field === "projet" && overrides.projet.trim()) return overrides.projet.trim();
+  if (field === "type" && overrides.type.trim()) return overrides.type.trim();
+  if (field === "société" && overrides.société.trim()) return overrides.société.trim();
+  const extra = overrides.valeurs?.[field];
+  return typeof extra === "string" ? extra.trim() : "";
 }
 
 function understoodSentence(field: string, value: string): string {

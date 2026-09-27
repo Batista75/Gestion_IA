@@ -368,6 +368,7 @@ function UnderstandingPanel({
     >
       <p className="text-sm font-medium">Fiche de compréhension</p>
       <p className="text-sm leading-6">Action proposée : {card.action}</p>
+      {card.path ? <p className="text-sm leading-6">{card.path}</p> : null}
       {card.understood.length > 0 ? (
         <ul className="grid gap-1 text-sm leading-6">
           {card.understood.map((line) => (

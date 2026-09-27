@@ -116,6 +116,19 @@ test("la ligne Fiche ne réécrit pas la demande", () => {
   assert.equal(restored?.understood[0], "Le projet retenu est Atlas.");
 });
 
+test("une valeur acceptée lève le champ qui bloquait", () => {
+  const card = understandingCard({
+    ...empty,
+    action: "Enregistrer une commande",
+    required: ["client"],
+    text: "enregistre la commande",
+    projectClient: "Atelier Nord",
+    overrides: { projet: "", type: "", société: "", valeurs: { client: "Atelier Nord" } },
+  });
+  assert.equal(card.confirm, "");
+  assert.match(card.understood.join(" "), /Atelier Nord/);
+});
+
 test("le client facturé est confirmé même s’il est celui du projet ouvert", () => {
   const question = blockingQuestion({
     ...empty,

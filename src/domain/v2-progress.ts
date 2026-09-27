@@ -36,7 +36,7 @@ export const v2Progress: V2ProgressRow[] = [
   { domain: "Chaîne", point: "Catalogue fermé : intention structurée, pas une action libre", status: "fait", doneAt: "2026-09-27T13:26:10Z" },
   { domain: "Chaîne", point: "Complétude de chaque champ, seuil selon la criticité", status: "fait", doneAt: "2026-09-27T14:05:21Z" },
   { domain: "Chaîne", point: "Question minimale : choix fermé, confirmation, ou valeur manquante", status: "fait", doneAt: "2026-09-27T14:05:21Z" },
-  { domain: "Chaîne", point: "Parcours borné, suspendu puis repris après la réponse", status: "pas", doneAt: "" },
+  { domain: "Chaîne", point: "Parcours borné, suspendu puis repris après la réponse", status: "fait", doneAt: "2026-09-27T14:48:14Z" },
   { domain: "Chaîne", point: "Fiche de compréhension corrigeable sans reformuler le message", status: "fait", doneAt: "2026-09-27T14:20:23Z" },
   { domain: "Chaîne", point: "Quatre mémoires ; une correction ne devient pas une règle globale", status: "pas", doneAt: "" },
   { domain: "Chaîne", point: "Journal d’audit : entrée, contexte, proposition, validation, résultat", status: "pas", doneAt: "" },
@@ -112,9 +112,9 @@ export const v2Phases: V2Phase[] = [
   {
     order: 7,
     title: "Parcours repris après réponse",
-    state: "pas",
-    summary: "Un traitement suspendu garde son état et reprend quand la réponse arrive.",
-    doneAt: "",
+    state: "fait",
+    summary: "Un traitement suspendu garde son état et reprend quand la réponse arrive. Rien n’est écrit.",
+    doneAt: "2026-09-27T14:48:14Z",
   },
   {
     order: 8,

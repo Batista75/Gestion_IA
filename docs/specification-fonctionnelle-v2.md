@@ -189,7 +189,7 @@ Un second serveur, un autre moteur d’inférence, un orchestrateur externe ou u
 4. Complétude champ par champ. Cette phase est en service pour une action du catalogue encore sans exécution : chaque champ a un seuil, sans score global.
 5. Questions ciblées. Cette phase est en service : une seule question, choix fermé, confirmation, ou valeur manquante. Rien n’est écrit.
 6. Simulation avant écriture. Cette phase est en service : une action à risque dont la fiche est complète montre le résultat prévu. Rien n’est écrit.
-7. Parcours persistant, avec reprise.
+7. Parcours persistant, avec reprise. Cette phase est en service : une action encore sans exécution garde quatre étapes. Si un champ bloque, le parcours est suspendu et une réponse courte le reprend. Rien n’est écrit.
 8. Mémoire des corrections validées.
 9. Évaluation sur de vrais messages courts.
 

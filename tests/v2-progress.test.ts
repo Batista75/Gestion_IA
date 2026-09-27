@@ -43,7 +43,9 @@ test("le tableau sépare ce qui est livré de la cible restante", () => {
   assert.equal(phase?.state, "fait");
   assert.equal(v2Phases.find((item) => item.order === 5)?.state, "fait");
   assert.equal(v2Phases.find((item) => item.order === 6)?.state, "fait");
-  assert.equal(v2Phases.find((item) => item.order === 7)?.state, "pas");
+  assert.equal(v2Phases.find((item) => item.order === 7)?.state, "fait");
+  assert.equal(v2Phases.find((item) => item.order === 8)?.state, "pas");
+  assert.equal(byPoint.get("Parcours borné, suspendu puis repris après la réponse"), "fait");
 });
 
 test("la date trie du plus récent au plus ancien, et l’inverse", () => {

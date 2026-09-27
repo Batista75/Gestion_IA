@@ -139,8 +139,18 @@ model Conversation {
   createdAt DateTime              @default(now())
   updatedAt DateTime              @updatedAt
   messages  ConversationMessage[]
+  task      AssistantTask?
 
   @@index([projectId])
+}
+
+/** Parcours d’une action encore sans exécution. Une seule tâche par fil. */
+model AssistantTask {
+  id             String       @id @default(cuid())
+  conversationId String       @unique
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  payload        Json
+  updatedAt      DateTime     @updatedAt
 }
 
 model ConversationMessage {

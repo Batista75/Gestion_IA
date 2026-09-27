@@ -44,7 +44,15 @@ import {
 } from "@/domain/interpreter";
 import { readModelInterpretation } from "@/lib/interpreter";
 import { simulateWrite } from "@/domain/simulation";
-import { absentReply, decideFree, intentCatalog, type IntentDecision } from "@/domain/intent-catalog";
+import { absentReply, decideFree, intentCatalog, type IntentDecision, type IntentId } from "@/domain/intent-catalog";
+import {
+  nextOverrides,
+  pathLine,
+  resumeKind,
+  taskSteps,
+  type StoredTask,
+} from "@/domain/task-path";
+import { loadTask, saveTask } from "@/lib/task-path";
 import { attachConversationProject, resolveContext } from "@/lib/context-envelope";
 import { asksHybridQuote } from "@/domain/hybrid-quote";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
@@ -89,9 +97,8 @@ export async function POST(request: Request) {
     content: parsed.text,
     linkText: parsed.text,
   });
-  const snapshot = await resolveContext(
-    readHint(payload && typeof payload === "object" && "context" in payload ? payload.context : null),
-  );
+  const hint = readHint(payload && typeof payload === "object" && "context" in payload ? payload.context : null);
+  let snapshot = await resolveContext(hint);
   await attachConversationProject(conversationId, snapshot.projectId);
 
   const correction = readCardCorrection(parsed.text);
@@ -103,6 +110,30 @@ export async function POST(request: Request) {
       source: "regle-metier",
       step: "Fiche",
     });
+  }
+
+  const stored = await loadTask(conversationId);
+  if (!correction && stored?.status === "suspendue" && intentCatalog.some((item) => item.id === stored.intent)) {
+    const kind = resumeKind(parsed.text);
+    const moved = kind ? nextOverrides(stored.overrides, stored.valeurs, stored.field, kind, parsed.text, stored.proposed) : null;
+    const accept = Boolean(moved?.kept);
+    const refuse = kind === "non" && Boolean(stored.proposed);
+    if (moved && (accept || refuse)) {
+      snapshot = await resumeSnapshot(snapshot, stored);
+      const kept = accept ? moved : null;
+      return publishBlocked({
+        conversationId,
+        request: stored.request,
+        decision: { id: stored.intent as IntentId, execution: "absente", missing: [] },
+        snapshot,
+        view: hint.view.startsWith("/projets/") ? hint.view : stored.view,
+        overrides: fieldOverrides(kept ? kept.overrides : stored.overrides, kept ? kept.valeurs : stored.valeurs),
+        preface: kept
+          ? `Parcours repris. La réponse « ${kept.accepted} » continue la même demande.`
+          : "Ce point n’est pas retenu.",
+        prior: stored,
+      });
+    }
   }
 
   if (!correction) {
@@ -129,35 +160,36 @@ export async function POST(request: Request) {
     });
   }
   if (free.execution === "absente" && free.id) {
-    const blocked = await blockedTurn(baseText, free, snapshot, correction);
-    return streamDirect({
+    return publishBlocked({
       conversationId,
-      reply: blockedReply(free, blocked, snapshot),
-      source: "regle-metier",
-      step: blocked.card ? "Fiche" : "Catalogue",
-      understanding: blocked.card,
+      request: baseText,
+      decision: free,
+      snapshot,
+      view: hint.view,
+      overrides: fieldOverrides(
+        {
+          projet: correction?.projet || stored?.overrides.projet || "",
+          type: correction?.type || stored?.overrides.type || "",
+          societe: correction?.société || stored?.overrides.societe || "",
+        },
+        { ...(stored?.valeurs ?? {}), ...(correction?.valeurs ?? {}) },
+      ),
+      preface: correction && stored?.status === "suspendue" ? "Parcours repris. La fiche continue la même demande." : "",
+      prior: stored,
     });
   }
 
   const interpreted = plainQuestion(baseText) ?? (await modelInterpretation(baseText, snapshot));
   if (interpreted && interpreterEffect(interpreted) === "ecrire") {
-    const blocked = await blockedTurn(
-      baseText,
-      { id: interpreted.intent, execution: "absente", missing: [] },
-      snapshot,
-      correction,
-    );
-    return streamDirect({
+    return publishBlocked({
       conversationId,
-      reply: blockedReply(
-        { id: interpreted.intent, execution: "absente", missing: [] },
-        blocked,
-        snapshot,
-        interpretationLine(interpreted),
-      ),
-      source: "regle-metier",
-      step: "Interprétation",
-      understanding: blocked.card,
+      request: baseText,
+      decision: { id: interpreted.intent, execution: "absente", missing: [] },
+      snapshot,
+      view: hint.view,
+      overrides: correction,
+      preface: interpretationLine(interpreted),
+      prior: null,
     });
   }
   if (free.execution === "absente") {
@@ -368,6 +400,74 @@ function proposalResponse(opened: ProposalView) {
     source: "proposition" as const,
     proposal: opened.proposal,
   };
+}
+
+function fieldOverrides(
+  overrides: { projet: string; type: string; societe: string },
+  valeurs: Record<string, string>,
+): FieldOverrides {
+  const next = { ...valeurs };
+  if (overrides.projet) next.projet = overrides.projet;
+  if (overrides.type) next.type = overrides.type;
+  if (overrides.societe) next["société"] = overrides.societe;
+  return { projet: overrides.projet, type: overrides.type, société: overrides.societe, valeurs: next };
+}
+
+async function resumeSnapshot(snapshot: ContextSnapshot, task: StoredTask): Promise<ContextSnapshot> {
+  let next = snapshot;
+  if (!next.projectId && task.view.startsWith("/projets/")) {
+    const saved = await resolveContext({ view: task.view, attachments: task.attachments });
+    if (saved.projectId) next = saved;
+  }
+  if (next.attachments.length === 0 && task.attachments.length > 0) {
+    next = { ...next, attachments: task.attachments };
+  }
+  return next;
+}
+
+async function publishBlocked(input: {
+  conversationId: string;
+  request: string;
+  decision: IntentDecision;
+  snapshot: ContextSnapshot;
+  view: string;
+  overrides: FieldOverrides | null;
+  preface: string;
+  prior: StoredTask | null;
+}): Promise<Response> {
+  const blocked = await blockedTurn(input.request, input.decision, input.snapshot, input.overrides);
+  const ready = blocked.card?.confirm === "";
+  const steps = taskSteps({ ready, simulated: Boolean(blocked.card?.simulation) });
+  const path = blocked.card ? pathLine(steps) : "";
+  const card = blocked.card ? { ...blocked.card, path } : null;
+  if (input.decision.id && card) {
+    const overrides = input.overrides ?? { projet: "", type: "", société: "" };
+    await saveTask(input.conversationId, {
+      intent: input.decision.id,
+      action: card.action,
+      request: input.request,
+      field: card.field,
+      question: card.confirm,
+      proposed: card.proposed,
+      status: ready ? "prete" : "suspendue",
+      steps,
+      overrides: {
+        projet: overrides.projet,
+        type: overrides.type,
+        societe: overrides.société,
+      },
+      valeurs: overrides.valeurs ?? {},
+      attachments: input.snapshot.attachments.length ? input.snapshot.attachments : (input.prior?.attachments ?? []),
+      view: input.view.startsWith("/projets/") ? input.view : input.prior?.view || input.view || "/",
+    });
+  }
+  return streamDirect({
+    conversationId: input.conversationId,
+    reply: blockedReply(input.decision, { question: blocked.question, card }, input.snapshot, [input.preface, path].filter(Boolean).join("\n")),
+    source: "regle-metier",
+    step: card ? "Parcours" : "Catalogue",
+    understanding: card,
+  });
 }
 
 function blockedReply(
