@@ -8,6 +8,7 @@ import {
   fieldChangeSummary,
 } from "@/domain/record-journal";
 import { currentChangeSource } from "@/lib/change-source";
+import { currentOperatorMark } from "@/domain/operator";
 
 const LABELS: Record<string, Record<string, string>> = {
   Client: CLIENT_FIELD_LABELS,
@@ -111,6 +112,7 @@ async function writeEvent(
       action,
       summary,
       source: currentChangeSource(),
+      actor: currentOperatorMark(),
     },
   });
 }

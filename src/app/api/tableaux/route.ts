@@ -5,7 +5,7 @@ import {
   listGroups,
   listJournal,
   listLines,
-  listQuoteTable,
+  listClientQuotes,
   listTexts,
   type Listed,
 } from "@/lib/commercial-board";
@@ -15,7 +15,10 @@ export const dynamic = "force-dynamic";
 async function tableOf(view: string, query: URLSearchParams): Promise<Listed | null> {
   const q = query.get("q") ?? "";
   if (view === "documents") return listDocuments(q);
-  if (view === "devis") return listQuoteTable(q);
+  if (view === "devis") {
+    const result = await listClientQuotes(q, query.get("situation") ?? "", query.get("client") ?? "");
+    return result.listed;
+  }
   if (view === "lignes") return listLines(q);
   if (view === "echeances") return listDeadlines(q);
   if (view === "textes") return listTexts(q);
@@ -41,9 +44,12 @@ export async function GET(request: Request) {
   if (!listed) {
     return new Response("Export inconnu.", { status: 404 });
   }
+  const indexes = listed.headers
+    .map((header, index) => (header === "Télécharger" ? -1 : index))
+    .filter((index) => index >= 0);
   const body = csvTable(
-    listed.headers,
-    listed.rows.map((row) => row.map((cell) => cell.text)),
+    indexes.map((index) => listed.headers[index] ?? ""),
+    listed.rows.map((row) => indexes.map((index) => row[index]?.text ?? "")),
   );
   return new Response(body, {
     headers: {

@@ -41,6 +41,7 @@ export type ProductRecord = {
   statedPrice: string;
   vatNote: string;
   kind: string;
+  enteredLabel: string;
   updatedLabel: string;
   versions: ProductVersionView[];
 };
@@ -63,6 +64,7 @@ export function ProductManager({
   quoteAction,
   showHeading = true,
   showFinder = true,
+  edition = "",
 }: {
   query: string;
   source: string;
@@ -74,6 +76,7 @@ export function ProductManager({
   quoteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   showHeading?: boolean;
   showFinder?: boolean;
+  edition?: string;
 }) {
   return (
     <div className="grid gap-6">
@@ -220,7 +223,7 @@ export function ProductManager({
                     </div>
                   ) : null}
                   <p className="text-xs text-muted-foreground">
-                    Mis à jour le {record.updatedLabel}
+                    Saisi le {record.enteredLabel} · mis à jour le {record.updatedLabel}
                   </p>
                   <ConfirmDelete
                     action={deleteAction}
@@ -228,9 +231,9 @@ export function ProductManager({
                     label="Supprimer le produit"
                     confirm={`Supprimer ${record.name} ? Les lignes de devis de ce produit sont retirées.`}
                   />
-                  <details>
+                  <details id={record.id === edition ? "edition" : undefined} open={record.id === edition || undefined}>
                     <summary className="cursor-pointer text-sm font-medium">
-                      Modifier
+                      Éditer
                     </summary>
                     <div className="pt-3">
                       <ProductFields

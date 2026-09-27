@@ -10,8 +10,8 @@ Sur la machine Ubuntu, ouvrez [l’accueil](/). L’adresse locale est `http://1
 
 Le menu est à gauche, en cinq groupes.
 
-- **Actions** : Accueil, Nouveau dossier, Aide au prix.
-- **Suivi de devis** : le tableau des devis en attente, transformés ou non aboutis, leur liste, et les projets.
+- **Actions** : Accueil.
+- **Suivi de devis** : Devis client, et les projets. Le bouton **Nouveau dossier** est sur la page Projets.
 - **Liste** : Documents, Clients, Fournisseurs, Articles, Regroupements, Historiques lignes, Échéances impayées, Textes.
 - **Pilotage** : Tableau de bord, Tableau d’analyse.
 - **Comptabilité** : Journal des ventes, Achats, Banque.
@@ -76,7 +76,7 @@ La [vue Fournisseurs](/fournisseurs) s’ouvre sur un tableau : nom, e-mail, té
 
 ## Produits
 
-La [vue Articles](/produits) s’ouvre sur un tableau : référence, désignation, famille, prix indiqué, coût indiqué, unité et fournisseur. Ces prix restent ceux de la fiche. Le catalogue réunit :
+La [vue Articles](/produits) s’ouvre sur un tableau : référence, désignation, famille, prix indiqué, coût indiqué, unité, fournisseur et date de saisie. **Éditer** ouvre le formulaire de cette fiche. Ces prix restent ceux de la fiche. Le catalogue réunit :
 
 - **Saisie manuelle** : nom, référence, unité, fournisseur, description. Un fournisseur inconnu est créé.
 - **Issu d’un devis** : titre du devis et un produit par ligne, ou un fichier confirmé depuis l’accueil. Chaque confirmation de devis ajoute une version : prix indiqué et conditions. Une version ne remplace pas la précédente.
@@ -97,6 +97,8 @@ Sous le client et le contexte, des liens mènent au **parcours**, à la **livrai
 **Voir le document** ouvre le devis, la commande client ou la commande fournisseur comme une pièce : en-tête de l’entreprise, destinataire, lignes et total HT. **Voir la facture client** reprend la commande client la plus récente et les références déjà enregistrées (facture, bon de commande, bon de livraison, procès-verbal). L’application n’attribue pas de numéro de facture. **Imprimer** utilise l’impression du navigateur. La commande fournisseur montre le coût d’achat. Le devis, la commande client et la facture montrent le prix de vente HT, pas la marge. Le texte complet est l’[instruction métier](/documentation/metier).
 
 Chaque dossier garde aussi une **actualité** : ouverture, objet, devis établi, commande, confirmation des chiffres, pièce rattachée, mise à jour. **Modifications** date à part les changements de la fiche projet : création, correction, suppression. **Modifier ou supprimer** change le nom, le client, le statut, l’objet et la prochaine action, retire un devis du catalogue rattaché au dossier, ou supprime le projet. Les devis retirés du catalogue restent au catalogue. Un devis de catalogue rattaché affiche la devise, les totaux indiqués et la mention de TVA. La conversion en euro et la marge brute de ces pièces restent absentes tant que le taux ou le coût de revient n’est pas indiqué.
+
+La page [Projets](/projets) tient en deux moitiés. En haut, le tableau des dossiers et le bouton **Nouveau dossier**, qui ouvre le formulaire. En bas, les modifications de fiche et les actions du dossier. Chaque ligne nomme l’auteur par l’initiale du prénom et le nom. L’utilisateur en place est Jhon Smith, affiché **J Smith**. Le mot de passe n’est pas demandé.
 
 **Nouveau dossier** demande :
 
@@ -162,7 +164,9 @@ Si Configuration indique **Serveur injoignable**, le PC hôte doit faire écoute
 
 [Documents](/listes/documents) aligne les devis, les commandes et les devis reçus : type, date, référence du dossier, client ou fournisseur, projet, montant HT, situation. Le montant d’une pièce produite additionne les lignes qui ont un coût. Le total imprimé d’un devis reçu n’est pas recalculé.
 
-[Suivi de devis](/suivi) présente trois colonnes : en attente, transformé en commande, non abouti. **Liste** ouvre le même ensemble en tableau.
+[Devis client](/suivi) est la liste des devis établis depuis un dossier. Les filtres portent sur la situation et le client.
+
+[Documents](/listes/documents) propose **Télécharger** sur chaque ligne. Une pièce produite se télécharge en page HTML. Un devis reçu qui a un fichier joint se télécharge tel qu’il a été déposé.
 
 [Regroupements](/listes/regroupements) classe les articles par fournisseur. Il n’y a pas de pack au prix modifié.
 

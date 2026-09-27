@@ -1,0 +1,1 @@
+ALTER TABLE "RecordEvent" ADD COLUMN "actor" TEXT NOT NULL DEFAULT 'J Smith';

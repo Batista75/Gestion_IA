@@ -33,9 +33,9 @@ export function ChangeJournal({
               <li key={entry.id} className="text-sm leading-6 break-words">
                 <span className="text-muted-foreground">{entry.at}</span>
                 {" · "}
-                <span className="font-medium">{entry.name}</span>
+                <span className="font-medium">{entry.actor}</span>
                 {" · "}
-                {entry.source}
+                <span className="font-medium">{entry.name}</span>
                 {" · "}
                 {entry.summary}
               </li>

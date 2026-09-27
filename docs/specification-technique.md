@@ -93,8 +93,9 @@ Le menu est un rail à gauche, sur le modèle d’un logiciel de devis et de fac
 
 Les listes partagent la même coquille : titre, recherche, filtres, choix de 10, 25, 50 ou 100 lignes, pagination, export CSV (`GET /api/tableaux`). Les montants HT des pièces produites passent par `saleLineFigures` et `saleOperationTotals`. Un total imprimé sur un devis reçu reste le texte de la pièce. Aucune liste n’attribue de numéro.
 
-- **Suivi de devis** (`/suivi`) range les devis du dossier en trois colonnes : en attente, transformé, non abouti. **Liste** (`/suivi?vue=liste`) est le même ensemble en tableau.
-- **Documents** (`/listes/documents`) mêle devis, commandes client, commandes fournisseur et devis reçus. Colonnes : type, date, référence du dossier, client ou fournisseur, projet, montant HT, situation.
+- **Devis client** (`/suivi`) est le tableau des devis du dossier, filtré par situation et par client.
+- **Projets** (`/projets`) place le tableau des dossiers en haut, avec le bouton Nouveau dossier, et le journal des modifications et des actions en bas. L’auteur est l’initiale du prénom et le nom (`operatorMark` dans `src/domain/operator.ts`). L’utilisateur en place est Jhon Smith, affiché J Smith. `RecordEvent.actor` garde cette marque. Le mot de passe n’est pas demandé.
+- **Documents** (`/listes/documents`) mêle devis, commandes client, commandes fournisseur et devis reçus. Colonnes : type, date, référence du dossier, client ou fournisseur, projet, montant HT, situation. Chaque ligne a un téléchargement : HTML pour une pièce produite (`GET /api/ventes/[id]`), fichier d’origine pour un devis reçu qui en a un.
 - **Clients, fournisseurs, articles** gardent la saisie sous le tableau. L’article affiche le prix indiqué et le coût indiqué, sans les recalculer.
 - **Regroupements** (`/listes/regroupements`) groupe le catalogue par fournisseur. Un pack au prix ajusté n’existe pas.
 - **Historiques lignes** (`/listes/lignes`) donne une ligne de tableau par ligne de pièce.

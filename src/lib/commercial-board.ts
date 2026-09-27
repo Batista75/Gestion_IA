@@ -11,7 +11,7 @@ type MoneyLine = {
   discountPercent: number;
 };
 
-export type Cell = { text: string; href?: string };
+export type Cell = { text: string; href?: string; download?: boolean };
 
 export type ProducedDocument = {
   id: string;
@@ -138,7 +138,10 @@ export async function listDocuments(query: string): Promise<Listed> {
     if (!haystack([document.type, document.reference, document.party, document.projectName, document.title, document.statusLabel], query)) {
       continue;
     }
-    rows.push(producedCells(document, formatCents(document.ht)));
+    rows.push([
+      ...producedCells(document, formatCents(document.ht)),
+      { text: "Télécharger", href: `/api/ventes/${document.id}`, download: true },
+    ]);
   }
   for (const quote of received) {
     const party = blank(quote.clientName || quote.supplierName);
@@ -153,21 +156,43 @@ export async function listDocuments(query: string): Promise<Listed> {
       { text: quote.project?.name || "—" , href: quote.projectId ? `/projets/${quote.projectId}` : undefined },
       { text: blank(quote.statedTotalHt) === "—" ? "non indiqué" : quote.statedTotalHt },
       { text: "Reçu" },
+      {
+        text: "Télécharger",
+        href: quote.fileId ? `/api/pieces/${quote.fileId}` : `/api/devis-recus/${quote.id}`,
+        download: true,
+      },
     ]);
   }
-  return { headers: producedHeaders, rows };
+  return { headers: [...producedHeaders, "Télécharger"], rows };
 }
 
-export async function listQuoteTable(query: string): Promise<Listed> {
-  const documents = (await loadProduced()).filter(
+export async function listClientQuotes(query: string, situation: string, client: string): Promise<{
+  listed: Listed;
+  clients: string[];
+  situations: string[];
+}> {
+  const documents = (await loadProduced()).filter((document) => document.kind === "devis");
+  const clients = [...new Set(documents.map((document) => document.party))].sort((left, right) => left.localeCompare(right, "fr"));
+  const situations = [...new Set(documents.map((document) => document.statusLabel))];
+  const rows = documents.filter(
     (document) =>
-      document.kind === "devis" &&
+      (!situation || document.statusLabel === situation) &&
+      (!client || document.party === client) &&
       haystack([document.reference, document.party, document.projectName, document.title, document.statusLabel], query),
   );
   return {
-    headers: producedHeaders,
-    rows: documents.map((document) => producedCells(document, formatCents(document.ht))),
+    clients,
+    situations,
+    listed: {
+      headers: producedHeaders,
+      rows: rows.map((document) => producedCells(document, formatCents(document.ht))),
+    },
   };
+}
+
+export async function listQuoteTable(query: string): Promise<Listed> {
+  const { listed } = await listClientQuotes(query, "", "");
+  return listed;
 }
 
 export async function listLines(query: string): Promise<Listed> {

@@ -8,6 +8,7 @@ export type JournalEntry = {
   action: string;
   summary: string;
   source: string;
+  actor: string;
 };
 
 export async function listRecordEvents(entityType: string, take = 20): Promise<JournalEntry[]> {
@@ -24,6 +25,7 @@ export async function listRecordEvents(entityType: string, take = 20): Promise<J
     action: row.action,
     summary: row.summary,
     source: sourceText(row.source),
+    actor: row.actor.trim() || "J Smith",
   }));
 }
 

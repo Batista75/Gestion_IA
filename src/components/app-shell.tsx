@@ -1,24 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Suspense, useState, type ReactNode } from "react";
 import { cn } from "cn";
 
 const sections = [
   {
     title: "Actions",
-    links: [
-      { href: "/", label: "Accueil" },
-      { href: "/projets#dossier", label: "Nouveau dossier" },
-      { href: "/ventes", label: "Aide au prix" },
-    ],
+    links: [{ href: "/", label: "Accueil" }],
   },
   {
     title: "Suivi de devis",
     links: [
-      { href: "/suivi", label: "Suivi de devis" },
-      { href: "/suivi?vue=liste", label: "Liste" },
+      { href: "/suivi", label: "Devis client" },
       { href: "/projets", label: "Projets" },
     ],
   },
@@ -52,21 +47,14 @@ const sections = [
   },
 ] as const;
 
-function isActive(pathname: string, search: string, href: string): boolean {
+function isActive(pathname: string, href: string): boolean {
   const url = new URL(href, "http://local");
-  if (href.includes("#")) return false;
   if (url.pathname === "/projets") return pathname === "/projets" || pathname.startsWith("/projets/");
-  if (url.pathname !== pathname) return false;
-  const vue = url.searchParams.get("vue");
-  const current = new URLSearchParams(search).get("vue");
-  if (href === "/suivi") return !current;
-  if (vue) return current === vue;
-  return true;
+  return url.pathname === pathname;
 }
 
 function SideBar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
   const pathname = usePathname();
-  const search = useSearchParams().toString();
   return (
     <aside
       className={cn(
@@ -85,7 +73,7 @@ function SideBar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
             <p className="px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">{section.title}</p>
             <ul className="grid">
               {section.links.map((link) => {
-                const active = isActive(pathname, search, link.href);
+                const active = isActive(pathname, link.href);
                 return (
                   <li key={`${section.title}-${link.href}-${link.label}`}>
                     <Link
@@ -149,6 +137,7 @@ export function AppShell({
           </form>
           <div className="ml-auto flex items-center gap-3 text-sm">
             <span className="hidden max-w-48 truncate text-muted-foreground sm:inline">{company}</span>
+            <span className="hidden text-muted-foreground md:inline">J Smith</span>
             <Link href="/configuration" className="inline-flex min-h-11 items-center hover:underline">
               Configuration
             </Link>

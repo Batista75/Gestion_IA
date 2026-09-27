@@ -184,6 +184,7 @@ model RecordEvent {
   action     String
   summary    String
   source     String   @default("")
+  actor      String   @default("J Smith")
   createdAt  DateTime @default(now())
 
   @@index([entityType, entityId])
