@@ -19,6 +19,7 @@ import {
 } from "@/domain/client-file";
 import { mentionedNames, sourceLabel, uniqueNameMatch } from "@/domain/knowledge";
 import { withChangeSource } from "@/lib/change-source";
+import { syncPrimaryContact } from "@/lib/contacts";
 import { prisma } from "@/lib/db";
 
 const PATHS = [
@@ -192,11 +193,16 @@ export async function saveClientDraft(
     address: ready.address,
     notes: notesWithRegistration(ready.notes, ready.registration),
   };
-  if (target) {
-    await prisma.client.update({ where: { id: target.id }, data });
-  } else {
-    await prisma.client.create({ data });
-  }
+  const saved = target
+    ? await prisma.client.update({ where: { id: target.id }, data })
+    : await prisma.client.create({ data });
+  await syncPrimaryContact({
+    clientId: saved.id,
+    fullName: ready.contactName,
+    role: ready.contactRole,
+    email: ready.email,
+    phone: ready.phone,
+  });
   for (const path of PATHS) revalidatePath(path);
   return {
     ok: true,

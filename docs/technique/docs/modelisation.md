@@ -8,6 +8,8 @@ Cette page liste chaque modèle, ses champs utiles, ses liens et ce que l’appl
 
 ```
 Client 1 ── * Project
+Client 1 ── * Contact
+Supplier 1 ── * Contact
 Supplier 1 ── * Product
 Product 1 ── * QuoteLine
 Product 1 ── * ProjectLine
@@ -50,7 +52,7 @@ Une seule ligne, `id` = `local`. En-tête des pièces.
 
 ## Répertoire
 
-Le contact d’un client est une colonne de `Client`. Il n’existe pas de table de contacts.
+Le contact principal d’un client reste recopié dans `contactName`, `contactRole`, `email` et `phone`. Les autres personnes sont des `Contact`.
 
 ### Client
 
@@ -62,15 +64,24 @@ Le contact d’un client est une colonne de `Client`. Il n’existe pas de table
 - Interlocuteur : `contactName`, `contactRole`, `email`, `phone`.
 - `notes`, `reference`, `sector`, `currency`.
 - `createdAt`, `updatedAt`.
-- Lien : un client a plusieurs `Project`. Retirer le client vide `Project.clientId`.
+- Lien : un client a plusieurs `Project` et plusieurs `Contact`. Retirer le client vide `Project.clientId` et retire ses contacts.
 
 ### Supplier
 
 `nameKey` est unique.
 
-- `name`, `siren`, `email`, `phone`, `address`, `notes`.
+- `name`, `siren`, `siret`, `vatNumber`, `legalForm`, `country`, `postalCode`, `city`, `email`, `phone`, `address`, `notes`.
 - `createdAt`, `updatedAt`.
-- Lien : un fournisseur a plusieurs `Product`. Retirer le fournisseur vide `Product.supplierId`.
+- Lien : un fournisseur a plusieurs `Product` et plusieurs `Contact`. Retirer le fournisseur vide `Product.supplierId` et retire ses contacts.
+
+### Contact
+
+Personne rattachée à un client ou à un fournisseur, pas aux deux.
+
+- `clientId` ou `supplierId`. La suppression de la fiche retire ses contacts.
+- `firstName`, `lastName`, `role`, `email`, `phone`.
+- `isPrimary` : le contact recopié sur la fiche. Les autres restent à `false`.
+- `createdAt`.
 
 ### Product
 
@@ -340,8 +351,8 @@ Le lot suivant est retenu. Ces noms ne sont pas des tables.
 
 Priorité haute, pas encore faites :
 
-- Harmoniser `Client` et `Supplier`, puis une `Organization` avec un rôle client, fournisseur, ou les deux.
-- `Contact` et `Address`, plusieurs interlocuteurs et plusieurs adresses. Le contact unique reste aujourd’hui sur `Client`.
+- Une `Organization` unique, à la fois client et fournisseur. `Client` et `Supplier` restent deux fiches, avec les mêmes attributs d’identité.
+- `Address`, plusieurs adresses par fiche. Les adresses restent des colonnes sur `Client`, `Supplier` et `Project`.
 - `SaleDocument` comme pièce commerciale reliée à sa pièce parente : devis, commande, livraison, facture, avoir. L’application n’émet toujours pas de facture et n’attribue pas de numéro.
 - Montants métier en centimes sur `Quote` et `QuoteLine`, à côté des textes extraits. `SupplierOffer.unitCostCents` est le premier pas. Les prix de vente du dossier passent déjà par `src/domain/pricing.ts`.
 

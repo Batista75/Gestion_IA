@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { FormState } from "@/app/catalog-actions";
+import { contactLabel } from "@/domain/contact";
 import { ConfirmDelete } from "@/components/record-actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,15 @@ export type PartyRecord = {
   contactRole?: string;
   sector?: string;
   currency?: string;
+  contacts?: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    email: string;
+    phone: string;
+    isPrimary: boolean;
+  }>;
   history?: Array<{ id: string; at: string; source: string; actor?: string; summary: string }>;
 };
 
@@ -53,6 +63,7 @@ export function PartyManager({
   createAction,
   updateAction,
   deleteAction,
+  addContactAction,
   showFinder = true,
 }: {
   title?: string;
@@ -61,11 +72,12 @@ export function PartyManager({
   query: string;
   records: PartyRecord[];
   noun: string;
-  profile?: "client";
+  profile?: "client" | "supplier";
   showFinder?: boolean;
   createAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   updateAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   deleteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
+  addContactAction: (previous: FormState, formData: FormData) => Promise<FormState>;
 }) {
   return (
     <div className="grid gap-6">
@@ -157,12 +169,11 @@ export function PartyManager({
                             .join(" · ")}
                         </p>
                       ) : null}
-                      {record.contactName ? (
-                        <p className="text-sm leading-6">
-                          Contact {record.contactName}
-                          {record.contactRole ? `, ${record.contactRole}` : ""}
-                        </p>
-                      ) : null}
+                      <ContactList
+                        record={record}
+                        action={addContactAction}
+                        parent={profile === "supplier" ? "supplier" : "client"}
+                      />
                       {record.address ? (
                         <p className="text-sm leading-6">
                           {[record.address, record.postalCode, record.city]
@@ -221,6 +232,53 @@ export function PartyManager({
   );
 }
 
+function ContactList({
+  record,
+  action,
+  parent,
+}: {
+  record: PartyRecord;
+  action: (previous: FormState, formData: FormData) => Promise<FormState>;
+  parent: "client" | "supplier";
+}) {
+  const [state, formAction, pending] = useActionState(action, emptyState);
+  const contacts = record.contacts ?? [];
+  return (
+    <div className="grid gap-2">
+      <p className="text-sm font-medium">Interlocuteurs</p>
+      {contacts.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Aucun interlocuteur.</p>
+      ) : (
+        <ul className="grid gap-2">
+          {contacts.map((contact) => {
+            const label = contactLabel(contact);
+            return (
+              <li key={contact.id} className="rounded-lg bg-muted px-3 py-2 text-sm leading-6">
+                <p className="font-medium">{label || "Interlocuteur"}{contact.isPrimary ? " · principal" : ""}</p>
+                {contact.role ? <p>{contact.role}</p> : null}
+                {contact.email ? <p>{contact.email}</p> : null}
+                {contact.phone ? <p>{contact.phone}</p> : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <form action={formAction} className="grid gap-2">
+        <input type="hidden" name={parent === "supplier" ? "supplierId" : "clientId"} value={record.id} />
+        <Field prefix={`${record.id}-contact`} label="Prénom" name="firstName" />
+        <Field prefix={`${record.id}-contact`} label="Nom" name="lastName" />
+        <Field prefix={`${record.id}-contact`} label="Fonction" name="role" />
+        <Field prefix={`${record.id}-contact`} label="E-mail" name="email" type="email" />
+        <Field prefix={`${record.id}-contact`} label="Téléphone" name="phone" />
+        <FormMessage state={state} />
+        <Button type="submit" variant="outline" disabled={pending} className="min-h-11 w-fit px-4">
+          {pending ? "Ajout…" : "Ajouter un interlocuteur"}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 function PartyFields({
   action,
   submitLabel,
@@ -230,7 +288,7 @@ function PartyFields({
   action: (previous: FormState, formData: FormData) => Promise<FormState>;
   submitLabel: string;
   record?: PartyRecord;
-  profile?: "client";
+  profile?: "client" | "supplier";
 }) {
   const [state, formAction, pending] = useActionState(action, emptyState);
   const prefix = record?.id ?? "new";
@@ -270,9 +328,11 @@ function PartyFields({
         required
         defaultValue={record?.name}
       />
-      {profile === "client" ? (
+      {profile === "client" || profile === "supplier" ? (
         <>
-          <Field prefix={prefix} label="Enseigne" name="tradeName" defaultValue={record?.tradeName} />
+          {profile === "client" ? (
+            <Field prefix={prefix} label="Enseigne" name="tradeName" defaultValue={record?.tradeName} />
+          ) : null}
           <Field prefix={prefix} label="Forme juridique" name="legalForm" defaultValue={record?.legalForm} />
           <Field prefix={prefix} label="Pays" name="country" defaultValue={record?.country} />
           <Field prefix={prefix} label="SIREN" name="siren" defaultValue={record?.siren} />
@@ -281,7 +341,7 @@ function PartyFields({
           <Field prefix={prefix} label="Adresse" name="address" defaultValue={record?.address} />
           <Field prefix={prefix} label="Code postal" name="postalCode" defaultValue={record?.postalCode} />
           <Field prefix={prefix} label="Ville" name="city" defaultValue={record?.city} />
-          <Field prefix={prefix} label="Contact" name="contactName" defaultValue={record?.contactName} />
+          <Field prefix={prefix} label="Contact principal" name="contactName" defaultValue={record?.contactName} />
           <Field prefix={prefix} label="Fonction du contact" name="contactRole" defaultValue={record?.contactRole} />
         </>
       ) : (

@@ -21,6 +21,12 @@ export const CLIENT_FIELD_LABELS: Record<string, string> = {
 export const PARTY_FIELD_LABELS: Record<string, string> = {
   name: "Nom",
   siren: "SIREN",
+  siret: "SIRET",
+  vatNumber: "TVA",
+  legalForm: "Forme",
+  country: "Pays",
+  postalCode: "Code postal",
+  city: "Ville",
   email: "E-mail",
   phone: "Téléphone",
   address: "Adresse",

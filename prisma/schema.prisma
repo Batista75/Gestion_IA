@@ -129,6 +129,7 @@ model Client {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   projects    Project[]
+  contacts    Contact[]
 }
 
 model Conversation {
@@ -215,15 +216,41 @@ model Supplier {
   id        String    @id @default(cuid())
   name      String
   nameKey   String    @unique
-  siren     String    @default("")
-  email     String    @default("")
-  phone     String    @default("")
-  address   String   @default("")
-  notes     String    @default("")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  products  Product[]
-  offers    SupplierOffer[]
+  siren      String    @default("")
+  siret      String    @default("")
+  vatNumber  String    @default("")
+  legalForm  String    @default("")
+  country    String    @default("")
+  postalCode String    @default("")
+  city       String    @default("")
+  email      String    @default("")
+  phone      String    @default("")
+  address    String    @default("")
+  notes      String    @default("")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  products   Product[]
+  offers     SupplierOffer[]
+  contacts   Contact[]
+}
+
+/** Interlocuteur d’un client ou d’un fournisseur. Une fiche en a plusieurs. Le principal reste recopié sur la fiche. */
+model Contact {
+  id         String    @id @default(cuid())
+  clientId   String?
+  client     Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  firstName  String    @default("")
+  lastName   String    @default("")
+  role       String    @default("")
+  email      String    @default("")
+  phone      String    @default("")
+  isPrimary  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@index([clientId])
+  @@index([supplierId])
 }
 
 model Product {

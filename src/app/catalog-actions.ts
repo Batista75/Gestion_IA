@@ -7,7 +7,9 @@ import {
   saveProductForm,
   saveQuoteForm,
   saveSupplierForm,
+  type SupplierDetails,
 } from "@/lib/catalog-store";
+import { addExtraContact } from "@/lib/contacts";
 import {
   removeClient,
   removeInbox,
@@ -40,14 +42,32 @@ export async function createSupplierAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return traced(() => saveSupplierForm(null, partyFromForm(formData)));
+  return traced(() => saveSupplierForm(null, partyFromForm(formData), supplierDetails(formData)));
 }
 
 export async function updateSupplierAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return traced(() => saveSupplierForm(idFromForm(formData), partyFromForm(formData)));
+  return traced(() => saveSupplierForm(idFromForm(formData), partyFromForm(formData), supplierDetails(formData)));
+}
+
+export async function addContactAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const result = await withChangeSource("formulaire", () =>
+    addExtraContact({
+      clientId: String(formData.get("clientId") ?? ""),
+      supplierId: String(formData.get("supplierId") ?? ""),
+      firstName: String(formData.get("firstName") ?? ""),
+      lastName: String(formData.get("lastName") ?? ""),
+      role: String(formData.get("role") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+    }),
+  );
+  return done(result);
 }
 
 export async function createProductAction(
@@ -186,6 +206,20 @@ function toState(result: { ok: boolean; summary: string }): FormState {
 function idFromForm(formData: FormData): string | null {
   const id = String(formData.get("id") ?? "").trim();
   return id || null;
+}
+
+function supplierDetails(formData: FormData): SupplierDetails {
+  const text = (name: string) => String(formData.get(name) ?? "");
+  return {
+    legalForm: text("legalForm"),
+    country: text("country"),
+    postalCode: text("postalCode"),
+    city: text("city"),
+    siret: text("siret"),
+    vatNumber: text("vatNumber"),
+    contactName: text("contactName"),
+    contactRole: text("contactRole"),
+  };
 }
 
 function partyFromForm(formData: FormData) {

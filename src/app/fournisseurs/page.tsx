@@ -1,4 +1,5 @@
 import {
+  addContactAction,
   createSupplierAction,
   deleteSupplierAction,
   updateSupplierAction,
@@ -25,15 +26,16 @@ export default async function SuppliersPage({
     <div className="grid gap-6">
     <DataBoard
       title="Liste des fournisseurs"
-      intro="La commande, la réception et la facture fournisseur ne se saisissent pas encore. La fiche se tient sous le tableau."
+      intro="La fiche reprend la forme, le SIRET, la TVA et l’adresse, comme un client. Plusieurs interlocuteurs peuvent y être ajoutés. La commande, la réception et la facture fournisseur ne se saisissent pas encore."
       basePath="/fournisseurs"
       query={{ q }}
-      headers={["Nom", "E-mail", "Téléphone", "Adresse"]}
+      headers={["Nom", "Forme", "Ville", "E-mail", "Téléphone"]}
       rows={suppliers.map((supplier) => [
         { text: supplier.name },
+        { text: supplier.legalForm || "—" },
+        { text: supplier.city || "—" },
         { text: supplier.email || "—" },
         { text: supplier.phone || "—" },
-        { text: supplier.address || "—" },
       ])}
       empty="Aucun fournisseur ne correspond à cette recherche."
     />
@@ -45,21 +47,36 @@ export default async function SuppliersPage({
       actionPath="/fournisseurs"
       query={q}
       noun="fournisseur"
+      profile="supplier"
       createAction={createSupplierAction}
       updateAction={updateSupplierAction}
       deleteAction={deleteSupplierAction}
+      addContactAction={addContactAction}
       records={suppliers.map((supplier) => ({
         id: supplier.id,
         name: supplier.name,
         siren: supplier.siren,
+        siret: supplier.siret,
+        vatNumber: supplier.vatNumber,
+        legalForm: supplier.legalForm,
+        country: supplier.country,
+        postalCode: supplier.postalCode,
+        city: supplier.city,
         email: supplier.email,
         phone: supplier.phone,
         address: supplier.address,
         notes: supplier.notes,
+        contactName: [primaryContact(supplier)?.firstName, primaryContact(supplier)?.lastName].filter(Boolean).join(" "),
+        contactRole: primaryContact(supplier)?.role ?? "",
+        contacts: supplier.contacts,
         updatedLabel: supplier.updatedAt.toLocaleString("fr-FR"),
         history: journal.filter((event) => event.entityId === supplier.id).slice(0, 6),
       }))}
     />
     </div>
   );
+}
+
+function primaryContact(supplier: Awaited<ReturnType<typeof listSuppliers>>[number]) {
+  return supplier.contacts.find((contact) => contact.isPrimary) ?? supplier.contacts[0];
 }

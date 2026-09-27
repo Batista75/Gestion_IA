@@ -9,6 +9,7 @@ import {
 } from "@/domain/catalog";
 import { ensureSpokenProject } from "@/lib/business-records";
 import { prisma } from "@/lib/db";
+import { syncPrimaryContact } from "@/lib/contacts";
 import { fillMissingOfferCents, recordSupplierOffer } from "@/lib/supplier-offers";
 
 export type ActionResult = { ok: boolean; summary: string };
@@ -23,9 +24,12 @@ const PATHS = [
   "/ventes",
 ];
 
+const contactOrder = [{ isPrimary: "desc" as const }, { createdAt: "asc" as const }];
+
 export async function listClients(query: string) {
   return prisma.client.findMany({
     where: partyWhere(query),
+    include: { contacts: { orderBy: contactOrder } },
     orderBy: { updatedAt: "desc" },
     take: 200,
   });
@@ -34,10 +38,22 @@ export async function listClients(query: string) {
 export async function listSuppliers(query: string) {
   return prisma.supplier.findMany({
     where: partyWhere(query),
+    include: { contacts: { orderBy: contactOrder } },
     orderBy: { updatedAt: "desc" },
     take: 200,
   });
 }
+
+export type SupplierDetails = {
+  legalForm: string;
+  country: string;
+  postalCode: string;
+  city: string;
+  siret: string;
+  vatNumber: string;
+  contactName: string;
+  contactRole: string;
+};
 
 export async function listProducts(query: string, source: string) {
   const q = query.trim();
@@ -97,10 +113,11 @@ export async function saveClientForm(
 export async function saveSupplierForm(
   id: string | null,
   input: PartyInput,
+  details?: SupplierDetails,
 ): Promise<ActionResult> {
   const result = id
-    ? await updatePartyById("supplier", id, input)
-    : await createParty("supplier", input);
+    ? await updatePartyById("supplier", id, input, details)
+    : await createParty("supplier", input, details);
   if (result.ok) {
     for (const path of PATHS) revalidatePath(path);
   }
@@ -177,6 +194,7 @@ async function dispatch(command: CatalogCommand): Promise<ActionResult> {
 async function createParty(
   kind: "client" | "supplier",
   input: PartyInput,
+  details?: SupplierDetails,
 ): Promise<ActionResult> {
   const parsed = validateParty(input);
   if (!parsed.ok) return { ok: false, summary: parsed.error };
@@ -189,7 +207,16 @@ async function createParty(
       summary: `Le ${label} « ${existing.name} » existe déjà.`,
     };
   }
-  await createPartyRow(kind, parsed.value, key);
+  const created = await createPartyRow(kind, parsed.value, key, details);
+  if (kind === "supplier") {
+    await syncPrimaryContact({
+      supplierId: created.id,
+      fullName: details?.contactName ?? "",
+      role: details?.contactRole ?? "",
+      email: parsed.value.email,
+      phone: parsed.value.phone,
+    });
+  }
   return { ok: true, summary: `${capitalize(label)} « ${parsed.value.name} » créé.` };
 }
 
@@ -221,6 +248,7 @@ async function updatePartyById(
   kind: "client" | "supplier",
   id: string,
   input: PartyInput,
+  details?: SupplierDetails,
 ): Promise<ActionResult> {
   const parsed = validateParty(input);
   if (!parsed.ok) return { ok: false, summary: parsed.error };
@@ -230,11 +258,18 @@ async function updatePartyById(
     const label = kind === "client" ? "client" : "fournisseur";
     return { ok: false, summary: `Un ${label} porte déjà le nom « ${clash.name} ».` };
   }
-  const data = { ...parsed.value, nameKey: key };
+  const data = { ...parsed.value, nameKey: key, ...supplierColumns(details) };
   if (kind === "client") {
     await prisma.client.update({ where: { id }, data });
   } else {
     await prisma.supplier.update({ where: { id }, data });
+    await syncPrimaryContact({
+      supplierId: id,
+      fullName: details?.contactName ?? "",
+      role: details?.contactRole ?? "",
+      email: parsed.value.email,
+      phone: parsed.value.phone,
+    });
   }
   const label = kind === "client" ? "Client" : "Fournisseur";
   return { ok: true, summary: `${label} « ${parsed.value.name} » mis à jour.` };
@@ -451,10 +486,23 @@ function findParty(kind: "client" | "supplier", key: string) {
   return prisma.supplier.findUnique({ where: { nameKey: key } });
 }
 
-function createPartyRow(kind: "client" | "supplier", input: PartyInput, key: string) {
-  const data = { ...input, nameKey: key };
+function createPartyRow(kind: "client" | "supplier", input: PartyInput, key: string, details?: SupplierDetails) {
+  const data = { ...input, nameKey: key, ...supplierColumns(details) };
   if (kind === "client") return prisma.client.create({ data });
   return prisma.supplier.create({ data });
+}
+
+function supplierColumns(details?: SupplierDetails) {
+  if (!details) return {};
+  const clip = (value: string) => value.trim().replace(/\s+/g, " ").slice(0, 160);
+  return {
+    legalForm: clip(details.legalForm),
+    country: clip(details.country),
+    postalCode: clip(details.postalCode),
+    city: clip(details.city),
+    siret: clip(details.siret),
+    vatNumber: clip(details.vatNumber),
+  };
 }
 
 function partyWhere(query: string) {

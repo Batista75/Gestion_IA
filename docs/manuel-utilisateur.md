@@ -63,7 +63,7 @@ Le groupe **Liste** ouvre directement [Clients](/clients), [Fournisseurs](/fourn
 
 ## Clients
 
-La [vue Clients](/clients) s’ouvre sur un tableau : nom, type, adresse, code postal, ville, téléphone, mail et fonction du contact. Elle distingue un **particulier** et une **entreprise**, en **France** ou à l’**international**. Une fiche sans type affiche **Non qualifié**. Une fiche créée depuis une pièce confirmée porte le nom relevé et une note « à compléter ».
+La [vue Clients](/clients) s’ouvre sur un tableau : nom, type, adresse, code postal, ville, téléphone, mail et fonction du contact principal. Elle distingue un **particulier** et une **entreprise**, en **France** ou à l’**international**. Une fiche sans type affiche **Non qualifié**. Une fiche créée depuis une pièce confirmée porte le nom relevé et une note « à compléter ». **Ajouter un interlocuteur** enregistre une autre personne, sans remplacer le contact principal.
 
 **Nouveau client** enregistre dès que vous validez le formulaire. Renseignez le type, le nom ou la raison sociale, le pays, l’adresse, un e-mail ou un téléphone. Pour une entreprise française, le SIREN permet de déduire le numéro de TVA. Pour une entreprise étrangère, indiquez l’identifiant fiscal. Le contact et sa fonction servent au dossier commercial.
 
@@ -75,7 +75,7 @@ Créer un projet ne crée plus la fiche client. Le dossier s’ouvre, et la fich
 
 ## Fournisseurs
 
-La [vue Fournisseurs](/fournisseurs) s’ouvre sur un tableau : nom, e-mail, téléphone, adresse. Elle suit le même principe : créer, modifier, supprimer. Les produits liés restent au catalogue. **Achats** y renvoie. La commande, la réception et la facture fournisseur ne se saisissent pas encore. **Modifications** y date chaque changement, comme pour les clients.
+La [vue Fournisseurs](/fournisseurs) s’ouvre sur un tableau : nom, forme, ville, e-mail, téléphone. La fiche porte aussi le SIREN, le SIRET, la TVA et l’adresse, comme un client. **Ajouter un interlocuteur** ajoute une personne sans remplacer le contact principal. Les produits liés restent au catalogue. **Achats** y renvoie. La commande, la réception et la facture fournisseur ne se saisissent pas encore. **Modifications** y date chaque changement, comme pour les clients.
 
 ## Produits
 
