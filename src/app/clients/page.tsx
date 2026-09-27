@@ -1,4 +1,5 @@
 import {
+  addAddressAction,
   addContactAction,
   createClientAction,
   deleteClientAction,
@@ -23,7 +24,7 @@ export default async function ClientsPage({
     <div className="grid gap-6">
     <DataBoard
       title="Liste des clients"
-      intro="Particuliers et entreprises. Une fiche peut avoir plusieurs interlocuteurs. Le contact principal reste celui du tableau. La recherche porte sur le nom, l’e-mail et le SIREN."
+      intro="Particuliers et entreprises. Une fiche peut avoir plusieurs interlocuteurs et plusieurs adresses. Le contact et l’adresse du tableau restent ceux du siège. La recherche porte sur le nom, l’e-mail et le SIREN."
       basePath="/clients"
       query={{ q }}
       headers={["Nom", "Type", "Adresse", "Code postal", "Ville", "Téléphone", "Mail", "Fonction"]}
@@ -52,6 +53,7 @@ export default async function ClientsPage({
       updateAction={updateClientAction}
       deleteAction={deleteClientAction}
       addContactAction={addContactAction}
+      addAddressAction={addAddressAction}
       records={clients.map((client) => ({
         ...toRecord(client),
         history: journal.filter((event) => event.entityId === client.id).slice(0, 6),
@@ -83,6 +85,7 @@ function toRecord(client: Awaited<ReturnType<typeof listClients>>[number]) {
     contactName: client.contactName,
     contactRole: client.contactRole,
     contacts: client.contacts,
+    addresses: client.addresses,
     sector: client.sector,
     currency: client.currency,
   };

@@ -9,6 +9,7 @@ import {
   saveSupplierForm,
   type SupplierDetails,
 } from "@/lib/catalog-store";
+import { addExtraAddress } from "@/lib/addresses";
 import { addExtraContact } from "@/lib/contacts";
 import {
   removeClient,
@@ -65,6 +66,24 @@ export async function addContactAction(
       role: String(formData.get("role") ?? ""),
       email: String(formData.get("email") ?? ""),
       phone: String(formData.get("phone") ?? ""),
+    }),
+  );
+  return done(result);
+}
+
+export async function addAddressAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const result = await withChangeSource("formulaire", () =>
+    addExtraAddress({
+      clientId: String(formData.get("clientId") ?? ""),
+      supplierId: String(formData.get("supplierId") ?? ""),
+      kind: String(formData.get("kind") ?? ""),
+      line: String(formData.get("line") ?? ""),
+      postalCode: String(formData.get("postalCode") ?? ""),
+      city: String(formData.get("city") ?? ""),
+      country: String(formData.get("country") ?? ""),
     }),
   );
   return done(result);

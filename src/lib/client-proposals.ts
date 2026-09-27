@@ -19,6 +19,7 @@ import {
 } from "@/domain/client-file";
 import { mentionedNames, sourceLabel, uniqueNameMatch } from "@/domain/knowledge";
 import { withChangeSource } from "@/lib/change-source";
+import { syncPrimaryAddress } from "@/lib/addresses";
 import { syncPrimaryContact } from "@/lib/contacts";
 import { prisma } from "@/lib/db";
 
@@ -202,6 +203,13 @@ export async function saveClientDraft(
     role: ready.contactRole,
     email: ready.email,
     phone: ready.phone,
+  });
+  await syncPrimaryAddress({
+    clientId: saved.id,
+    line: ready.address,
+    postalCode: ready.postalCode,
+    city: ready.city,
+    country: ready.country,
   });
   for (const path of PATHS) revalidatePath(path);
   return {

@@ -9,6 +9,7 @@ import {
 } from "@/domain/catalog";
 import { ensureSpokenProject } from "@/lib/business-records";
 import { prisma } from "@/lib/db";
+import { syncPrimaryAddress } from "@/lib/addresses";
 import { syncPrimaryContact } from "@/lib/contacts";
 import { fillMissingOfferCents, recordSupplierOffer } from "@/lib/supplier-offers";
 
@@ -29,7 +30,7 @@ const contactOrder = [{ isPrimary: "desc" as const }, { createdAt: "asc" as cons
 export async function listClients(query: string) {
   return prisma.client.findMany({
     where: partyWhere(query),
-    include: { contacts: { orderBy: contactOrder } },
+    include: { contacts: { orderBy: contactOrder }, addresses: { orderBy: contactOrder } },
     orderBy: { updatedAt: "desc" },
     take: 200,
   });
@@ -38,7 +39,7 @@ export async function listClients(query: string) {
 export async function listSuppliers(query: string) {
   return prisma.supplier.findMany({
     where: partyWhere(query),
-    include: { contacts: { orderBy: contactOrder } },
+    include: { contacts: { orderBy: contactOrder }, addresses: { orderBy: contactOrder } },
     orderBy: { updatedAt: "desc" },
     take: 200,
   });
@@ -216,6 +217,13 @@ async function createParty(
       email: parsed.value.email,
       phone: parsed.value.phone,
     });
+    await syncPrimaryAddress({
+      supplierId: created.id,
+      line: parsed.value.address,
+      postalCode: details?.postalCode ?? "",
+      city: details?.city ?? "",
+      country: details?.country ?? "",
+    });
   }
   return { ok: true, summary: `${capitalize(label)} « ${parsed.value.name} » créé.` };
 }
@@ -269,6 +277,13 @@ async function updatePartyById(
       role: details?.contactRole ?? "",
       email: parsed.value.email,
       phone: parsed.value.phone,
+    });
+    await syncPrimaryAddress({
+      supplierId: id,
+      line: parsed.value.address,
+      postalCode: details?.postalCode ?? "",
+      city: details?.city ?? "",
+      country: details?.country ?? "",
     });
   }
   const label = kind === "client" ? "Client" : "Fournisseur";

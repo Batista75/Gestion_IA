@@ -120,7 +120,11 @@ async function writeEvent(
 const globalForPrisma = globalThis as unknown as { prisma?: ReturnType<typeof createClient> };
 
 function clientKnowsOffers(client: ReturnType<typeof createClient>): boolean {
-  return typeof client.supplierOffer?.findMany === "function" && typeof client.contact?.findMany === "function";
+  return (
+    typeof client.supplierOffer?.findMany === "function" &&
+    typeof client.contact?.findMany === "function" &&
+    typeof client.address?.findMany === "function"
+  );
 }
 
 function readClient(): ReturnType<typeof createClient> {

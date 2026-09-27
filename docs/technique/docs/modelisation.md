@@ -9,7 +9,9 @@ Cette page liste chaque modèle, ses champs utiles, ses liens et ce que l’appl
 ```
 Client 1 ── * Project
 Client 1 ── * Contact
+Client 1 ── * Address
 Supplier 1 ── * Contact
+Supplier 1 ── * Address
 Supplier 1 ── * Product
 Product 1 ── * QuoteLine
 Product 1 ── * ProjectLine
@@ -52,7 +54,7 @@ Une seule ligne, `id` = `local`. En-tête des pièces.
 
 ## Répertoire
 
-Le contact principal d’un client reste recopié dans `contactName`, `contactRole`, `email` et `phone`. Les autres personnes sont des `Contact`.
+Le contact principal d’un client reste recopié dans `contactName`, `contactRole`, `email` et `phone`. Les autres personnes sont des `Contact`. L’adresse du siège reste dans `address`, `postalCode`, `city` et `country`. Les autres lieux sont des `Address`.
 
 ### Client
 
@@ -64,7 +66,7 @@ Le contact principal d’un client reste recopié dans `contactName`, `contactRo
 - Interlocuteur : `contactName`, `contactRole`, `email`, `phone`.
 - `notes`, `reference`, `sector`, `currency`.
 - `createdAt`, `updatedAt`.
-- Lien : un client a plusieurs `Project` et plusieurs `Contact`. Retirer le client vide `Project.clientId` et retire ses contacts.
+- Lien : un client a plusieurs `Project`, plusieurs `Contact` et plusieurs `Address`. Retirer le client vide `Project.clientId` et retire ses contacts et ses adresses.
 
 ### Supplier
 
@@ -72,7 +74,7 @@ Le contact principal d’un client reste recopié dans `contactName`, `contactRo
 
 - `name`, `siren`, `siret`, `vatNumber`, `legalForm`, `country`, `postalCode`, `city`, `email`, `phone`, `address`, `notes`.
 - `createdAt`, `updatedAt`.
-- Lien : un fournisseur a plusieurs `Product` et plusieurs `Contact`. Retirer le fournisseur vide `Product.supplierId` et retire ses contacts.
+- Lien : un fournisseur a plusieurs `Product`, plusieurs `Contact` et plusieurs `Address`. Retirer le fournisseur vide `Product.supplierId` et retire ses contacts et ses adresses.
 
 ### Contact
 
@@ -81,6 +83,16 @@ Personne rattachée à un client ou à un fournisseur, pas aux deux.
 - `clientId` ou `supplierId`. La suppression de la fiche retire ses contacts.
 - `firstName`, `lastName`, `role`, `email`, `phone`.
 - `isPrimary` : le contact recopié sur la fiche. Les autres restent à `false`.
+- `createdAt`.
+
+### Address
+
+Lieu rattaché à un client ou à un fournisseur, pas aux deux. L’adresse de livraison d’un dossier reste sur `Project`.
+
+- `clientId` ou `supplierId`. La suppression de la fiche retire ses adresses.
+- `kind` : `siege`, `facturation`, `livraison` ou `autre`.
+- `line`, `postalCode`, `city`, `country`.
+- `isPrimary` : le siège recopié sur la fiche. Une adresse ajoutée ensuite reste à `false`.
 - `createdAt`.
 
 ### Product
@@ -352,7 +364,6 @@ Le lot suivant est retenu. Ces noms ne sont pas des tables.
 Priorité haute, pas encore faites :
 
 - Une `Organization` unique, à la fois client et fournisseur. `Client` et `Supplier` restent deux fiches, avec les mêmes attributs d’identité.
-- `Address`, plusieurs adresses par fiche. Les adresses restent des colonnes sur `Client`, `Supplier` et `Project`.
 - `SaleDocument` comme pièce commerciale reliée à sa pièce parente : devis, commande, livraison, facture, avoir. L’application n’émet toujours pas de facture et n’attribue pas de numéro.
 - Montants métier en centimes sur `Quote` et `QuoteLine`, à côté des textes extraits. `SupplierOffer.unitCostCents` est le premier pas. Les prix de vente du dossier passent déjà par `src/domain/pricing.ts`.
 

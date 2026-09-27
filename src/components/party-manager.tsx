@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { FormState } from "@/app/catalog-actions";
+import { addressKindLabel, formatAddress } from "@/domain/address";
 import { contactLabel } from "@/domain/contact";
 import { ConfirmDelete } from "@/components/record-actions";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,15 @@ export type PartyRecord = {
     phone: string;
     isPrimary: boolean;
   }>;
+  addresses?: Array<{
+    id: string;
+    kind: string;
+    line: string;
+    postalCode: string;
+    city: string;
+    country: string;
+    isPrimary: boolean;
+  }>;
   history?: Array<{ id: string; at: string; source: string; actor?: string; summary: string }>;
 };
 
@@ -64,6 +74,7 @@ export function PartyManager({
   updateAction,
   deleteAction,
   addContactAction,
+  addAddressAction,
   showFinder = true,
 }: {
   title?: string;
@@ -78,6 +89,7 @@ export function PartyManager({
   updateAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   deleteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   addContactAction: (previous: FormState, formData: FormData) => Promise<FormState>;
+  addAddressAction: (previous: FormState, formData: FormData) => Promise<FormState>;
 }) {
   return (
     <div className="grid gap-6">
@@ -174,13 +186,11 @@ export function PartyManager({
                         action={addContactAction}
                         parent={profile === "supplier" ? "supplier" : "client"}
                       />
-                      {record.address ? (
-                        <p className="text-sm leading-6">
-                          {[record.address, record.postalCode, record.city]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </p>
-                      ) : null}
+                      <AddressList
+                        record={record}
+                        action={addAddressAction}
+                        parent={profile === "supplier" ? "supplier" : "client"}
+                      />
                       {record.notes ? (
                         <p className="text-sm leading-6 text-muted-foreground">
                           {record.notes}
@@ -273,6 +283,61 @@ function ContactList({
         <FormMessage state={state} />
         <Button type="submit" variant="outline" disabled={pending} className="min-h-11 w-fit px-4">
           {pending ? "Ajout…" : "Ajouter un interlocuteur"}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+function AddressList({
+  record,
+  action,
+  parent,
+}: {
+  record: PartyRecord;
+  action: (previous: FormState, formData: FormData) => Promise<FormState>;
+  parent: "client" | "supplier";
+}) {
+  const [state, formAction, pending] = useActionState(action, emptyState);
+  const addresses = record.addresses ?? [];
+  return (
+    <div className="grid gap-2">
+      <p className="text-sm font-medium">Adresses</p>
+      {addresses.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Aucune adresse.</p>
+      ) : (
+        <ul className="grid gap-2">
+          {addresses.map((address) => (
+            <li key={address.id} className="rounded-lg bg-muted px-3 py-2 text-sm leading-6">
+              <p className="font-medium">
+                {addressKindLabel(address.kind)}
+                {address.isPrimary ? " · principale" : ""}
+              </p>
+              <p>{formatAddress(address) || "Adresse sans détail"}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form action={formAction} className="grid gap-2">
+        <input type="hidden" name={parent === "supplier" ? "supplierId" : "clientId"} value={record.id} />
+        <Choice
+          prefix={`${record.id}-address`}
+          label="Type d’adresse"
+          name="kind"
+          defaultValue="livraison"
+          options={[
+            ["facturation", "Facturation"],
+            ["livraison", "Livraison"],
+            ["autre", "Autre"],
+          ]}
+        />
+        <Field prefix={`${record.id}-address`} label="Rue" name="line" />
+        <Field prefix={`${record.id}-address`} label="Code postal" name="postalCode" />
+        <Field prefix={`${record.id}-address`} label="Ville" name="city" />
+        <Field prefix={`${record.id}-address`} label="Pays" name="country" />
+        <FormMessage state={state} />
+        <Button type="submit" variant="outline" disabled={pending} className="min-h-11 w-fit px-4">
+          {pending ? "Ajout…" : "Ajouter une adresse"}
         </Button>
       </form>
     </div>

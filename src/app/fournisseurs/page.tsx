@@ -1,4 +1,5 @@
 import {
+  addAddressAction,
   addContactAction,
   createSupplierAction,
   deleteSupplierAction,
@@ -26,7 +27,7 @@ export default async function SuppliersPage({
     <div className="grid gap-6">
     <DataBoard
       title="Liste des fournisseurs"
-      intro="La fiche reprend la forme, le SIRET, la TVA et l’adresse, comme un client. Plusieurs interlocuteurs peuvent y être ajoutés. La commande, la réception et la facture fournisseur ne se saisissent pas encore."
+      intro="La fiche reprend la forme, le SIRET, la TVA et l’adresse du siège, comme un client. D’autres adresses et d’autres interlocuteurs peuvent y être ajoutés. La commande, la réception et la facture fournisseur ne se saisissent pas encore."
       basePath="/fournisseurs"
       query={{ q }}
       headers={["Nom", "Forme", "Ville", "E-mail", "Téléphone"]}
@@ -52,6 +53,7 @@ export default async function SuppliersPage({
       updateAction={updateSupplierAction}
       deleteAction={deleteSupplierAction}
       addContactAction={addContactAction}
+      addAddressAction={addAddressAction}
       records={suppliers.map((supplier) => ({
         id: supplier.id,
         name: supplier.name,
@@ -69,6 +71,7 @@ export default async function SuppliersPage({
         contactName: [primaryContact(supplier)?.firstName, primaryContact(supplier)?.lastName].filter(Boolean).join(" "),
         contactRole: primaryContact(supplier)?.role ?? "",
         contacts: supplier.contacts,
+        addresses: supplier.addresses,
         updatedLabel: supplier.updatedAt.toLocaleString("fr-FR"),
         history: journal.filter((event) => event.entityId === supplier.id).slice(0, 6),
       }))}

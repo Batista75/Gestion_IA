@@ -130,6 +130,7 @@ model Client {
   updatedAt   DateTime  @updatedAt
   projects    Project[]
   contacts    Contact[]
+  addresses   Address[]
 }
 
 model Conversation {
@@ -232,6 +233,7 @@ model Supplier {
   products   Product[]
   offers     SupplierOffer[]
   contacts   Contact[]
+  addresses  Address[]
 }
 
 /** Interlocuteur d’un client ou d’un fournisseur. Une fiche en a plusieurs. Le principal reste recopié sur la fiche. */
@@ -246,6 +248,25 @@ model Contact {
   role       String    @default("")
   email      String    @default("")
   phone      String    @default("")
+  isPrimary  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@index([clientId])
+  @@index([supplierId])
+}
+
+/** Adresse d’un client ou d’un fournisseur. Le siège reste recopié sur la fiche. */
+model Address {
+  id         String    @id @default(cuid())
+  clientId   String?
+  client     Client?   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  kind       String    @default("siege")
+  line       String    @default("")
+  postalCode String    @default("")
+  city       String    @default("")
+  country    String    @default("")
   isPrimary  Boolean   @default(false)
   createdAt  DateTime  @default(now())
 
