@@ -1,0 +1,65 @@
+# Assistant devis hybride (RAG + SQL)
+
+Ce document fixe la préparation automatique d’un devis. Il complète la [spécification technique](/documentation/technique). Il ne remplace pas la [spécification fonctionnelle (PDF)](/documentation/specification).
+
+## Objectif
+
+Préparer un devis brouillon à partir d’une demande écrite. Les conditions commerciales viennent des documents du client. Les prix, le stock et l’enregistrement viennent de PostgreSQL. Le modèle local ne fait pas les calculs.
+
+## Architecture
+
+L’accueil envoie la demande à l’orchestrateur. L’orchestrateur est le traitement de `POST /api/assistant`, puis Qwen 2.5 sur Ollama si la phrase n’est pas déjà comprise.
+
+Deux lectures, jamais mélangées :
+
+- Les conditions : notes du client, dossiers, devis reçus et pièces rattachées à ses dossiers.
+- Les montants : clients, produits, devis et lignes dans PostgreSQL.
+
+## Données SQL
+
+PostgreSQL est la source des entités et des calculs. Les identifiants sont ceux déjà en base.
+
+- Client : nom, e-mail, notes.
+- Produit : référence, désignation, prix indiqué, coût indiqué, stock actuel, famille produit ou service.
+- Devis : dossier, client via le dossier, date, statut, lignes.
+- Ligne : article, quantité, prix unitaire HT calculé, remise lue.
+
+Le stock vide reste « non indiqué ». Il se saisit sur la fiche article.
+
+## Conditions du client
+
+L’index vectoriel est la table `KnowledgeChunk`, avec `bge-m3` lorsqu’il est installé. Il n’y a pas de seconde base Chroma, Qdrant ou LanceDB.
+
+Pour un devis, la lecture des conditions est limitée au client nommé. Les pièces d’un autre client ne sont pas interrogées, même si le vecteur est calculé. Sans client unique, aucune recherche de conditions n’est lancée.
+
+Une remise est appliquée seulement si une seule valeur est écrite, par exemple `remise de 10 %`. Deux remises différentes ne sont pas tranchées. Aucune remise inventée n’est ajoutée.
+
+## Modèle local
+
+Cible : NVIDIA RTX 4080, 16 Go de mémoire graphique, 32 Go de RAM. Modèle de conversation : Qwen2.5-14B-Instruct, quantifié, avec appels d’outils. Le contexte de conversation reste 4 096 jetons. Les travaux graphiques passent par la file unique.
+
+## Outils
+
+Le modèle n’écrit pas un devis dans son texte. Il appelle :
+
+- `search_client_agreements` : conditions du client dont l’identifiant est fourni. Sans identifiant, rien n’est lu.
+- `get_product_info` : lecture SQL du catalogue, référence, désignation, prix indiqué, stock.
+- `create_draft_quote` : calcul dans `catalogUnitCents`, puis insertion d’un devis au statut brouillon.
+
+`prépare un devis pour …` exécute cette suite avant le modèle, afin que le prix ne dépende pas de la rédaction du modèle.
+
+## Suite d’une demande
+
+1. Recevoir la phrase.
+2. Reconnaître le client déjà enregistré et les articles du catalogue.
+3. Lire les conditions de ce client seulement.
+4. Lire le prix catalogue HT et le stock de chaque article.
+5. Calculer quantité × prix HT × (1 − remise) dans `src/domain/pricing.ts`.
+6. Enregistrer le devis en brouillon sur le dossier unique, ou sur le dossier nommé.
+7. Afficher les lignes, le total HT et le lien du devis.
+
+S’il manque le client, l’article, le prix catalogue ou un dossier unique, rien n’est enregistré. Le message dit ce qui manque.
+
+## Fiabilité
+
+Le modèle ne calcule pas le total. Le brouillon n’est pas une commande et n’est pas envoyé. La validation et l’envoi restent sur le dossier.

@@ -29,6 +29,8 @@ import { conversationIdOrNew, rememberTurn } from "@/lib/conversations";
 import type { UIMessage } from "ai";
 import { withGpuLane } from "@/lib/gpu-lane";
 import { mentionedNames } from "@/domain/knowledge";
+import { asksHybridQuote } from "@/domain/hybrid-quote";
+import { prepareHybridQuote } from "@/lib/hybrid-quote";
 import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
 import { searchKnowledge } from "@/lib/knowledge-store";
 import { listProjectSteps } from "@/lib/trade-steps";
@@ -147,6 +149,16 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
       model: null,
       source: "proposition" as const,
       proposal: rejected?.proposal,
+    };
+  }
+
+  if (asksHybridQuote(text) && !parseCatalogCommand(text)) {
+    const prepared = await prepareHybridQuote(text);
+    return {
+      reply: prepared.reply,
+      model: null,
+      source: prepared.wrote ? ("action" as const) : ("dossier" as const),
+      sources: prepared.sources,
     };
   }
 

@@ -101,10 +101,17 @@ export async function saveSupplierForm(
 export async function saveProductForm(
   id: string | null,
   input: ProductInput,
+  stockQty?: number | null,
 ): Promise<ActionResult> {
   const result = id
     ? await updateProductById(id, input)
     : await createProduct(input, "manuel");
+  if (result.ok && stockQty !== undefined) {
+    await prisma.product.updateMany({
+      where: { nameKey: nameKey(input.name) },
+      data: { stockQty },
+    });
+  }
   if (result.ok) {
     for (const path of PATHS) revalidatePath(path);
   }

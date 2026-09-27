@@ -114,6 +114,43 @@ export type SaleLineFigures = {
   lineMarginCents: number | null;
 };
 
+export function catalogUnitCents(catalogCents: number, discountPercent: number): number {
+  if (!Number.isInteger(catalogCents) || catalogCents < 0) {
+    throw new Error("Le prix catalogue HT doit être un montant en centimes, positif ou nul.");
+  }
+  if (!Number.isInteger(discountPercent) || discountPercent < 0 || discountPercent > 99) {
+    throw new Error("La remise négociée doit être un entier entre 0 et 99.");
+  }
+  return Math.round((catalogCents * (100 - discountPercent)) / 100);
+}
+
+export function figuresFromSaleUnit(
+  quantity: number,
+  saleUnitCents: number,
+  costCents: number | null,
+): SaleLineFigures {
+  const count = readSaleQuantity(String(quantity));
+  if (!Number.isInteger(saleUnitCents) || saleUnitCents < 0) {
+    throw new Error("Le prix unitaire HT doit être un montant en centimes, positif ou nul.");
+  }
+  const lineNetCents = saleUnitCents * count;
+  const lineCostCents = costCents === null ? null : costCents * count;
+  return {
+    unitNetCents: saleUnitCents,
+    unitListCents: saleUnitCents,
+    lineCostCents,
+    lineNetCents,
+    lineMarginCents: lineCostCents === null ? null : lineNetCents - lineCostCents,
+  };
+}
+
+export function storedSaleFigures(input: SaleLineDraft & { saleUnitCents?: number | null }): SaleLineFigures {
+  if (typeof input.saleUnitCents === "number") {
+    return figuresFromSaleUnit(input.quantity, input.saleUnitCents, input.costCents);
+  }
+  return saleLineFigures(input);
+}
+
 export function saleLineFigures(input: SaleLineDraft): SaleLineFigures {
   const quantity = readSaleQuantity(String(input.quantity));
   const markupPercent = readSalePercent(String(input.markupPercent), "Le taux de marque");

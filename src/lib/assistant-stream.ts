@@ -329,6 +329,70 @@ function assistantTools(side: Meta) {
         return applyProposal(side, opened);
       },
     }),
+    search_client_agreements: tool({
+      description: "Lit les conditions commerciales d’un seul client. Le filtre client est obligatoire.",
+      inputSchema: jsonSchema<{ clientId: string }>({
+        type: "object",
+        properties: { clientId: { type: "string" } },
+        required: ["clientId"],
+      }),
+      execute: async ({ clientId }) => {
+        const { readClientAgreements } = await import("@/lib/hybrid-quote");
+        const prepared = await readClientAgreements(clientId);
+        side.sources = prepared.sources;
+        return prepared.reply;
+      },
+    }),
+    get_product_info: tool({
+      description: "Lit le catalogue SQL : référence, désignation, prix indiqué et stock. Ne calcule rien.",
+      inputSchema: jsonSchema<{ searchTerm: string }>({
+        type: "object",
+        properties: { searchTerm: { type: "string" } },
+        required: ["searchTerm"],
+      }),
+      execute: async ({ searchTerm }) => {
+        const { prisma } = await import("@/lib/db");
+        const products = await prisma.product.findMany({
+          where: {
+            OR: [
+              { name: { contains: searchTerm, mode: "insensitive" } },
+              { reference: { contains: searchTerm, mode: "insensitive" } },
+            ],
+          },
+          take: 8,
+        });
+        if (products.length === 0) return "Aucun article ne correspond.";
+        return products
+          .map((product) =>
+            [
+              product.reference || "sans référence",
+              product.name,
+              product.statedPrice.trim() ? `prix indiqué ${product.statedPrice}` : "prix catalogue non indiqué",
+              product.stockQty === null ? "stock non indiqué" : `stock ${product.stockQty}`,
+              product.kind === "service" ? "service" : "matériel",
+            ].join(" · "),
+          )
+          .join("\n");
+      },
+    }),
+    create_draft_quote: tool({
+      description: "Enregistre un devis brouillon. Les prix viennent du catalogue et des conditions du client, jamais du modèle.",
+      inputSchema: jsonSchema<{ clientName: string; items: string }>({
+        type: "object",
+        properties: {
+          clientName: { type: "string" },
+          items: { type: "string", description: "Articles et quantités, par exemple 2 charnières" },
+        },
+        required: ["clientName", "items"],
+      }),
+      execute: async ({ clientName, items }) => {
+        const { prepareHybridQuote } = await import("@/lib/hybrid-quote");
+        const prepared = await prepareHybridQuote(`prépare un devis pour ${clientName}, ${items}`);
+        side.sources = prepared.sources;
+        side.source = prepared.wrote ? "action" : "proposition";
+        return prepared.reply;
+      },
+    }),
     record_quote: tool({
       description: "Propose un devis. Rien n’est écrit avant confirmation. Ne calcule aucun prix.",
       inputSchema: jsonSchema<{ title: string; products: Array<{ name: string; reference?: string; supplierName?: string }> }>({
@@ -420,6 +484,12 @@ function toolTitle(name: string): string {
       return "Proposition de projet";
     case "record_quote":
       return "Proposition de devis";
+    case "search_client_agreements":
+      return "Conditions du client";
+    case "get_product_info":
+      return "Catalogue";
+    case "create_draft_quote":
+      return "Brouillon de devis";
     default:
       return "Étape";
   }

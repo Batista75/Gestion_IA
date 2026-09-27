@@ -1,5 +1,5 @@
 import { dayKey, inDayRange, periodGap } from "@/domain/board";
-import { formatCents, saleLineFigures, saleOperationTotals, type SaleLineFigures } from "@/domain/pricing";
+import { figuresFromSaleUnit, formatCents, saleLineFigures, saleOperationTotals, type SaleLineFigures } from "@/domain/pricing";
 import { saleKindLabel, saleStatusLabel } from "@/domain/sale-line";
 import { prisma } from "@/lib/db";
 
@@ -7,6 +7,7 @@ type MoneyLine = {
   name: string;
   quantity: number;
   costCents: number | null;
+  saleUnitCents?: number | null;
   markupPercent: number;
   discountPercent: number;
 };
@@ -37,6 +38,9 @@ export type Listed = {
 };
 
 function figuresOf(line: MoneyLine): SaleLineFigures {
+  if (typeof line.saleUnitCents === "number") {
+    return figuresFromSaleUnit(line.quantity, line.saleUnitCents, line.costCents);
+  }
   try {
     return saleLineFigures(line);
   } catch {

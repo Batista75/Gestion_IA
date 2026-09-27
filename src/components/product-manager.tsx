@@ -41,6 +41,7 @@ export type ProductRecord = {
   statedPrice: string;
   vatNote: string;
   kind: string;
+  stockQty: number | null;
   enteredLabel: string;
   updatedLabel: string;
   versions: ProductVersionView[];
@@ -270,6 +271,12 @@ function ProductFields({
       <TextField prefix={prefix} label="Nom" name="name" required defaultValue={record?.name} />
       <TextField prefix={prefix} label="Référence" name="reference" defaultValue={record?.reference} />
       <TextField prefix={prefix} label="Unité" name="unit" defaultValue={record?.unit} />
+      <TextField
+        prefix={prefix}
+        label="Stock actuel"
+        name="stockQty"
+        defaultValue={record?.stockQty === null || record?.stockQty === undefined ? "" : String(record.stockQty)}
+      />
       <TextField
         prefix={prefix}
         label="Fournisseur"

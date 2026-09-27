@@ -133,6 +133,7 @@ Il distingue cinq demandes :
 - **Corriger une fiche connue** : `le téléphone de Holzwerk Müller GmbH est le +49 89 000111`. Il retrouve la fiche, garde les autres champs, et propose la mise à jour.
 - **Compléter une entreprise déjà déclarée** : `ajoute un contact Anne Durand, directrice commerciale, chez Holzwerk Müller GmbH` ou `ajoute une information sur Holzwerk Müller GmbH : livraison le mardi`. Il s’appuie sur la fiche enregistrée, conserve ce qui n’est pas cité, et propose la mise à jour. `ajoute un contact chez Holzwerk Müller GmbH`, sans nommer la personne, décrit la fiche et n’écrit rien.
 - **Créer ou mettre à jour** avec une phrase explicite, comme ci-dessous.
+- **Préparer un devis** : `prépare un devis pour Marie Dupont, 2 charnières`. L’assistant retrouve le client, lit seulement ses conditions, reprend le prix catalogue et le stock, puis enregistre un brouillon. Il n’invente pas de remise. La validation et l’envoi restent à faire depuis le dossier.
 
 Pour un client, il commence par l’analyse de l’action demandée (création ou mise à jour), puis sépare le nom, la forme, l’adresse, le pays et les identifiants. Un bloc collé sur plusieurs lignes est lu de la même façon. Exemple : `ajoute le client : Grid Solutions Oy`, puis la rue, le code postal, la ville, le pays, le Business ID et le VAT ID. La proposition affiche **Action demandée** et **Analyse**. Rien n’est écrit tant que vous n’avez pas confirmé. Les champs encore absents, comme l’e-mail ou le contact, sont listés à part.
 

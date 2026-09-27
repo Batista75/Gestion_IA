@@ -185,6 +185,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             supplierName: line.supplierName,
             quantity: line.quantity,
             costCents: line.costCents,
+            saleUnitCents: line.saleUnitCents,
             markupPercent: line.markupPercent,
             discountPercent: line.discountPercent,
             confirmedLabel: null,

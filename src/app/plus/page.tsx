@@ -66,6 +66,12 @@ export default function MorePage() {
           >
             Spécification technique
           </Link>
+          <Link
+            href="/documentation/devis-hybride"
+            className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
+          >
+            Devis hybride
+          </Link>
         </CardContent>
       </Card>
 

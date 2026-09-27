@@ -17,17 +17,28 @@ Les prix, la TVA et les numéros de pièce ne sont pas calculés par le modèle.
 1. Une phrase parlée du type « Créer le projet : … Le projet consiste à … », ou un tableau collé, est enregistrée tout de suite.
 2. Une question de prix de vente reçoit la règle métier, sans modèle.
 3. `Je confirme.` enregistre la proposition la plus récente, fiche client ou autre fiche. `non` n’écrit rien.
-4. Une question de parcours commercial, de prochaine étape ou de preuve documentaire est répondue depuis l’instruction métier, sans modèle. Un seul projet nommé fait lire ses étapes enregistrées.
-5. Une consultation ou une liste est lue dans les fiches, sans modèle.
-6. Une demande d’ajouter un contact ou une information, ou une correction, relit d’abord la fiche client déjà enregistrée. Si le nom est unique et que la nouvelle valeur est comprise, une proposition de mise à jour s’ouvre. Les champs non cités restent ceux de la fiche. Une note nouvelle s’ajoute à la note déjà écrite. Si la valeur manque, la réponse décrit la fiche et demande le contact ou l’information, sans proposition.
-7. Une phrase de client ouvre une proposition.
-8. Une phrase de fournisseur, de produit, de projet court ou de devis ouvre une proposition. Elle n’écrit pas.
-9. Un commentaire sur une fiche client en attente produit une nouvelle proposition.
-10. Un nom seul déjà connu, sans verbe d’action, demande s’il faut consulter ou modifier.
+4. `prépare un devis pour …` suit l’assistant hybride : client en SQL, conditions filtrées sur ce client, prix catalogue, brouillon. Le modèle ne calcule pas.
+5. Une question de parcours commercial, de prochaine étape ou de preuve documentaire est répondue depuis l’instruction métier, sans modèle. Un seul projet nommé fait lire ses étapes enregistrées.
+6. Une consultation ou une liste est lue dans les fiches, sans modèle.
+7. Une demande d’ajouter un contact ou une information, ou une correction, relit d’abord la fiche client déjà enregistrée. Si le nom est unique et que la nouvelle valeur est comprise, une proposition de mise à jour s’ouvre. Les champs non cités restent ceux de la fiche. Une note nouvelle s’ajoute à la note déjà écrite. Si la valeur manque, la réponse décrit la fiche et demande le contact ou l’information, sans proposition.
+8. Une phrase de client ouvre une proposition.
+9. Une phrase de fournisseur, de produit, de projet court ou de devis ouvre une proposition. Elle n’écrit pas.
+10. Un commentaire sur une fiche client en attente produit une nouvelle proposition.
+11. Un nom seul déjà connu, sans verbe d’action, demande s’il faut consulter ou modifier.
 
 S’il ne reste rien de tout cela, et si Ollama répond, le modèle de conversation prend le relais. S’il ne répond pas, le fil affiche l’indisponibilité. La consultation des fiches continue par les mots.
 
-Le modèle dispose d’outils. `search_records` relit les fiches. Les autres outils, client, fournisseur, produit, projet et devis, ne font que proposer. Le modèle a au plus trois pas. Il ne numérote pas de facture et ne calcule pas de montant.
+Le modèle dispose d’outils. `search_records` relit les fiches. `search_client_agreements` exige un client et ne lit que ses conditions. `get_product_info` lit le catalogue. `create_draft_quote` enregistre un brouillon dont les montants viennent de `pricing.ts`. Les outils client, fournisseur, produit, projet et devis ne font que proposer. Le modèle a au plus trois pas. Il ne numérote pas de facture et ne calcule pas de montant.
+
+## Devis hybride
+
+La préparation d’un devis sépare les conditions écrites et les montants. Le détail est dans [Assistant devis hybride](/documentation/devis-hybride).
+
+Le client, le catalogue, le stock et le devis sont dans PostgreSQL. Le prix unitaire HT d’un brouillon est le prix catalogue indiqué, moins la remise écrite pour ce client : quantité × prix HT × (1 − remise). Cette formule est dans `catalogUnitCents`. Elle ne passe pas par le modèle. Sans prix catalogue, la ligne n’est pas chiffrée. Plusieurs remises différentes ne sont pas tranchées.
+
+Les conditions viennent des notes du client, de ses dossiers, des devis reçus rattachés et des pièces de ces dossiers. Une recherche de devis ne lit pas les pièces d’un autre client. Le vecteur, s’il est calculé, ne classe que ce lot. L’index général reste `KnowledgeChunk`, avec `bge-m3`. Il n’y a pas de base Chroma, Qdrant ou LanceDB séparée.
+
+Le devis est créé au statut `brouillon`, sur le dossier unique du client, ou sur le dossier nommé. Aucun envoi n’est fait. S’il y a plusieurs dossiers, le chiffrage est montré et rien n’est écrit. Le total HT du document utilise `saleUnitCents`, le prix déjà calculé, et non la formule de marque.
 
 ## Fil et étapes
 
@@ -45,7 +56,7 @@ Une seule écriture attendue à la fois : la plus récente entre la proposition 
 
 - **Confirmer** ou `Je confirme.` l’applique.
 - `non` n’écrit pas. La proposition de client reste pour être corrigée. La proposition de fournisseur, de produit, de projet ou de devis est écartée.
-- La phrase parlée de projet et le tableau collé ne passent pas par cette attente.
+- La phrase parlée de projet, le tableau collé et le brouillon de devis hybride ne passent pas par cette attente. Le brouillon n’est pas envoyé.
 
 ## Nom ambigu
 

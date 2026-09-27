@@ -31,6 +31,7 @@ export function saleKindLabel(kind: string): string {
 }
 
 export function saleStatusLabel(status: string): string {
+  if (status === "brouillon") return "Brouillon";
   if (status === "non_abouti") return "Non abouti";
   if (status === "transforme") return "Commande établie";
   return "En cours";

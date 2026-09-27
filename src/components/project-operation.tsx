@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { centsInput, formatCents, saleLineFigures, saleOperationTotals } from "@/domain/pricing";
+import { centsInput, formatCents, saleLineFigures, saleOperationTotals, storedSaleFigures } from "@/domain/pricing";
 import { saleKindLabel, saleStatusLabel } from "@/domain/sale-line";
 
 const initial: SaleState = { message: null, ok: false };
@@ -32,6 +32,7 @@ export type OperationLine = {
   supplierName: string;
   quantity: number;
   costCents: number | null;
+  saleUnitCents?: number | null;
   markupPercent: number;
   discountPercent: number;
   confirmedLabel: string | null;
@@ -399,9 +400,9 @@ function DocumentCard({
   suppliers: Array<{ id: string; name: string }>;
 }) {
   const formId = `doc-${document.id}`;
-  const figures = document.lines.map((line) => saleLineFigures(line));
+  const figures = document.lines.map((line) => storedSaleFigures(line));
   const totals = saleOperationTotals(figures);
-  const editable = document.status === "en_cours" && !document.confirmedLabel;
+  const editable = (document.status === "en_cours" || document.status === "brouillon") && !document.confirmedLabel;
   return (
     <li className="grid gap-3 rounded-lg border border-border p-3">
       <div className="flex flex-wrap items-center gap-2">

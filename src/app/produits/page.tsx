@@ -37,13 +37,14 @@ export default async function ProductsPage({
       intro="Le prix indiqué et le coût indiqué restent ceux écrits sur la fiche. Ils ne sont pas recalculés. La saisie et les versions de devis sont sous le tableau."
       basePath="/produits"
       query={{ q: query, source }}
-      headers={["Référence", "Désignation", "Famille", "Prix indiqué", "Coût indiqué", "Unité", "Fournisseur", "Date de saisie", "Édition"]}
+      headers={["Référence", "Désignation", "Famille", "Prix indiqué", "Coût indiqué", "Stock", "Unité", "Fournisseur", "Date de saisie", "Édition"]}
       rows={products.map((product) => [
         { text: product.reference || "—" },
         { text: product.name },
         { text: product.kind === "service" ? "Service" : "Produit" },
         { text: product.statedPrice || "non indiqué" },
         { text: product.costStated || "non indiqué" },
+        { text: product.stockQty === null ? "non indiqué" : String(product.stockQty) },
         { text: product.unit || "—" },
         { text: product.supplier?.name || "—" },
         { text: product.createdAt.toLocaleDateString("fr-FR") },
@@ -74,6 +75,7 @@ export default async function ProductsPage({
         statedPrice: product.statedPrice,
         vatNote: product.vatNote,
         kind: product.kind,
+        stockQty: product.stockQty,
         enteredLabel: product.createdAt.toLocaleDateString("fr-FR"),
         origin: productOrigin(
           product.source,

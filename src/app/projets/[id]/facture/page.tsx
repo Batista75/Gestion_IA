@@ -5,7 +5,7 @@ import { PrintButton } from "@/components/print-button";
 import { buttonVariants } from "@/components/ui/button";
 import { sheetHeading } from "@/domain/company";
 import { deliveryFromRecord, deliverySummary } from "@/domain/delivery";
-import { formatCents, saleLineFigures, saleOperationTotals } from "@/domain/pricing";
+import { formatCents, saleOperationTotals, storedSaleFigures } from "@/domain/pricing";
 import { loadCompany } from "@/lib/company-store";
 import { prisma } from "@/lib/db";
 import { cn } from "@/lib/utils";
@@ -35,7 +35,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const order = project.sales[0] ?? null;
   const proof = (key: string) => project.steps.find((step) => step.stepKey === key)?.proofRef ?? "";
   const invoiceRef = proof("facturation");
-  const figures = (order?.lines ?? []).map((line) => saleLineFigures(line));
+  const figures = (order?.lines ?? []).map((line) => storedSaleFigures(line));
   const totals = saleOperationTotals(figures);
   const partyLines = [
     client?.address,

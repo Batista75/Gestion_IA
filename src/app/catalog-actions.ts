@@ -54,14 +54,18 @@ export async function createProductAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return traced(() => saveProductForm(null, productFromForm(formData)));
+  const parsed = productFromForm(formData);
+  if (parsed.error) return { message: parsed.error, ok: false };
+  return traced(() => saveProductForm(null, parsed.product, parsed.stockQty));
 }
 
 export async function updateProductAction(
   _previous: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  return traced(() => saveProductForm(idFromForm(formData), productFromForm(formData)));
+  const parsed = productFromForm(formData);
+  if (parsed.error) return { message: parsed.error, ok: false };
+  return traced(() => saveProductForm(idFromForm(formData), parsed.product, parsed.stockQty));
 }
 
 export async function createQuoteAction(
@@ -195,7 +199,25 @@ function partyFromForm(formData: FormData) {
   };
 }
 
-function productFromForm(formData: FormData) {
+function productFromForm(formData: FormData): {
+  product: ReturnType<typeof productFields>;
+  stockQty: number | null;
+  error: string | null;
+} {
+  const raw = String(formData.get("stockQty") ?? "").trim();
+  const parsedStock = raw === "" ? null : Number(raw);
+  const invalid =
+    parsedStock !== null &&
+    (!Number.isInteger(parsedStock) || parsedStock < 0 || parsedStock > 999999);
+  const stockQty = invalid ? null : parsedStock;
+  return {
+    product: productFields(formData),
+    stockQty: invalid ? null : stockQty,
+    error: invalid ? "Le stock actuel est un entier entre 0 et 999 999, ou vide." : null,
+  };
+}
+
+function productFields(formData: FormData) {
   return {
     name: String(formData.get("name") ?? ""),
     reference: String(formData.get("reference") ?? ""),

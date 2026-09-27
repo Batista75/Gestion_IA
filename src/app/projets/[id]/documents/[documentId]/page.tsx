@@ -5,7 +5,7 @@ import { PrintButton } from "@/components/print-button";
 import { buttonVariants } from "@/components/ui/button";
 import { sheetBuys, sheetHeading } from "@/domain/company";
 import { deliveryFromRecord, deliverySummary } from "@/domain/delivery";
-import { formatCents, saleLineFigures, saleOperationTotals } from "@/domain/pricing";
+import { formatCents, saleOperationTotals, storedSaleFigures } from "@/domain/pricing";
 import { loadCompany } from "@/lib/company-store";
 import { prisma } from "@/lib/db";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ export default async function SaleDocumentPage({
         })
       : Promise.resolve(null),
   ]);
-  const figures = document.lines.map((line) => saleLineFigures(line));
+  const figures = document.lines.map((line) => storedSaleFigures(line));
   const totals = saleOperationTotals(figures);
   const partyLines = buys
     ? [supplier?.address, supplier?.email, supplier?.phone].filter((line): line is string => Boolean(line))

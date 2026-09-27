@@ -218,6 +218,7 @@ model Product {
   currency    String      @default("")
   vatNote     String      @default("")
   costStated  String      @default("")
+  stockQty    Int?
   supplierId  String?
   supplier    Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   createdAt    DateTime      @default(now())
@@ -381,6 +382,7 @@ model SaleDocumentLine {
   supplierName    String       @default("")
   quantity        Int          @default(1)
   costCents       Int?
+  saleUnitCents   Int?
   markupPercent   Int          @default(30)
   discountPercent Int          @default(0)
   createdAt       DateTime     @default(now())
