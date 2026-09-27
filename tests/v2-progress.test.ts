@@ -26,7 +26,7 @@ test("le tableau sépare ce qui est livré de la cible restante", () => {
   );
   assert.equal(
     byPoint.get("Catalogue fermé : intention structurée, pas une action libre"),
-    "pas",
+    "fait",
   );
   assert.equal(byPoint.has("Confiance et source affichées sur chaque donnée extraite"), false);
   const counts = v2ProgressCounts();

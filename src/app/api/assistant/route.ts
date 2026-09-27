@@ -29,6 +29,7 @@ import { conversationIdOrNew, rememberTurn } from "@/lib/conversations";
 import type { UIMessage } from "ai";
 import { withGpuLane } from "@/lib/gpu-lane";
 import { mentionedNames } from "@/domain/knowledge";
+import { absentReply, decideFree } from "@/domain/intent-catalog";
 import { asksHybridQuote } from "@/domain/hybrid-quote";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
 import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
@@ -82,6 +83,16 @@ export async function POST(request: Request) {
       step: stepFor(direct.source),
       proposal: direct.proposal,
       sources: direct.sources,
+    });
+  }
+
+  const free = decideFree(parsed.text);
+  if (free.execution === "absente") {
+    return streamDirect({
+      conversationId,
+      reply: absentReply(free),
+      source: "regle-metier",
+      step: "Catalogue",
     });
   }
 

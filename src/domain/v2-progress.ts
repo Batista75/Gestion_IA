@@ -31,7 +31,7 @@ export const v2Progress: V2ProgressRow[] = [
   { domain: "Chaîne", point: "Enveloppe de contexte : page, sélection, actions récentes, rôle, droits", status: "pas" },
   { domain: "Chaîne", point: "Faits du document sourcés, page et zone, indépendants du message", status: "pas" },
   { domain: "Chaîne", point: "Résolveur SQL, lexique, vecteurs et récence, droits avant la recherche", status: "pas" },
-  { domain: "Chaîne", point: "Catalogue fermé : intention structurée, pas une action libre", status: "pas" },
+  { domain: "Chaîne", point: "Catalogue fermé : intention structurée, pas une action libre", status: "fait" },
   { domain: "Chaîne", point: "Complétude de chaque champ, seuil selon la criticité", status: "pas" },
   { domain: "Chaîne", point: "Question minimale : choix fermé, confirmation, ou valeur manquante", status: "pas" },
   { domain: "Chaîne", point: "Parcours borné, suspendu puis repris après la réponse", status: "pas" },
@@ -53,6 +53,71 @@ export const v2Progress: V2ProgressRow[] = [
   { domain: "Hors socle", point: "Historique daté des prix d’achat et de vente", status: "pas" },
   { domain: "Hors socle", point: "Export documentaire, export comptable, sauvegarde restaurable", status: "pas" },
   { domain: "Hors socle", point: "Connecteur vers une plateforme agréée, désactivable", status: "pas" },
+];
+
+export type V2Phase = {
+  order: number;
+  title: string;
+  state: V2Status;
+  summary: string;
+};
+
+/** Ordre de réalisation de la chaîne. La phase en cours est la première qui n’est pas faite. */
+export const v2Phases: V2Phase[] = [
+  {
+    order: 1,
+    title: "Catalogue fermé",
+    state: "fait",
+    summary: "Les phrases reconnues passent par une liste fermée. Le modèle cherche et explique, il n’écrit plus.",
+  },
+  {
+    order: 2,
+    title: "Enveloppe de contexte",
+    state: "pas",
+    summary: "La page, le projet ouvert et l’objet sélectionné accompagnent le message.",
+  },
+  {
+    order: 3,
+    title: "Complétude et question unique",
+    state: "pas",
+    summary: "Chaque champ a un seuil. Une seule question porte sur la donnée bloquante.",
+  },
+  {
+    order: 4,
+    title: "Fiche de compréhension",
+    state: "pas",
+    summary: "L’écran montre ce qui est compris et se corrige sans reformuler le message.",
+  },
+  {
+    order: 5,
+    title: "Sortie JSON de l’interpréteur",
+    state: "pas",
+    summary: "Le modèle choisit une intention du catalogue dans un objet contraint, sans lancer l’action.",
+  },
+  {
+    order: 6,
+    title: "Simulation avant écriture",
+    state: "pas",
+    summary: "Chaque action à risque montre son résultat avant d’écrire.",
+  },
+  {
+    order: 7,
+    title: "Parcours repris après réponse",
+    state: "pas",
+    summary: "Un traitement suspendu garde son état et reprend quand la réponse arrive.",
+  },
+  {
+    order: 8,
+    title: "Mémoire des corrections",
+    state: "pas",
+    summary: "Une correction vaut pour le document concerné, pas pour une règle globale.",
+  },
+  {
+    order: 9,
+    title: "Évaluation sur messages courts",
+    state: "pas",
+    summary: "Des phrases du type « Enregistre ça » servent à vérifier la chaîne.",
+  },
 ];
 
 export function v2ProgressCounts(rows: V2ProgressRow[] = v2Progress): { done: number; open: number } {

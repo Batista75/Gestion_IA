@@ -9,11 +9,7 @@ import {
   type UIMessage,
   type UIMessageChunk,
 } from "ai";
-import { type PartyInput, type ProductInput } from "@/domain/catalog";
-import { draftFromKnownFields } from "@/domain/client-file";
 import { retrievalContext, sourceLabel } from "@/domain/knowledge";
-import { openCatalogProposal } from "@/lib/catalog-proposals";
-import { openClientProposal, proposeFromParty, type ProposalView } from "@/lib/client-proposals";
 import { rememberTurn } from "@/lib/conversations";
 import { withGpuLane } from "@/lib/gpu-lane";
 import { searchKnowledge } from "@/lib/knowledge-store";
@@ -141,7 +137,7 @@ export async function streamModel(input: {
         writer.write({ type: "finish-step" });
         const result = streamText({
           model: openai.chat(input.model),
-          system: `${SYSTEM_PROMPT}\n\nInstruction métier :\n${readTradeInstruction()}\n\n${retrievalContext(docs)}\nUne écriture de fiche n’est pas faite tant que l’utilisateur n’a pas confirmé.`,
+          system: `${SYSTEM_PROMPT}\n\nInstruction métier :\n${readTradeInstruction()}\n\n${retrievalContext(docs)}\nTu ne proposes pas d’enregistrement : le catalogue a déjà traité les écritures avant cet appel.`,
           messages: textMessages(input.messages),
           stopWhen: stepCountIs(3),
           temperature: 0.1,
@@ -250,32 +246,9 @@ function textMessages(messages: UIMessage[]) {
 }
 
 function assistantTools(side: Meta) {
-  const party = jsonSchema<PartyInput>({
-    type: "object",
-    properties: {
-      name: { type: "string" },
-      siren: { type: "string" },
-      email: { type: "string" },
-      phone: { type: "string" },
-      address: { type: "string" },
-      notes: { type: "string" },
-    },
-    required: ["name"],
-  });
-  const product = jsonSchema<ProductInput>({
-    type: "object",
-    properties: {
-      name: { type: "string" },
-      reference: { type: "string" },
-      unit: { type: "string" },
-      description: { type: "string" },
-      supplierName: { type: "string" },
-    },
-    required: ["name"],
-  });
   return {
     search_records: tool({
-      description: "Relit les fiches déjà enregistrées avant de citer une information.",
+      description: "Relit les fiches déjà enregistrées avant de citer une information. N’écrit rien.",
       inputSchema: jsonSchema<{ query: string }>({
         type: "object",
         properties: { query: { type: "string" } },
@@ -286,47 +259,6 @@ function assistantTools(side: Meta) {
         const found = await searchKnowledge(query, "lookup");
         side.sources = found.map((doc) => ({ label: sourceLabel(doc.sourceType), title: doc.title }));
         return renderKnowledge(found, "lookup");
-      },
-    }),
-    create_client: tool({
-      description: "Propose une fiche client. Rien n’est écrit avant confirmation.",
-      inputSchema: party,
-      execute: async (input) => {
-        const opened = await openClientProposal(draftFromKnownFields(blankParty(input), "create"));
-        return applyProposal(side, opened);
-      },
-    }),
-    update_client: tool({
-      description: "Propose la mise à jour d’un client. Rien n’est écrit avant confirmation.",
-      inputSchema: party,
-      execute: async (input) => {
-        const opened = await proposeFromParty({ type: "update_client", party: blankParty(input) });
-        return applyProposal(side, opened);
-      },
-    }),
-    create_supplier: partyTool("create_supplier", "Propose un fournisseur. Rien n’est écrit avant confirmation.", party, side),
-    update_supplier: partyTool("update_supplier", "Propose la mise à jour d’un fournisseur.", party, side),
-    create_product: productTool("create_product", "Propose un produit. Rien n’est écrit avant confirmation.", product, side),
-    update_product: productTool("update_product", "Propose la mise à jour d’un produit.", product, side),
-    create_project: tool({
-      description: "Propose un projet. Ne crée pas la fiche client. Rien n’est écrit avant confirmation.",
-      inputSchema: jsonSchema<{ name: string; primaryClient: string; nextAction?: string }>({
-        type: "object",
-        properties: {
-          name: { type: "string" },
-          primaryClient: { type: "string" },
-          nextAction: { type: "string" },
-        },
-        required: ["name", "primaryClient"],
-      }),
-      execute: async (input) => {
-        const opened = await openCatalogProposal({
-          type: "create_project",
-          name: input.name,
-          primaryClient: input.primaryClient,
-          nextAction: input.nextAction ?? "",
-        });
-        return applyProposal(side, opened);
       },
     }),
     search_client_agreements: tool({
@@ -375,143 +307,18 @@ function assistantTools(side: Meta) {
           .join("\n");
       },
     }),
-    create_draft_quote: tool({
-      description: "Enregistre un devis brouillon. Les prix viennent du catalogue et des conditions du client, jamais du modèle.",
-      inputSchema: jsonSchema<{ clientName: string; items: string }>({
-        type: "object",
-        properties: {
-          clientName: { type: "string" },
-          items: { type: "string", description: "Articles et quantités, par exemple 2 charnières" },
-        },
-        required: ["clientName", "items"],
-      }),
-      execute: async ({ clientName, items }) => {
-        const { prepareHybridQuote } = await import("@/lib/hybrid-quote");
-        const prepared = await prepareHybridQuote(`prépare un devis pour ${clientName}, ${items}`);
-        side.sources = prepared.sources;
-        side.source = prepared.wrote ? "action" : "proposition";
-        return prepared.reply;
-      },
-    }),
-    record_quote: tool({
-      description: "Propose un devis. Rien n’est écrit avant confirmation. Ne calcule aucun prix.",
-      inputSchema: jsonSchema<{ title: string; products: Array<{ name: string; reference?: string; supplierName?: string }> }>({
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          products: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                reference: { type: "string" },
-                supplierName: { type: "string" },
-              },
-              required: ["name"],
-            },
-          },
-        },
-        required: ["title", "products"],
-      }),
-      execute: async (input) => {
-        const opened = await openCatalogProposal({
-          type: "record_quote",
-          title: input.title,
-          products: input.products.map((product) =>
-            blankProduct({
-              name: product.name,
-              reference: product.reference,
-              supplierName: product.supplierName,
-            }),
-          ),
-        });
-        return applyProposal(side, opened);
-      },
-    }),
   };
-}
-
-function partyTool(
-  type: "create_supplier" | "update_supplier",
-  description: string,
-  inputSchema: ReturnType<typeof jsonSchema<PartyInput>>,
-  side: Meta,
-) {
-  return tool({
-    description,
-    inputSchema,
-    execute: async (input) =>
-      applyProposal(side, await openCatalogProposal({ type, party: blankParty(input) })),
-  });
-}
-
-function productTool(
-  type: "create_product" | "update_product",
-  description: string,
-  inputSchema: ReturnType<typeof jsonSchema<ProductInput>>,
-  side: Meta,
-) {
-  return tool({
-    description,
-    inputSchema,
-    execute: async (input) =>
-      applyProposal(side, await openCatalogProposal({ type, product: blankProduct(input) })),
-  });
-}
-
-function applyProposal(side: Meta, opened: ProposalView | { clarify: string }): string {
-  if ("clarify" in opened) return opened.clarify;
-  side.proposal = opened.proposal;
-  side.source = "proposition";
-  return opened.reply;
 }
 
 function toolTitle(name: string): string {
   switch (name) {
     case "search_records":
       return "Recherche dans les fiches";
-    case "create_client":
-    case "update_client":
-      return "Proposition de client";
-    case "create_supplier":
-    case "update_supplier":
-      return "Proposition de fournisseur";
-    case "create_product":
-    case "update_product":
-      return "Proposition de produit";
-    case "create_project":
-      return "Proposition de projet";
-    case "record_quote":
-      return "Proposition de devis";
     case "search_client_agreements":
       return "Conditions du client";
     case "get_product_info":
       return "Catalogue";
-    case "create_draft_quote":
-      return "Brouillon de devis";
     default:
       return "Étape";
   }
-}
-
-function blankParty(input: Partial<PartyInput>): PartyInput {
-  return {
-    name: input.name ?? "",
-    siren: input.siren ?? "",
-    email: input.email ?? "",
-    phone: input.phone ?? "",
-    address: input.address ?? "",
-    notes: input.notes ?? "",
-  };
-}
-
-function blankProduct(input: Partial<ProductInput>): ProductInput {
-  return {
-    name: input.name ?? "",
-    reference: input.reference ?? "",
-    unit: input.unit ?? "u",
-    description: input.description ?? "",
-    supplierName: input.supplierName ?? "",
-  };
 }

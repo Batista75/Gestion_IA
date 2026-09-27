@@ -38,13 +38,13 @@ Cible : NVIDIA RTX 4080, 16 Go de mémoire graphique, 32 Go de RAM. Modèle de c
 
 ## Outils
 
-Le modèle n’écrit pas un devis dans son texte. Il appelle :
+Le modèle n’écrit pas un devis. `prépare un devis pour …` exécute la suite dans l’application, avant le modèle :
 
-- `search_client_agreements` : conditions du client dont l’identifiant est fourni. Sans identifiant, rien n’est lu.
-- `get_product_info` : lecture SQL du catalogue, référence, désignation, prix indiqué, stock.
-- `create_draft_quote` : calcul dans `catalogUnitCents`, puis insertion d’un devis au statut brouillon.
+- conditions du client dont l’identifiant est connu, et de ce client seulement ;
+- lecture SQL du catalogue : référence, désignation, prix indiqué, stock ;
+- calcul dans `catalogUnitCents`, puis insertion d’un devis au statut brouillon.
 
-`prépare un devis pour …` exécute cette suite avant le modèle, afin que le prix ne dépende pas de la rédaction du modèle.
+Le modèle peut encore relire des fiches pour une question. Il ne crée pas le brouillon.
 
 ## Suite d’une demande
 

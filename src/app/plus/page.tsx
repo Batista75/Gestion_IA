@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { v2Progress, v2ProgressCounts } from "@/domain/v2-progress";
+import { v2Phases, v2Progress, v2ProgressCounts } from "@/domain/v2-progress";
 import { cn } from "cn";
 
 export default function MorePage() {
@@ -77,6 +77,43 @@ export default function MorePage() {
           </Link>
         </CardContent>
       </Card>
+
+      <section className="grid gap-3">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold tracking-tight">Phases</h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            La chaîne avance dans cet ordre. La phase en cours est la première qui reste à faire.
+          </p>
+        </div>
+        <div className="overflow-x-auto rounded-lg border border-border bg-card">
+          <table className="w-full min-w-[36rem] border-collapse text-sm">
+            <caption className="sr-only">Phases de la chaîne hybride</caption>
+            <thead>
+              <tr className="border-b border-border bg-muted/60 text-left text-xs tracking-wide text-muted-foreground uppercase">
+                <th className="w-16 px-3 py-2 font-medium">Phase</th>
+                <th className="px-3 py-2 font-medium">Travail</th>
+                <th className="w-28 px-3 py-2 font-medium">État</th>
+              </tr>
+            </thead>
+            <tbody>
+              {v2Phases.map((phase) => (
+                <tr key={phase.order} className="border-b border-border last:border-0">
+                  <td className="px-3 py-1.5 text-muted-foreground">{phase.order}</td>
+                  <td className="px-3 py-1.5">
+                    <span className="font-medium">{phase.title}</span>
+                    <span className="text-muted-foreground"> — {phase.summary}</span>
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <Badge variant={phase.state === "fait" ? "secondary" : "outline"}>
+                      {phase.state === "fait" ? "Fait" : "Pas fait"}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="grid gap-3">
         <div className="grid gap-1">

@@ -26,9 +26,9 @@ Les prix, la TVA et les numéros de pièce ne sont pas calculés par le modèle.
 10. Un commentaire sur une fiche client en attente produit une nouvelle proposition.
 11. Un nom seul déjà connu, sans verbe d’action, demande s’il faut consulter ou modifier.
 
-S’il ne reste rien de tout cela, et si Ollama répond, le modèle de conversation prend le relais. S’il ne répond pas, le fil affiche l’indisponibilité. La consultation des fiches continue par les mots.
+S’il ne reste rien de tout cela, `decideFree` dans `src/domain/intent-catalog.ts` tranche. Une intention du catalogue encore sans exécution, ou une phrase d’écriture hors liste, répond tout de suite : la donnée manquante, ou l’absence d’action. Rien n’est écrit. Une question libre, si Ollama répond, part au modèle. S’il ne répond pas, le fil affiche l’indisponibilité. La consultation des fiches continue par les mots.
 
-Le modèle dispose d’outils. `search_records` relit les fiches. `search_client_agreements` exige un client et ne lit que ses conditions. `get_product_info` lit le catalogue. `create_draft_quote` enregistre un brouillon dont les montants viennent de `pricing.ts`. Les outils client, fournisseur, produit, projet et devis ne font que proposer. Le modèle a au plus trois pas. Il ne numérote pas de facture et ne calcule pas de montant.
+Le modèle ne dispose plus que d’outils de lecture : `search_records`, `search_client_agreements`, `get_product_info`. Il ne propose plus de fiche et ne crée plus de brouillon. Le brouillon de devis reste la règle `prépare un devis pour …`, exécutée avant lui. Il a au plus trois pas. Il ne numérote pas de facture et ne calcule pas de montant.
 
 ## Devis hybride
 
@@ -123,7 +123,7 @@ La chaîne décrite dans la spécification V2 n’est pas le chemin par défaut.
 - l’enveloppe de contexte (page ouverte, objet sélectionné, actions récentes, rôle, droits) n’est pas construite avant le modèle ;
 - l’analyse d’une pièce dépend encore du message et ne cite pas la page ni la zone ;
 - le rapprochement mélange mots, vecteurs et reranker, sans faire primer l’identifiant métier ni appliquer les droits avant la recherche ;
-- le modèle de conversation prend le relais hors catalogue et peut proposer une fiche ;
+- le modèle peut encore expliquer une question libre, sans écrire ; l’enveloppe de contexte et l’interpréteur JSON ne sont pas en place ;
 - la confiance n’est pas évaluée champ par champ ;
 - la question de clarification n’est pas limitée au choix fermé, à la confirmation ou à la valeur manquante ;
 - il n’y a pas de parcours d’états suspendu puis repris, ni de fiche de compréhension corrigeable ;
