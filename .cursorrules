@@ -37,3 +37,39 @@ Avant d’écrire du code Next.js, lire le guide dans `node_modules/next/dist/do
 - Les fichiers de `src/domain` importés par les tests Node s’importent entre eux avec l’extension `.ts`, sans alias `@/`.
 - La cible TypeScript est ES2017 : pas de groupes nommés dans les expressions régulières.
 - Les tests passent par `npm test`. Le contrôle de types est `./node_modules/.bin/tsc --noEmit`.
+
+# Directives d'architecture UI & Ergonomie (Style Base-Nova / Neutral)
+
+## 1. Principes Généraux de Design
+- **Sobriété et Densité** : L'interface doit être épurée, compacte et lisible. Ne pas surcharger l'écran avec des marges ou rembourrages verticaux excessifs.
+- **Règle du Zéro-Scroll inutile** : Privilégier les mises en page contenues (`h-screen overflow-hidden` avec défilement interne `overflow-y-auto` dans la zone de contenu principal) pour éviter le défilement interminable de toute la page.
+- **Cohérence des composants** : Utiliser en priorité les primitives shadcn existantes dans `@/components/ui` (`Button`, `Input`, `Textarea`, `Label`, `Card`, `Badge`). Ne pas réinventer des boutons ou cartes en HTML brut.
+
+## 2. Typographie & Couleurs
+- **Police** : Utiliser la police `Geist` (`font-sans`). Varier l'épaisseur avec parcimonie (`font-medium` pour l'interactif, `font-semibold` pour les titres).
+- **Contraste & Hiérarchie des textes** :
+  - Texte principal : `text-neutral-900`
+  - Texte secondaire / descriptions : `text-neutral-500` (taille `text-sm`)
+  - Placeholders / tertiaire : `text-neutral-400`
+- **Actions** : Utiliser la couleur d'action vert-gris désaturée configurée dans `globals.css` sans ajouter de dégradés ni de couleurs vives superflues.
+
+## 3. Structure des Écrans & Mise en Page
+- **Formulaires** :
+  - Si un formulaire comporte plus de 4 champs, structurer la mise en page en grille à 2 colonnes (`grid grid-cols-2 gap-4`).
+  - Utiliser la primitive `Label` au-dessus de chaque champ avec un espacement serré (`space-y-1.5`).
+- **Tableaux & Listes** :
+  - Limiter la hauteur des tableaux longs et ajouter un défilement interne ou une pagination.
+  - Densité des lignes : utiliser un rembourrage vertical compact (`py-2` à `py-2.5` par ligne `<tr>`).
+  - Alignement : aligner le texte et les badges à gauche, les montants/chiffres à droite.
+- **Composants HTML bruts (`<details>`, `<table>`, etc.)** :
+  - Styliser la balise `<details>` avec une bordure fine et un fond discret au survol (`border border-neutral-200 rounded-md p-3 hover:bg-neutral-50/50`).
+  - Conserver des bordures fines et claires (`border-neutral-200` ou `border-neutral-100`).
+
+## 4. Ombrages & Effets
+- Ne **jamais** utiliser d'ombres lourdes (`shadow-lg`, `shadow-xl`).
+- Utiliser uniquement des bordures fines (`border border-neutral-200`) associées à l'ombre minimale `shadow-sm`.
+- Ajouter des transitions douces et rapides sur les états survolés/actifs (`transition-colors duration-150`).
+
+## 5. Icônes
+- Utiliser uniquement les icônes de la bibliothèque `lucide-react`.
+- Garder les icônes rares et fonctionnelles (taille standard `h-4 w-4` ou `h-3.5 w-3.5`).
