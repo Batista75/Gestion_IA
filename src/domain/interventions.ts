@@ -127,6 +127,7 @@ export function readTimeQuestion(text: string): TimeQuestion | null {
 export function readInterventionEntry(text: string): InterventionEntry | null {
   const folded = fold(text);
   if (readTimeQuestion(text)) return null;
+  if (/\breclamations?\b/.test(folded)) return null;
   if (!/\b(enregistre|enregistrer|proposer|proposez|propose|ajoute|ajouter|creer|saisir|saisis)\b/.test(folded)) return null;
   if (!/\b(interventions?|assistances?|integrations?|pannes?|tickets?)\b/.test(folded)) return null;
   if (/\$|\busd\b/i.test(text)) {

@@ -12,6 +12,8 @@ Client 1 ── * Contract
 Client 1 ── * Intervention
 Client 1 ── * InstalledEquipment
 Product 1 ── * InstalledEquipment
+Client 1 ── * Claim
+Client 1 ── * ReturnRequest
 Project 1 ── * Intervention
 Organization 1 ── 0..1 Client
 Organization 1 ── 0..1 Supplier
@@ -38,7 +40,7 @@ StoredFile 1 ── * DocumentProposal
 StoredFile 1 ── * Demand
 
 Sans clé étrangère : Account, AppSetting, CompanyProfile, DocumentMemory,
-CatalogProposal, ClientProposal, ContractProposal, InterventionProposal, InstalledEquipmentProposal, PurchaseFollowUpProposal, SupplierTermsProposal, RecordEvent, KnowledgeChunk
+CatalogProposal, ClientProposal, ContractProposal, InterventionProposal, InstalledEquipmentProposal, PurchaseFollowUpProposal, SupplierTermsProposal, ClaimProposal, ReturnRequestProposal, RecordEvent, KnowledgeChunk
 ```
 
 Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, produit d’un équipement installé, fichier d’une demande. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une boîte retire ses `StoredFile`.
@@ -92,7 +94,7 @@ Tiers unique, identifié par `nameKey`.
 - Interlocuteur : `contactName`, `contactRole`, `email`, `phone`.
 - `notes`, `reference`, `sector`, `currency`.
 - `createdAt`, `updatedAt`.
-- Lien : un client a plusieurs `Project`, plusieurs `Contact`, plusieurs `Address`, plusieurs `Contract`, plusieurs `Intervention` et plusieurs `InstalledEquipment`. Retirer le client vide `Project.clientId` et retire ses contacts, ses adresses, ses contrats, ses interventions et ses équipements.
+- Lien : un client a plusieurs `Project`, plusieurs `Contact`, plusieurs `Address`, plusieurs `Contract`, plusieurs `Intervention`, plusieurs `InstalledEquipment`, plusieurs `Claim` et plusieurs `ReturnRequest`. Retirer le client vide `Project.clientId` et retire ses contacts, ses adresses, ses contrats, ses interventions, ses équipements, ses réclamations et ses retours.
 
 ### Supplier
 
@@ -428,6 +430,49 @@ Ligne d’achat confirmée. Le bon de commande et la facture reçue sont deux mo
 - `confirmedAt` : moment de la validation.
 - `createdAt`.
 
+### ClaimProposal
+
+Réclamation encore à confirmer. Confirmer crée le `Claim`. Rejeter n’écrit pas de réclamation.
+
+- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `payload` : client, type fermé (`deballage` ou `retard`), date, état (`ouverte`, `en_cours`, `closee`), texte recopié.
+- `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
+- `createdAt`.
+
+### Claim
+
+Réclamation confirmée. Le nombre du mois n’est pas une colonne : c’est un filtre sur `occurredOn` et sur le type. Le texte est `note`, déjà écrit. Ce n’est pas un numéro de facture.
+
+- `clientId` vers `Client`. Retirer le client retire la réclamation.
+- `kind` : `deballage` (panne au déballage) ou `retard` (retard de livraison).
+- `occurredOn` : date `YYYY-MM-DD`.
+- `status` : `ouverte`, `en_cours` ou `closee`.
+- `note` : texte recopié de la phrase.
+- `confirmedAt` : moment de la validation. Sans cette date, la réclamation n’existe pas.
+- `createdAt`.
+
+### ReturnRequestProposal
+
+Retour encore à confirmer. Confirmer crée le `ReturnRequest`. Rejeter n’écrit pas de retour.
+
+- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `payload` : client, type fermé (`retour` ou `remplacement`), date, état (`en_cours` ou `clos`), sous garantie ou hors garantie, texte recopié.
+- `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
+- `createdAt`.
+
+### ReturnRequest
+
+Retour ou remplacement confirmé. La liste « en cours et sous garantie » n’est pas une colonne : c’est un filtre sur `status` et `underWarranty`. Le texte est `note`, déjà écrit.
+
+- `clientId` vers `Client`. Retirer le client retire le retour.
+- `kind` : `retour` ou `remplacement`.
+- `occurredOn` : date `YYYY-MM-DD`.
+- `status` : `en_cours` ou `clos`.
+- `underWarranty` : vrai si la phrase dit sous garantie.
+- `note` : texte recopié de la phrase.
+- `confirmedAt` : moment de la validation.
+- `createdAt`.
+
 ## Assistant
 
 ### Conversation
@@ -549,5 +594,6 @@ Priorité haute, pas encore faites :
 - Le taux moyen, le total d’heures et le délai moyen d’une intervention sont calculés par `src/domain/interventions.ts` à partir des taux, des minutes et des dates déjà enregistrés. Ils ne sont pas stockés.
 - L’âge d’un équipement et le filtre « acheté l’an dernier » sont calculés par `src/domain/equipment.ts` en comparant `InstalledEquipment.installedOn` à une date. Ils ne sont pas stockés. Le niveau de garantie est la valeur déjà enregistrée.
 - L’écart d’un achat est calculé par `src/domain/purchases.ts` : facture reçue moins bon de commande, deux centimes déjà stockés. Le volume et le montant de sous-traitance additionnent des `orderCents` déjà enregistrés. Le retard d’expédition compare `shipsOn` à la date du jour. Aucun de ces résultats n’est stocké.
+- Le nombre de réclamations du mois et le nombre de retours en cours sont des filtres de `src/domain/claims.ts` sur les fiches déjà confirmées. Ils ne sont pas stockés. Le texte affiché est `Claim.note` ou `ReturnRequest.note`, recopié, pas réécrit.
 - L’application n’attribue pas de numéro de facture ni d’avoir. Une `NotedPiece` recopie la référence déjà écrite. Elle n’enregistre pas de relevé bancaire.
 - La validité de trente jours d’une offre fournisseur, les rôles et les notifications ne sont pas des tables. L’historique de prix est la suite des `SupplierOffer`. `Quote.versionLabel` et `Quote.fingerprint` identifient une offre reçue, sans durée de validité en colonne.

@@ -110,7 +110,7 @@ Ce lot reste le dernier. Il ne crée pas d’encaissement ni de rapprochement ba
 
 Chaque lot se termine par une fonction de domaine testée sans modèle, une question exemple qui affiche le paquet, et une phrase du manuel. Les colonnes nouvelles sont décrites dans la modélisation au moment où le lot les crée. L’état ci-dessous est mis à jour quand le lot est livré. Ce n’est pas le tableau de Réalisations, ni le lot de modélisation déjà clos.
 
-Avancement du chantier : 7 sur 11, soit 64 %. Seul un lot marqué livré compte.
+Avancement du chantier : 8 sur 11, soit 73 %. Seul un lot marqué livré compte.
 
 1. **Paquet et garde-fou.** Type du paquet, affichage, contrôle des chiffres dans une phrase. Aucune moyenne métier. État : livré.
 2. **Mesures sur l’existant.** Famille de produit, lien produit sur la ligne de vente, marge moyenne, classement d’offres, devis en attente face à une offre plus récente, dernière commande, recherche du procès-verbal indexé. État : livré.
@@ -119,9 +119,9 @@ Avancement du chantier : 7 sur 11, soit 64 %. Seul un lot marqué livré compte.
 5. **Temps.** Taux moyen, heures non facturées, récapitulatif de forfait, délai moyen d’intervention. État : livré.
 6. **Parc.** Garanties souscrites et matériel de plus de cinq ans. État : livré.
 7. **Achats.** Écart de centimes, reliquat, suivi, volume par constructeur, encours et délai, sous-traitance. État : livré.
-8. **Réclamations et retours.** Liste filtrée et résumé borné au texte enregistré. État : pas commencé.
+8. **Réclamations et retours.** Liste filtrée et résumé borné au texte enregistré. État : livré.
 9. **Dossier.** Rentabilité, stock réservé, réception sans intervention, matériel acheté non repris. Dépend des lots temps et achats. État : pas commencé.
 10. **Brouillons.** Relance, tracking, cotation spéciale. Le contrôle de chiffres du lot 1 est requis. Rien n’est envoyé. État : pas commencé.
 11. **Dates de trésorerie.** Liste de la semaine à partir de dates et de montants déjà écrits. Sans banque et sans pénalité. État : pas commencé.
 
-Les sept premiers lots répondent dans le chat. Le devis à plusieurs lignes affiche un paquet : le total additionne des montants de ligne déjà calculés, et la phrase le dit. Le contrat, l’intervention, l’équipement installé et l’achat se confirment avant d’entrer dans une mesure. L’écart de facture est la différence de deux centimes déjà enregistrés. Le volume et la sous-traitance additionnent ces montants.
+Les huit premiers lots répondent dans le chat. Le devis à plusieurs lignes affiche un paquet : le total additionne des montants de ligne déjà calculés, et la phrase le dit. Le contrat, l’intervention, l’équipement installé, l’achat, la réclamation et le retour se confirment avant d’entrer dans une mesure. L’écart de facture est la différence de deux centimes déjà enregistrés. Le volume et la sous-traitance additionnent ces montants. Le résumé des réclamations et la liste des retours recopient le texte déjà enregistré.

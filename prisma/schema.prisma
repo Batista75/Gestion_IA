@@ -146,6 +146,8 @@ model Client {
   contracts      Contract[]
   interventions  Intervention[]
   equipments     InstalledEquipment[]
+  claims         Claim[]
+  returns        ReturnRequest[]
   organizationId String?       @unique
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
@@ -370,6 +372,65 @@ model PurchaseFollowUp {
 
   @@index([supplierId])
   @@index([orderedOn])
+}
+
+/** Réclamation encore à confirmer. La fiche `Claim` n’existe qu’après validation. */
+model ClaimProposal {
+  id           String    @id @default(cuid())
+  status       String    @default("en_attente")
+  payload      Json
+  modelVersion String    @default("")
+  confidence   Json      @default("[]")
+  validatedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([status])
+}
+
+/** Réclamation confirmée. Le texte est recopié. Le résumé ne le réécrit pas. */
+model Claim {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  kind        String
+  occurredOn  String
+  status      String
+  note        String
+  confirmedAt DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([clientId])
+  @@index([occurredOn])
+}
+
+/** Retour encore à confirmer. La fiche `ReturnRequest` n’existe qu’après validation. */
+model ReturnRequestProposal {
+  id           String    @id @default(cuid())
+  status       String    @default("en_attente")
+  payload      Json
+  modelVersion String    @default("")
+  confidence   Json      @default("[]")
+  validatedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([status])
+}
+
+/** Retour ou remplacement confirmé. Le texte est recopié. */
+model ReturnRequest {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  kind          String
+  occurredOn    String
+  status        String
+  underWarranty Boolean
+  note          String
+  confirmedAt   DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([clientId])
+  @@index([occurredOn])
 }
 
 model RecordEvent {

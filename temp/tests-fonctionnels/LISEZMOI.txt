@@ -39,5 +39,6 @@ Contrôles
 21-interventions — taux moyen, heures non facturées, tickets, délai.
 22-parc — garanties de l’an dernier, parc de plus de cinq ans.
 23-achats — écart de facture, reliquat, suivi, encours, sous-traitance, volume.
+24-reclamations — résumé du mois, retours sous garantie encore en cours.
 
 Le jeu de projets déjà présent dans temp/ reste à part. Il ne remplace pas ces consignes.

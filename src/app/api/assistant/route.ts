@@ -69,6 +69,7 @@ import { resolveContract } from "@/lib/contract-reply";
 import { resolveIntervention } from "@/lib/intervention-reply";
 import { resolveEquipment } from "@/lib/equipment-reply";
 import { resolvePurchase } from "@/lib/purchase-reply";
+import { resolveClaim } from "@/lib/claim-reply";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
 import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
 import { searchKnowledge } from "@/lib/knowledge-store";
@@ -333,6 +334,17 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
       source: purchase.source,
       packet: purchase.packet,
       proposal: purchase.proposal,
+    };
+  }
+
+  const claim = await resolveClaim(text);
+  if (claim) {
+    return {
+      reply: claim.reply,
+      model: null,
+      source: claim.source,
+      packet: claim.packet,
+      proposal: claim.proposal,
     };
   }
 

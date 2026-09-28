@@ -1,0 +1,47 @@
+Contrôle 24 — réclamations et retours
+====================================
+
+Aucune pièce à déposer. Tout se fait dans l’assistant, après connexion.
+Le client Atelier Nord est déjà au répertoire.
+Les dates d’exemple supposent le 28 septembre 2026.
+« Ce mois » est septembre 2026, du 2026-09-01 inclus au 2026-10-01 exclu.
+Une réclamation du 20 août n’entre pas dans ce résumé.
+Si le jour a changé, le mois change avec lui.
+
+1. Envoyer : Enregistre une réclamation pour Atelier Nord.
+   La carte « Réclamation à confirmer » demande le type.
+   Aucun bouton Confirmer.
+
+2. Envoyer : Enregistre une réclamation pour panne au déballage, client Atelier Nord, le 2026-09-10, ouverte, texte Carton écrasé à la livraison.
+   Type Panne au déballage. État Ouverte. Texte Carton écrasé à la livraison.
+   Cliquer Confirmer.
+   La réponse se termine par « Validation enregistrée. »
+
+3. Envoyer : Enregistre une réclamation pour retard de livraison, client Atelier Nord, le 2026-09-12, en cours, texte Colis annoncé le 2 septembre, reçu le 12.
+   Type Retard de livraison. État En cours. Confirmer.
+
+4. Envoyer : Enregistre une réclamation pour panne au déballage, client Atelier Nord, le 2026-08-20, ouverte, texte Hors mois.
+   Date 2026-08-20. Confirmer.
+
+5. Envoyer : Enregistre un retour sous garantie pour Atelier Nord, le 2026-09-18, en cours, texte Écran fissuré.
+   Carte « Retour à confirmer ». Type Retour. Garantie Sous garantie. État En cours.
+   Texte Écran fissuré. Confirmer.
+
+6. Envoyer : Enregistre un remplacement sous garantie pour Atelier Nord, le 2026-09-20, en cours, texte Baie échangée.
+   Type Remplacement. Confirmer.
+
+7. Envoyer : Enregistre un retour hors garantie pour Atelier Nord, le 2026-09-05, clos, texte Refus client.
+   Garantie Hors garantie. État Clos. Confirmer.
+
+8. Envoyer : Résumé des réclamations du mois pour panne au déballage ou retard de livraison.
+   Carte « Réclamations du mois ». Réclamations 2.
+   Carton écrasé à la livraison y est. reçu le 12 y est.
+   Hors mois n’y est pas.
+   La période dit septembre 2026.
+   La méthode dit que le texte de chaque ligne est celui déjà enregistré.
+
+9. Envoyer : Quelles demandes de retour et remplacements sous garantie sont en cours ?
+   Carte « Retours en cours ». Retours 2.
+   Écran fissuré y est. Baie échangée y est.
+   Refus client n’y est pas.
+   La méthode dit que le nombre compte les retours confirmés encore en cours et sous garantie.

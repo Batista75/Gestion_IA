@@ -31,6 +31,7 @@ Une seule bibliothèque calcule : `src/domain/pricing.ts`.
 - Une intervention confirmée porte un type fermé, une date, une durée en minutes et un taux en centimes. Le taux moyen, le total d’heures et le délai moyen se calculent sur ces valeurs déjà enregistrées.
 - Un équipement installé confirmé porte le client, la désignation, la date d’installation et un niveau de garantie fermé. L’âge et le filtre de l’an dernier comparent cette date. Le modèle ne les estime pas.
 - Un achat confirmé porte le fournisseur, le montant du bon de commande et, s’il est écrit, le montant de la facture reçue. L’écart est la différence de ces deux centimes. L’encours et le délai de paiement sont confirmés sur la fiche fournisseur.
+- Une réclamation confirmée et un retour confirmé portent un type fermé, une date, un client et un état. Le nombre du paquet filtre ces fiches. Le texte affiché est la note déjà enregistrée.
 
 Le modèle de langage ne reçoit pas ces formules à exécuter.
 
