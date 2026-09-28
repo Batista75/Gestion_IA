@@ -2,15 +2,17 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { ArrowUp, Paperclip, Square } from "lucide-react";
+import { ArrowUp, CircleAlert, CircleCheck, MessageSquarePlus, Paperclip, Sparkles, Square, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createInboxItemAction } from "@/app/actions";
+import { AssistantProposalCard, type ProposalState } from "@/components/assistant-proposal-card";
 import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import type { AnswerPacket } from "@/domain/answer-packet";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { provenanceLabel } from "@/domain/provenance";
@@ -33,14 +35,18 @@ export function AssistantChat({
   conversationId,
   projectName = "",
   initialMessages = [],
+  projectStatus = "",
   proposals = [],
   fill = false,
+  panel = false,
 }: {
   conversationId: string;
   projectName?: string;
+  projectStatus?: string;
   initialMessages?: StoredTurn[];
   proposals?: PendingProposal[];
   fill?: boolean;
+  panel?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -159,7 +165,7 @@ export function AssistantChat({
   const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
   const canSend = draft.trim().length > 0 || files.length > 0;
 
-  function renderMessage(message: ChatMessage) {
+  function renderMessage(message: ChatMessage, index: number) {
     return (
       <MessageRow
         key={message.id}
@@ -167,8 +173,10 @@ export function AssistantChat({
         pending={pending}
         live={pending && message.id === lastAssistant?.id}
         confirm={message.id === lastAssistant?.id && hasProposal(message)}
+        proposalState={proposalState(messages, index, message.id === lastAssistant?.id)}
         editable={message.id === lastAssistant?.id}
         onConfirm={() => void send("Je confirme.")}
+        onAmend={() => draftRef.current?.focus()}
         onCorrect={(line, attachments) => {
           hint.current.attachments = attachments;
           void sendMessage({ text: line }).finally(() => {
@@ -197,15 +205,43 @@ export function AssistantChat({
     setFiles((current) => current.filter((_, position) => position !== index));
   }
 
+  const suggestions = projectName
+    ? [`Quelle est la prochaine étape du projet ${projectName} ?`, `Quelle est la rentabilité réelle du projet ${projectName} ?`]
+    : [];
+
   return (
     <div
-      className={cn("flex min-h-0 flex-col", fill ? "h-full" : "h-[min(36rem,70dvh)]")}
+      className={cn("@container flex min-h-0 flex-col", fill ? "h-full" : "h-[min(36rem,70dvh)]")}
       id="assistant"
+      data-panel={panel ? "" : undefined}
     >
-      <div className="flex shrink-0 items-center justify-between gap-3 pb-2">
-        <p className="truncate text-sm font-medium">{projectName ? projectName : "Assistant"}</p>
-        <Link href="/?nouveau=1" className="inline-flex min-h-11 shrink-0 items-center text-sm underline-offset-4 hover:underline">
-          Nouveau fil
+      <div className={cn("flex shrink-0 items-center justify-between gap-2", panel ? "h-12 border-b border-border px-3" : "pb-2")}>
+        <div className="flex min-w-0 items-center gap-2">
+          {panel ? (
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
+              <Sparkles aria-hidden="true" className="size-3.5" />
+            </span>
+          ) : null}
+          <div className="grid min-w-0">
+            <p className="truncate text-sm font-semibold">{panel ? "Assistant" : projectName || "Assistant"}</p>
+            {panel && projectName ? (
+              <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground" title={`Contexte : dossier ${projectName}`}>
+                <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" />
+                <span className="truncate">
+                  Dossier {projectName}
+                  {projectStatus ? ` · ${projectStatus}` : ""}
+                </span>
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <Link
+          href="/?nouveau=1"
+          aria-label="Nouveau fil"
+          title="Nouveau fil"
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-surface-2 hover:text-foreground"
+        >
+          <MessageSquarePlus aria-hidden="true" className="size-4" />
         </Link>
       </div>
       <div
@@ -217,38 +253,72 @@ export function AssistantChat({
         }}
       >
         {messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center px-4 text-center">
-            <div className="grid max-w-md gap-2">
-              <p className="text-lg font-medium">Que souhaitez-vous faire ?</p>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Décrivez la demande, ou joignez une pièce. Rien n’est écrit sans votre accord. Les montants restent ceux de la pièce.
-              </p>
+          <div className="flex h-full items-center justify-center px-4 py-6">
+            <div className="grid w-full max-w-sm gap-3">
+              <div className="grid gap-1 text-center">
+                <p className="text-sm font-medium">{projectName ? `Dossier ${projectName}` : "Que souhaitez-vous faire ?"}</p>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {projectName
+                    ? "Le dossier ouvert part avec chaque message. Rien n’est écrit sans votre accord."
+                    : "Décrivez la demande, ou joignez une pièce. Rien n’est écrit sans votre accord. Les montants restent ceux de la pièce."}
+                </p>
+              </div>
+              {suggestions.length > 0 ? (
+                <ul className="grid gap-1.5" aria-label="Suggestions">
+                  {suggestions.map((suggestion) => (
+                    <li key={suggestion}>
+                      <button
+                        type="button"
+                        className="w-full rounded-md border border-border bg-surface px-3 py-2 text-left text-xs leading-5 transition-colors duration-150 hover:border-input hover:bg-surface-2"
+                        onClick={() => {
+                          setDraft(suggestion);
+                          draftRef.current?.focus();
+                        }}
+                      >
+                        {suggestion}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           </div>
         ) : (
-          <ol className="mx-auto grid w-full max-w-3xl gap-4 px-1 py-4">{messages.map((message) => renderMessage(message))}</ol>
+          <ol className={cn("mx-auto grid w-full gap-4", panel ? "px-3 py-3" : "max-w-3xl px-1 py-4")}>
+            {messages.map((message, index) => renderMessage(message, index))}
+          </ol>
         )}
       </div>
       {proposals.length > 0 ? (
-        <div className="mx-auto grid w-full max-w-3xl shrink-0 gap-2 py-2">
+        <div className={cn("mx-auto grid w-full shrink-0 gap-2 py-2", panel ? "px-3" : "max-w-3xl")}>
           <h2 className="text-sm font-medium">À confirmer</h2>
           <ProposalBoard proposals={proposals} />
         </div>
       ) : null}
-      <form onSubmit={onSubmit} aria-busy={pending} className="mx-auto grid w-full max-w-3xl shrink-0 gap-2 pt-2">
+      <form
+        onSubmit={onSubmit}
+        aria-busy={pending}
+        className={cn("mx-auto grid w-full shrink-0 gap-1.5", panel ? "border-t border-border px-3 pt-2 pb-2.5" : "max-w-3xl pt-2")}
+      >
         {files.length > 0 ? (
-          <ul className="flex flex-wrap gap-2">
+          <ul className="flex flex-wrap gap-1.5">
             {files.map((file, index) => (
-              <li key={`${file.name}-${file.size}-${index}`} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-muted px-3 text-sm">
-                <span className="max-w-48 truncate">{file.name}</span>
-                <button type="button" className="text-base leading-none" aria-label={`Retirer ${file.name}`} onClick={() => dropFile(index)}>
-                  ×
+              <li key={`${file.name}-${file.size}-${index}`} className="inline-flex h-7 items-center gap-1.5 rounded-md bg-surface-2 pr-1 pl-2 text-xs">
+                <Paperclip aria-hidden="true" className="size-3 text-muted-foreground" />
+                <span className="max-w-40 truncate">{file.name}</span>
+                <button
+                  type="button"
+                  className="inline-flex size-5 items-center justify-center rounded hover:bg-border"
+                  aria-label={`Retirer ${file.name}`}
+                  onClick={() => dropFile(index)}
+                >
+                  <X aria-hidden="true" className="size-3" />
                 </button>
               </li>
             ))}
           </ul>
         ) : null}
-        <div className="flex items-end gap-1 rounded-3xl border border-border bg-card py-1 pr-1 pl-1 shadow-sm">
+        <div className="flex items-end gap-1 rounded-lg border border-input bg-surface p-1 transition-colors duration-150 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30">
           <input
             ref={fileRef}
             id="assistant-files"
@@ -259,11 +329,12 @@ export function AssistantChat({
           />
           <button
             type="button"
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-muted"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-surface-2 hover:text-foreground"
             aria-label="Joindre une pièce"
+            title="Joindre une pièce"
             onClick={() => fileRef.current?.click()}
           >
-            <Paperclip aria-hidden="true" className="size-5" />
+            <Paperclip aria-hidden="true" className="size-4" />
           </button>
           <label htmlFor="assistant-draft" className="sr-only">
             Message
@@ -279,38 +350,40 @@ export function AssistantChat({
               event.preventDefault();
               event.currentTarget.form?.requestSubmit();
             }}
-            placeholder="Écrire un message"
+            placeholder={projectName ? "Question ou demande sur ce dossier…" : "Écrire un message"}
             maxLength={4000}
-            className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-1 py-2.5 text-base outline-none placeholder:text-muted-foreground md:text-sm"
+            className="max-h-40 min-h-8 flex-1 resize-none bg-transparent px-1 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
           />
           {streaming ? (
             <button
               type="button"
-              className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"
               aria-label="Arrêter"
               onClick={() => stop()}
             >
-              <Square aria-hidden="true" className="size-4 fill-current" />
+              <Square aria-hidden="true" className="size-3.5 fill-current" />
             </button>
           ) : (
             <button
               type="submit"
-              className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors duration-150 hover:bg-primary/85 disabled:bg-surface-2 disabled:text-muted-foreground"
               aria-label="Envoyer"
               disabled={pending || !canSend}
             >
-              <ArrowUp aria-hidden="true" className="size-5" />
+              <ArrowUp aria-hidden="true" className="size-4" />
             </button>
           )}
         </div>
-        <p className="text-center text-xs text-muted-foreground">Entrée envoie. Maj+Entrée passe à la ligne.</p>
+        <p className="text-center text-[0.7rem] text-muted-foreground">Entrée envoie · Maj+Entrée passe à la ligne</p>
         {error ? (
-          <p role="alert" className="text-sm leading-6 text-destructive">
+          <p role="alert" className="flex items-start gap-1.5 rounded-md bg-danger-soft px-2.5 py-2 text-xs leading-5 text-destructive">
+            <CircleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
             {error.message || "La réponse n’est pas arrivée. Reformulez la demande, ou réessayez dans un instant."}
           </p>
         ) : null}
         {fileError ? (
-          <p role="alert" className="text-sm leading-6 text-destructive">
+          <p role="alert" className="flex items-start gap-1.5 rounded-md bg-danger-soft px-2.5 py-2 text-xs leading-5 text-destructive">
+            <CircleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
             {fileError}
           </p>
         ) : null}
@@ -324,16 +397,20 @@ function MessageRow({
   pending,
   live,
   confirm,
+  proposalState,
   editable,
   onConfirm,
+  onAmend,
   onCorrect,
 }: {
   message: ChatMessage;
   pending: boolean;
   live: boolean;
   confirm: boolean;
+  proposalState: ProposalState;
   editable: boolean;
   onConfirm: () => void;
+  onAmend: () => void;
   onCorrect: (line: string, attachments: string[]) => void;
 }) {
   const label = roleLabel(message);
@@ -349,71 +426,117 @@ function MessageRow({
   const sources = message.metadata?.sources ?? [];
   const understanding = message.metadata?.understanding ?? null;
   const packet = message.metadata?.packet ?? null;
+  const source = message.metadata?.source ?? "";
 
   const mine = message.role === "user";
   const version = provenanceLabel(message.metadata?.modelVersion ?? "");
 
+  if (mine) {
+    return (
+      <li className="flex justify-end">
+        <article
+          aria-label={label}
+          className="w-fit max-w-[min(88%,36rem)] rounded-lg rounded-br-sm bg-primary-soft px-3 py-2 text-sm leading-6 break-words whitespace-pre-wrap text-foreground"
+        >
+          {text}
+        </article>
+      </li>
+    );
+  }
+
+  const tone = SOURCE_TONE[source];
   return (
-    <li className={cn("flex", mine ? "justify-end" : "justify-start")}>
-      <article
-        aria-label={label}
+    <li className="flex gap-2">
+      <span
+        aria-hidden="true"
         className={cn(
-          "grid gap-2 break-words",
-          mine
-            ? "w-fit max-w-[min(100%,36rem)] rounded-3xl bg-primary px-4 py-3 text-primary-foreground"
-            : "w-full max-w-3xl py-1",
+          "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md",
+          source === "action" ? "bg-success-soft text-success" : "bg-surface-2 text-muted-foreground",
         )}
       >
-      {version && !mine ? <span className="text-xs text-muted-foreground">{version}</span> : null}
-      {steps.length > 0 ? (
-        <ul className="grid gap-1">
-          {steps.map((step, index) => (
-            <li key={`${step}-${index}`} className="text-xs leading-5 text-muted-foreground">
-              {step}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {packet ? <PacketCard packet={packet} /> : text ? <p className="text-sm leading-6 whitespace-pre-wrap">{text}</p> : null}
-      {live && !text ? (
-        <span className="inline-flex items-center gap-1 py-1" role="status" aria-label="Réponse en cours">
-          <span className="size-1.5 animate-pulse rounded-full bg-current" />
-          <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:150ms]" />
-          <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:300ms]" />
-        </span>
-      ) : null}
-      {sources.length > 0 ? (
-        <p className="text-xs leading-5 text-muted-foreground">
-          Sources : {sources.map((source) => `${source.label} ${source.title}`).join(" · ")}
-        </p>
-      ) : null}
-      {proposal.length > 0 ? (
-        <dl className="mt-2 grid gap-1 text-sm">
-          {proposal.map((field) => (
-            <div key={field.label} className="grid grid-cols-[8rem_1fr] gap-2">
-              <dt className="text-muted-foreground">{field.label}</dt>
-              <dd className="break-words">{field.value}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
-      {understanding ? (
-        <UnderstandingPanel
-          card={understanding}
-          editable={editable}
-          pending={pending}
-          formId={message.id}
-          onCorrect={onCorrect}
-        />
-      ) : null}
-      {confirm ? (
-        <Button type="button" className="mt-2 min-h-11 w-fit px-4" disabled={pending} onClick={onConfirm}>
-          Confirmer
-        </Button>
-      ) : null}
+        {source === "action" ? <CircleCheck className="size-3.5" /> : <Sparkles className="size-3.5" />}
+      </span>
+      <article aria-label={label} className="grid min-w-0 flex-1 gap-2 break-words">
+        {tone || version ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {tone ? <StatusBadge tone={tone}>{label}</StatusBadge> : null}
+            {version ? <span className="text-[0.7rem] text-muted-foreground">{version}</span> : null}
+          </div>
+        ) : null}
+        {steps.length > 0 ? (
+          <ul className="grid gap-0.5 border-l-2 border-border pl-2">
+            {steps.map((step, index) => (
+              <li key={`${step}-${index}`} className="text-xs leading-5 text-muted-foreground">
+                {step}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {packet ? <PacketCard packet={packet} /> : text ? <p className="text-sm leading-6 whitespace-pre-wrap">{text}</p> : null}
+        {live && !text ? (
+          <span className="inline-flex items-center gap-2 py-1 text-xs text-muted-foreground" role="status">
+            <span className="inline-flex gap-1" aria-hidden="true">
+              <span className="size-1.5 animate-pulse rounded-full bg-current" />
+              <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:150ms]" />
+              <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:300ms]" />
+            </span>
+            Réponse en cours
+          </span>
+        ) : null}
+        {proposal.length > 0 ? (
+          <AssistantProposalCard
+            state={proposalState}
+            fields={proposal}
+            actions={
+              confirm ? (
+                <>
+                  <Button type="button" size="sm" disabled={pending} onClick={onConfirm}>
+                    Confirmer
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" disabled={pending} onClick={onAmend}>
+                    Préciser la demande
+                  </Button>
+                </>
+              ) : null
+            }
+          />
+        ) : null}
+        {understanding ? (
+          <UnderstandingPanel
+            card={understanding}
+            editable={editable}
+            pending={pending}
+            formId={message.id}
+            onCorrect={onCorrect}
+          />
+        ) : null}
+        {sources.length > 0 ? (
+          <p className="text-[0.7rem] leading-5 text-muted-foreground">
+            Sources : {sources.map((item) => `${item.label} ${item.title}`).join(" · ")}
+          </p>
+        ) : null}
       </article>
     </li>
   );
+}
+
+const SOURCE_TONE: Record<string, StatusTone> = {
+  "regle-metier": "neutral",
+  action: "success",
+  proposition: "proposal",
+  dossier: "info",
+};
+
+function proposalState(messages: ChatMessage[], index: number, latest: boolean): ProposalState {
+  if (latest) return "a_confirmer";
+  const reply = messages[index + 1];
+  const outcome = messages[index + 2];
+  const confirmed =
+    reply?.role === "user" &&
+    reply.parts.some((part) => part.type === "text" && /^je confirme\b/i.test(part.text.trim())) &&
+    outcome?.role === "assistant" &&
+    outcome.metadata?.source === "action";
+  return confirmed ? "confirmee" : "sans_suite";
 }
 
 function toUi(turns: StoredTurn[]): ChatMessage[] {
@@ -445,7 +568,7 @@ function toUi(turns: StoredTurn[]): ChatMessage[] {
 
 function PacketCard({ packet }: { packet: AnswerPacket }) {
   return (
-    <div className="grid gap-3 rounded-2xl bg-muted/60 px-4 py-3">
+    <div className="grid gap-2 rounded-lg border border-border bg-surface-2/60 px-3 py-2.5">
       <p className="text-sm font-medium leading-6">{packet.title}</p>
       {packet.period ? <p className="text-sm leading-6">Période : {packet.period}</p> : null}
       {packet.filters.length > 0 ? (
@@ -454,9 +577,9 @@ function PacketCard({ packet }: { packet: AnswerPacket }) {
       {packet.measures.length > 0 ? (
         <dl className="grid gap-1 text-sm">
           {packet.measures.map((measure) => (
-            <div key={measure.label} className="grid grid-cols-[9rem_1fr] gap-2">
+            <div key={measure.label} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-2">
               <dt className="text-muted-foreground">{measure.label}</dt>
-              <dd>{measure.value}</dd>
+              <dd className="text-right tabular-nums">{measure.value}</dd>
             </div>
           ))}
         </dl>
@@ -509,55 +632,65 @@ function UnderstandingPanel({
   onCorrect: (line: string, attachments: string[]) => void;
 }) {
   return (
-    <form
-      className="mt-2 grid gap-3 rounded-md border border-border bg-muted/40 p-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const data = new FormData(event.currentTarget);
-        const projet = String(data.get("projet") ?? "").trim();
-        const type = String(data.get("type") ?? "").trim();
-        const supplier = String(data.get("fournisseur") ?? "").trim();
-        const parts = [
-          projet ? `projet ${projet}` : "",
-          type ? `type ${type}` : "",
-          supplier ? `fournisseur ${supplier}` : "",
-        ].filter(Boolean);
-        if (parts.length === 0) return;
-        onCorrect(`Fiche : ${parts.join(", ")}`, card.attachments);
-      }}
+    <AssistantProposalCard
+      title="Fiche de compréhension"
+      state={editable ? "a_confirmer" : "sans_suite"}
+      note="La fiche n’écrit rien. La correction vaut pour ce document, elle ne devient pas une règle."
     >
-      <p className="text-sm font-medium">Fiche de compréhension</p>
-      <p className="text-sm leading-6">Action proposée : {card.action}</p>
-      {card.path ? <p className="text-sm leading-6">{card.path}</p> : null}
-      {card.understood.length > 0 ? (
-        <ul className="grid gap-1 text-sm leading-6">
-          {card.understood.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm leading-6 text-muted-foreground">Rien n’est encore assez sûr.</p>
-      )}
-      <p className="text-sm leading-6">
-        {card.confirm ? `À confirmer : ${card.confirm}` : "Rien à confirmer sur cette fiche."}
-      </p>
-      {card.simulation ? <p className="text-sm leading-6">{card.simulation}</p> : null}
-      {editable ? (
-        <>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <CardField id={`${formId}-projet`} name="projet" label="Projet" value={card.project} options={card.projects} />
-            <CardField id={`${formId}-type`} name="type" label="Type" value={card.documentType} options={card.types} />
-            <CardField id={`${formId}-fournisseur`} name="fournisseur" label="Fournisseur" value={card.supplier} options={card.suppliers} />
-          </div>
-          <Button type="submit" disabled={pending} className="min-h-11 w-fit px-4">
-            Corriger la fiche
-          </Button>
-          <p className="text-xs leading-5 text-muted-foreground">
-            La correction vaut pour ce document. Elle ne devient pas une règle. Le message d’origine n’est pas réécrit.
-          </p>
-        </>
-      ) : null}
-    </form>
+      <form
+        className="grid gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const data = new FormData(event.currentTarget);
+          const projet = String(data.get("projet") ?? "").trim();
+          const type = String(data.get("type") ?? "").trim();
+          const supplier = String(data.get("fournisseur") ?? "").trim();
+          const parts = [
+            projet ? `projet ${projet}` : "",
+            type ? `type ${type}` : "",
+            supplier ? `fournisseur ${supplier}` : "",
+          ].filter(Boolean);
+          if (parts.length === 0) return;
+          onCorrect(`Fiche : ${parts.join(", ")}`, card.attachments);
+        }}
+      >
+        <p className="text-sm leading-6">
+          <span className="text-muted-foreground">Action proposée : </span>
+          {card.action}
+        </p>
+        {card.path ? <p className="text-xs leading-5 text-muted-foreground">{card.path}</p> : null}
+        {card.understood.length > 0 ? (
+          <ul className="grid gap-0.5 text-sm leading-6">
+            {card.understood.map((line) => (
+              <li key={line} className="flex gap-1.5">
+                <CircleCheck aria-hidden="true" className="mt-1 size-3.5 shrink-0 text-success" />
+                {line}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm leading-6 text-muted-foreground">Rien n’est encore assez sûr.</p>
+        )}
+        {card.confirm ? (
+          <p className="rounded-md bg-warning-soft px-2.5 py-1.5 text-xs leading-5 text-warning">À confirmer : {card.confirm}</p>
+        ) : (
+          <p className="text-xs leading-5 text-muted-foreground">Rien à confirmer sur cette fiche.</p>
+        )}
+        {card.simulation ? <p className="text-xs leading-5 text-muted-foreground">{card.simulation}</p> : null}
+        {editable ? (
+          <>
+            <div className="grid gap-2 @lg:grid-cols-3">
+              <CardField id={`${formId}-projet`} name="projet" label="Projet" value={card.project} options={card.projects} />
+              <CardField id={`${formId}-type`} name="type" label="Type" value={card.documentType} options={card.types} />
+              <CardField id={`${formId}-fournisseur`} name="fournisseur" label="Fournisseur" value={card.supplier} options={card.suppliers} />
+            </div>
+            <Button type="submit" size="sm" variant="outline" disabled={pending} className="w-fit">
+              Corriger la fiche
+            </Button>
+          </>
+        ) : null}
+      </form>
+    </AssistantProposalCard>
   );
 }
 
@@ -575,9 +708,9 @@ function CardField({
   options: string[];
 }) {
   return (
-    <div className="grid gap-1">
-      <Label htmlFor={id}>{label}</Label>
-      <Input id={id} name={name} list={`${id}-list`} defaultValue={value} className="min-h-11" />
+    <div className="space-y-1">
+      <Label htmlFor={id} className="text-xs">{label}</Label>
+      <Input id={id} name={name} list={`${id}-list`} defaultValue={value} />
       <datalist id={`${id}-list`}>
         {options.map((option) => (
           <option key={option} value={option} />
