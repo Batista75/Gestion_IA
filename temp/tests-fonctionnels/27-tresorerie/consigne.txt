@@ -1,0 +1,25 @@
+Contrôle 27 — trésorerie de la semaine
+=====================================
+
+Aucune pièce à déposer. Tout se fait dans l’assistant, après connexion.
+Les dates d’exemple supposent le 28 septembre 2026, un lundi.
+La semaine va du 2026-09-28 inclus au 2026-10-05 exclu.
+Quincaillerie Durand a un délai confirmé de 60 jours, consigne 23.
+La facture FAC-88 du 2026-08-01, consigne 26, plus 60 jours, tombe le 2026-09-30.
+La facture FAC-90 du 2026-09-20, plus 60 jours, tombe le 2026-11-19, hors semaine.
+Si le jour a changé de semaine, la date limite change avec elle.
+Aucune pénalité n’est affichée. Aucun paiement n’est enregistré.
+
+1. Envoyer : Quelle est la trésorerie ?
+   La carte « Trésorerie de la semaine » demande la période : cette semaine.
+
+2. Envoyer : Quelles sont les échéances grossistes à payer et les encaissements clients attendus cette semaine ?
+   Carte « Trésorerie de la semaine ».
+   Période 2026-09-28 → 2026-10-05.
+   À payer 400,00 €, si FAC-88 et le délai de 60 jours sont confirmés.
+   Quincaillerie Durand, échéance 2026-09-30, Relance baie.
+   FAC-90 n’y est pas.
+   À encaisser est « non indiqué ».
+   La carte dit qu’aucune pièce client confirmée ne porte une date d’échéance écrite.
+   La carte dit qu’aucune pénalité n’est calculée.
+   La méthode dit qu’aucun rapprochement bancaire n’est enregistré.

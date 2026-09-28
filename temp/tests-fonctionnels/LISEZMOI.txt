@@ -42,5 +42,6 @@ Contrôles
 24-reclamations — résumé du mois, retours sous garantie encore en cours.
 25-dossier — rentabilité, stock, réception sans intervention, achat non repris.
 26-brouillons — relance de facture, relance de suivi, demande de cotation. Rien n’est envoyé.
+27-tresorerie — échéances de la semaine. Sans banque et sans pénalité.
 
 Le jeu de projets déjà présent dans temp/ reste à part. Il ne remplace pas ces consignes.

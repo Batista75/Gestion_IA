@@ -110,7 +110,7 @@ Ce lot reste le dernier. Il ne crée pas d’encaissement ni de rapprochement ba
 
 Chaque lot se termine par une fonction de domaine testée sans modèle, une question exemple qui affiche le paquet, et une phrase du manuel. Les colonnes nouvelles sont décrites dans la modélisation au moment où le lot les crée. L’état ci-dessous est mis à jour quand le lot est livré. Ce n’est pas le tableau de Réalisations, ni le lot de modélisation déjà clos.
 
-Avancement du chantier : 10 sur 11, soit 91 %. Seul un lot marqué livré compte.
+Avancement du chantier : 11 sur 11, soit 100 %. Seul un lot marqué livré compte.
 
 1. **Paquet et garde-fou.** Type du paquet, affichage, contrôle des chiffres dans une phrase. Aucune moyenne métier. État : livré.
 2. **Mesures sur l’existant.** Famille de produit, lien produit sur la ligne de vente, marge moyenne, classement d’offres, devis en attente face à une offre plus récente, dernière commande, recherche du procès-verbal indexé. État : livré.
@@ -122,6 +122,6 @@ Avancement du chantier : 10 sur 11, soit 91 %. Seul un lot marqué livré compte
 8. **Réclamations et retours.** Liste filtrée et résumé borné au texte enregistré. État : livré.
 9. **Dossier.** Rentabilité, stock réservé, réception sans intervention, matériel acheté non repris. Dépend des lots temps et achats. État : livré.
 10. **Brouillons.** Relance, tracking, cotation spéciale. Le contrôle de chiffres du lot 1 est requis. Rien n’est envoyé. État : livré.
-11. **Dates de trésorerie.** Liste de la semaine à partir de dates et de montants déjà écrits. Sans banque et sans pénalité. État : pas commencé.
+11. **Dates de trésorerie.** Liste de la semaine à partir de dates et de montants déjà écrits. Sans banque et sans pénalité. État : livré.
 
-Les dix premiers lots répondent dans le chat. Un brouillon recopie le paquet et n’est pas envoyé. Le devis à plusieurs lignes affiche un paquet : le total additionne des montants de ligne déjà calculés, et la phrase le dit. Le contrat, l’intervention, l’équipement installé, l’achat, la réclamation et le retour se confirment avant d’entrer dans une mesure. L’écart de facture est la différence de deux centimes déjà enregistrés. Le volume et la sous-traitance additionnent ces montants. Le résumé des réclamations et la liste des retours recopient le texte déjà enregistré. La rentabilité d’un dossier sépare quatre nombres déjà stockés. Le stock et les réceptions ne créent pas de facture.
+Les onze lots répondent dans le chat. La trésorerie de la semaine liste des dates et des montants déjà écrits, plus le délai confirmé sur la fiche. Aucune pénalité n’est calculée. Un brouillon recopie le paquet et n’est pas envoyé. Le devis à plusieurs lignes affiche un paquet : le total additionne des montants de ligne déjà calculés, et la phrase le dit. Le contrat, l’intervention, l’équipement installé, l’achat, la réclamation et le retour se confirment avant d’entrer dans une mesure. L’écart de facture est la différence de deux centimes déjà enregistrés. Le volume et la sous-traitance additionnent ces montants. Le résumé des réclamations et la liste des retours recopient le texte déjà enregistré. La rentabilité d’un dossier sépare quatre nombres déjà stockés. Le stock et les réceptions ne créent pas de facture.

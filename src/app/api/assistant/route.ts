@@ -72,6 +72,7 @@ import { resolvePurchase } from "@/lib/purchase-reply";
 import { resolveClaim } from "@/lib/claim-reply";
 import { resolveDossier } from "@/lib/dossier-reply";
 import { resolveDraft } from "@/lib/draft-reply";
+import { resolveCash } from "@/lib/cash-reply";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
 import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
 import { searchKnowledge } from "@/lib/knowledge-store";
@@ -358,6 +359,11 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
   const dossier = await resolveDossier(text);
   if (dossier) {
     return { reply: dossier.reply, model: null, source: dossier.source, packet: dossier.packet };
+  }
+
+  const cash = await resolveCash(text);
+  if (cash) {
+    return { reply: cash.reply, model: null, source: cash.source, packet: cash.packet };
   }
 
   const brief = isNewClientBrief(text) || Boolean(identifyClient(text));
