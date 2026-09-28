@@ -1,0 +1,16 @@
+Contrôle — meilleur tarif pour RIV-440
+Pièces : pieces/14-devis-riv-440-rive.txt puis pieces/15-devis-riv-440-loire.txt
+L’ordre des deux confirmations est libre.
+
+Geste
+1. Déposer le premier devis. Phrase : Classe ce devis. À traiter, badge Devis, Switch mural, référence RIV-440. Confirmer.
+2. Déposer le second de la même façon. Confirmer. Le produit s’appelle déjà Switch mural. Le second fournisseur est enregistré avec son prix.
+3. Nouveau fil. Phrase exacte : Quel est le meilleur tarif pour RIV-440 ?
+
+Texte attendu sur la carte
+Titre : Meilleur tarif pour RIV-440
+Prix le plus bas : 180,00 € HT
+Une ligne Atelier Rive SAS — 180,00 € HT
+Une ligne Grossiste Loire SARL — 240,00 € HT
+Le prix le plus bas est le plus petit nombre de centimes déjà lu. Aucune somme n’est faite.
+La carte ne montre pas 420,00 €.

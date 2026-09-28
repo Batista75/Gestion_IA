@@ -1,0 +1,13 @@
+Contrôle — un prix absent reste absent
+Pièce : pieces/12-devis-sans-prix.txt
+
+Geste
+1. Accueil. Joindre la pièce. Phrase : Classe ce devis. Envoyer.
+2. Lire Pièces reçues et le Détail de À traiter.
+
+Texte attendu
+Badge Devis.
+Numéro de devis DEV-SANS-PRIX.
+Client Quai Levant SAS. Fournisseur Atelier Rive SAS.
+Produits : Aucun produit chiffré.
+Aucun montant en euro n’est affiché pour le rail.

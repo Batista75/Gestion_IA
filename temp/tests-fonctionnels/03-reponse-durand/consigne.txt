@@ -1,0 +1,13 @@
+Contrôle — la réponse Durand reprend la même demande
+Même fil que le contrôle 02, fiche encore ouverte sur Enregistre ça.
+
+Geste
+1. Dans ce fil, phrase exacte : Durand. Envoyer. Ne pas joindre de nouveau fichier.
+
+Texte attendu
+Parcours repris. La réponse « Durand » continue la même demande.
+La société retenue est Durand.
+Rien à confirmer sur cette fiche.
+Simulation : Enregistrer un document. Pièce : devis_rive.txt. Type : devis. Projet : Atlas. Société : Durand. Aucun montant n’est calculé. Aucun numéro de facture n’est attribué. Rien n’est écrit.
+Les faits au-dessus peuvent encore afficher 18,00 € : c’est le montant écrit sur la pièce. La simulation ne le recalcule pas.
+Aucune fiche client ou produit n’est créée par ce message. Le bouton Confirmer de À traiter reste à part.

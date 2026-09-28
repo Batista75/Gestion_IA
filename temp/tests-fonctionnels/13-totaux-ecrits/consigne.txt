@@ -1,0 +1,14 @@
+Contrôle — le total affiché est celui qui est écrit
+Pièce : pieces/13-devis-totaux.txt
+
+Geste
+1. Accueil. Joindre la pièce. Phrase : Classe ce devis. Envoyer.
+2. Ouvrir Pièces reçues, puis le Détail de À traiter.
+
+Texte attendu
+Badge Devis.
+Vis plateau, 10,00 € HT.
+Ecrou cage, 20,00 € HT.
+Total HT indiqué 99,99 €.
+Le montant 30,00 € n’apparaît pas.
+Phrase : Cette version est conservée à part. Elle ne remplace pas un autre devis du même produit.

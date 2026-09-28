@@ -1,0 +1,18 @@
+Contrôle — dernière commande du client Quai Levant
+Pièce : pieces/19-devis-onduleur.txt
+Client Quai Levant SAS déjà confirmé (contrôle 00).
+
+Geste
+1. Déposer la pièce. Phrase : Classe ce devis. Confirmer. Article Onduleur quai, référence QLV-8, 260,00 € HT.
+2. Projets, Nouveau dossier. Nom : Quai onduleur. Client : Quai Levant SAS. Créer, puis ouvrir.
+3. Ajouter un produit du catalogue : Onduleur quai. Quantité 2. Ajouter au projet.
+4. Titre du devis : Devis quai. Cocher la ligne. Établir le devis.
+5. Sur ce devis, cliquer Ouvrir la commande client.
+6. Nouveau fil, accueil ou dossier. Phrase exacte : Quelle est la dernière commande du client Quai Levant ?
+
+Texte attendu
+Titre : Dernière commande de Quai Levant SAS
+Le filtre contient Commande client · Devis quai
+Lignes : 1
+Onduleur quai — quantité 2
+Une option n’est pas une ligne séparée : la liste est celle enregistrée sur la commande.

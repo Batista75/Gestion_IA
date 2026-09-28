@@ -1,0 +1,14 @@
+Contrôle — Enregistre ça, sans pièce
+Aucune pièce.
+
+Geste
+1. Nouveau fil, sur l’accueil.
+2. Phrase exacte : Enregistre ça. Envoyer. Ne pas joindre de fichier.
+
+Texte attendu
+Action proposée : Enregistrer un document.
+À confirmer : Quel document dois-je enregistrer ?
+La question ne demande pas la société.
+Le mot Simulation n’apparaît pas.
+La phrase Rien n’est écrit. est affichée.
+À traiter ne gagne pas de fiche à cause de cette phrase.

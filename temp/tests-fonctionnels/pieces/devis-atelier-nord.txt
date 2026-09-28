@@ -1,0 +1,6 @@
+Devis n° DEV-NORD-14
+Date : 12/03/2026
+Client : Atelier Nord
+Fournisseur : Quincaillerie Durand
+Lampe atelier | Réf. LAT-4 | 48,00 € HT
+Total HT : 48,00 €

@@ -1,0 +1,15 @@
+Contrôle — procès-verbal du client Quai Levant
+Pièce : pieces/16-proces-verbal-quai.txt
+Le dépôt suffit. Confirmer n’est pas nécessaire.
+
+Geste
+1. Accueil. Joindre la pièce. Phrase : Classe cette pièce. Envoyer.
+2. Pièces reçues : badge Document.
+3. Nouveau fil. Phrase exacte : Où est le procès-verbal du client Quai Levant ?
+
+Texte attendu
+Titre : Procès-verbal pour Quai Levant
+Pièces : au moins 1
+Le nom 16-proces-verbal-quai.txt apparaît.
+L’extrait cite la réception du quai et la référence PV-QL-18.
+Aucun numéro de téléphone n’apparaît.

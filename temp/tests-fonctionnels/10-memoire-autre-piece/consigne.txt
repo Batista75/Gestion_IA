@@ -1,0 +1,15 @@
+Contrôle — la société Durand reste sur devis_rive.txt
+Pièces : pieces/devis_rive.txt puis pieces/autre.txt
+Faire le contrôle 08 avant celui-ci, pour que la correction Durand soit déjà retenue sur devis_rive.txt.
+
+Geste
+1. Nouveau fil, toujours dans le dossier Atlas.
+2. Joindre autre.txt. Phrase exacte : Enregistre ça. Envoyer.
+
+Texte attendu
+Le document est autre.txt.
+À confirmer : Quel est le type du document : devis, facture, commande ou contrat ?
+La fiche redemande le type. Elle ne reprend pas Durand. Durand reste la correction de devis_rive.txt.
+Le badge de autre.txt est Document.
+Les faits disent : autre.txt : aucune lecture exploitable. Aucun fait n’est tiré de la phrase.
+La phrase Elle ne devient pas une règle. a été affichée lors de la correction de devis_rive.txt. Elle ne s’applique pas à autre.txt.

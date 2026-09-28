@@ -113,6 +113,11 @@ Client Portuaire Sud SAS (France), fournisseur Apex Components LLC (États-Unis)
 - 15-memo.txt — document (mémo de quai)
 - 16-piece-vide.txt — autre (fichier vide)
 
+Tests fonctionnels
+------------------
+
+Les contrôles à jouer dans l’écran, avec une consigne et les pièces à déposer, sont dans `tests-fonctionnels/`. Le jeu de projets ci-dessus ne les remplace pas.
+
 Types couverts
 --------------
 

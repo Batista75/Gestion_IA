@@ -1,0 +1,29 @@
+Contrôle — Enregistre ça, avec la pièce et le dossier Atlas
+Pièce : pieces/devis_rive.txt
+Le client Quai Levant SAS est déjà confirmé (contrôle 00).
+
+Geste
+1. Projets, Nouveau dossier. Nom du projet : Atlas. Client : Quai Levant SAS. Créer le dossier.
+2. Ouvrir le dossier Atlas. Utiliser l’assistant en bas de cette page, pas celui de l’accueil.
+3. Nouveau fil. Joindre devis_rive.txt. Phrase exacte : Enregistre ça. Envoyer.
+4. Laisser À traiter fermé : ne pas cliquer Confirmer.
+
+Texte attendu sur la fiche de compréhension
+Action proposée : Enregistrer un document.
+Le document est devis_rive.txt.
+Le type retenu est devis.
+Le projet retenu est Atlas.
+À confirmer : Quelle société figure sur le document ?
+Rien n’est écrit.
+
+Au-dessus, les faits de la pièce :
+Nature : Devis
+Numéro de devis : DEV-RIVE-7
+Référence : VIS-01
+Client : Atelier des Rives
+Fournisseur : Quincaillerie Durand
+Date : 04/03/2026
+Montant écrit : 18,00 €
+Les montants sont ceux de la pièce. Ils ne sont pas recalculés.
+
+Pièces reçues : badge Devis sur devis_rive.txt.

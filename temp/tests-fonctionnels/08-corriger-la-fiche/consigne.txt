@@ -1,0 +1,14 @@
+Contrôle — la fiche corrige la pièce
+Pièce : pieces/devis_rive.txt
+Dossier Atlas ouvert, comme au contrôle 02.
+
+Geste
+1. Nouveau fil, assistant en bas du dossier Atlas.
+2. Joindre devis_rive.txt. Phrase : Enregistre ça. Envoyer.
+3. Sur la fiche de compréhension, champ Fournisseur : Durand. Laisser Projet et Type tels qu’ils sont. Corriger la fiche.
+
+Texte attendu
+La correction vaut pour devis_rive.txt. Le texte contient : Elle ne devient pas une règle.
+La société retenue est Durand.
+Simulation : Enregistrer un document. Elle contient Société : Durand. et Aucun numéro de facture n’est attribué. Rien n’est écrit.
+Le message d’origine Enregistre ça reste dans le fil.

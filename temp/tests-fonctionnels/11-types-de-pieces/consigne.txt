@@ -1,0 +1,14 @@
+Contrôle — un fichier, un badge
+Déposer chaque fichier seul, depuis l’accueil, avec la phrase Pièce à classer. Lire le badge dans Pièces reçues et, s’il y a une fiche, le badge de À traiter. Ne pas confirmer : ces pièces servent au classement, pas à l’écriture.
+
+pieces/01-demande-de-prix.txt — badge Demande de prix. Étape : Demande de devis reçue. Article Rail DIN, 4,20 € HT.
+pieces/02-bon-de-commande.txt — badge Commande. La suite ne dit pas d’ajouter une version de devis. Article Rail court, 6,40 € HT.
+pieces/03-facture.txt — badge Facture. Phrase : Elle ne devient pas une version de devis. Montants écrits 64,00 €, 12,80 € et 76,80 €.
+pieces/04-tarif.txt — badge Tarif. Version conservée à part. Goulotte, 3,10 € HT.
+pieces/05-avoir.txt — badge Avoir. Phrase : Elle ne devient pas une version de devis. Montant écrit 6,40 €.
+pieces/06-bon-de-livraison.txt — badge Bon de livraison. Phrase : Elle ne devient pas une version de devis.
+pieces/07-contrat.txt — badge Contrat. Maintenance annuelle, 40,00 € HT. Phrase : Elle ne devient pas une version de devis.
+pieces/08-fiche-technique.txt — badge Fiche technique. Suite : Créer le produit Kit de développement AOM-DK2721. Aucun prix.
+pieces/09-compte-rendu.txt — badge Document. Client Quai Levant SAS.
+pieces/10-piece-vide.txt — badge Autre. Texte : Le texte n’a pas pu être extrait. À traiter ne propose pas de fiche pour ce fichier.
+pieces/11-facture-dollars.txt — badge Facture. Montant écrit 100.00. Produits : Aucun produit chiffré. Aucun montant en euro n’est ajouté.

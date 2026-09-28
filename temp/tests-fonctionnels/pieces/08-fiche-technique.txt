@@ -1,0 +1,4 @@
+Fiche technique
+Qualcomm QCS6490 Development Kit
+AOM-DK2721
+Part No. AOM-DK2721-FAA1E

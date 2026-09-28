@@ -1,0 +1,14 @@
+Contrôle — prépare un devis pour Atelier Nord
+Pièce : pieces/devis-atelier-nord.txt
+
+Geste
+1. Accueil. Joindre la pièce. Phrase : Classe ce devis. Envoyer.
+2. À traiter. Badge Devis. Détail : client Atelier Nord, fournisseur Quincaillerie Durand, article Lampe atelier, prix indiqué 48,00 € HT, total 48,00 €.
+3. Confirmer. Le message contient la création du client et du produit.
+4. Nouveau fil. Phrase exacte : prépare un devis pour Atelier Nord
+5. Nouveau message. Phrase exacte : prépare un devis pour Atelier Nord, 2 Lampe atelier
+
+Texte attendu
+Après la phrase sans article : Aucun article du catalogue n’est cité pour Atelier Nord. Le devis n’est pas créé.
+Après la phrase avec l’article : Devis non créé pour Atelier Nord. Lampe atelier : prix catalogue non indiqué, ligne non chiffrée.
+La pièce a écrit un coût d’achat. Le prix de vente catalogue de la fiche produit reste vide, donc aucun brouillon n’est enregistré.

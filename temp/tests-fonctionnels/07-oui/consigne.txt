@@ -1,0 +1,10 @@
+Contrôle — oui, sans fiche en attente
+Aucune pièce. À traiter est vide. Sinon, Ignorer les fiches encore affichées avant ce contrôle.
+
+Geste
+1. Nouveau fil.
+2. Phrase exacte : oui
+
+Texte attendu
+Il n’y a pas de fiche en attente.
+Aucune société n’est remplie.

@@ -1,0 +1,39 @@
+Tests fonctionnels, boîte noire
+================================
+
+Dossier `temp/tests-fonctionnels`. Chaque sous-dossier est un contrôle. La consigne ne décrit que des gestes à l’écran et le texte qui doit apparaître. Les pièces fictives sont dans `pieces/`. Elles ne sont pas chargées dans la base : il faut les déposer.
+
+Les identifiants, téléphones et montants sont écrits sur les pièces. L’application ne doit pas en inventer d’autres, ni additionner deux lignes pour fabriquer un total, ni attribuer un numéro de facture.
+
+Préalable
+---------
+
+Connexion, en développement : ouvrir Connexion, cliquer Utiliser le compte admin, puis Entrer.
+
+Dépôt : trombone, fichier, phrase, Envoyer. Badge dans Pièces reçues. Fiche éventuelle dans À traiter, sur l’accueil. Confirmer seulement si la consigne le demande.
+
+Contrôles
+---------
+
+00-client-quai — fiche client Quai Levant SAS, avant les dossiers.
+01-enregistre-sans-piece — « Enregistre ça », sans fichier.
+02-enregistre-avec-piece — même phrase, avec devis_rive.txt, dossier Atlas ouvert.
+03-reponse-durand — répondre Durand, simulation, aucun numéro.
+04-question-classement — « Comment classe-t-on un devis ? »
+05-devis-atelier-nord — « prépare un devis pour Atelier Nord », après confirmation de la pièce.
+06-supprime — « Supprime tout ça ».
+07-oui — « oui » sans fiche en attente.
+08-corriger-la-fiche — champ Fournisseur et bouton Corriger la fiche.
+09-marie-dupont — « que sait-on de Marie Dupont », après dépôt de la fiche.
+10-memoire-autre-piece — autre.txt ne reprend pas la société de devis_rive.txt.
+11-types-de-pieces — un fichier par badge visible.
+12-faits-de-la-piece — les faits affichés viennent de devis_rive.txt.
+13-totaux-ecrits — le total affiché est 99,99 €.
+14-montant-absent — un devis sans prix n’affiche pas de montant inventé.
+15-meilleur-tarif — deux devis euro, référence RIV-440.
+16-proces-verbal — procès-verbal du client Quai Levant.
+17-prix-grossiste — devis en cours, puis un second devis confirmé après.
+18-derniere-commande — commande client du dossier Quai onduleur.
+19-marge-moyenne — catégorie Serveur, confirmation du jour, mois précédent vide.
+
+Le jeu de projets déjà présent dans temp/ reste à part. Il ne remplace pas ces consignes.

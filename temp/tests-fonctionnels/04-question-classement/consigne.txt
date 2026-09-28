@@ -1,0 +1,11 @@
+Contrôle — une question ne reprend pas une écriture
+Aucune pièce.
+
+Geste
+1. Nouveau fil.
+2. Phrase exacte : Comment classe-t-on un devis ?
+
+Texte attendu
+La réponse est une lecture. La fiche de compréhension n’apparaît pas.
+À traiter ne gagne pas de ligne.
+Si le modèle de conversation est injoignable, l’écran le dit et rappelle qu’une recherche de fiche fonctionne sans lui.

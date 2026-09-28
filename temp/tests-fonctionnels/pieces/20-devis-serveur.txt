@@ -1,0 +1,6 @@
+Devis n° DEV-SRV-19
+Date : 10/09/2026
+Client : Quai Levant SAS
+Fournisseur : Atelier Rive SAS
+Serveur baie | Réf. SRV-19 | 1000,00 € HT
+Total HT : 1 000,00 €

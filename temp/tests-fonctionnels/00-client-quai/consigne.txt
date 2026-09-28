@@ -1,0 +1,12 @@
+Contrôle — client nécessaire aux dossiers
+Pièce : pieces/fiche-quai-levant.txt
+
+Geste
+1. Accueil. Joindre la pièce. Phrase : Classe cette fiche. Envoyer.
+2. Ouvrir À traiter. Badge Document. Nom du fichier fiche-quai-levant.txt.
+3. Ouvrir Détail. Client : Quai Levant SAS. Adresse affichée : 8 quai du Port, 13002 Marseille.
+4. Confirmer.
+
+Texte attendu
+Validation enregistrée. Le message contient Client « Quai Levant SAS » créé.
+Dans Référentiels, la fiche client porte ce nom et cette adresse.

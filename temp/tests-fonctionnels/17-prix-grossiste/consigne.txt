@@ -1,0 +1,19 @@
+Contrôle — devis en attente et coût grossiste plus élevé
+Pièces : pieces/17-devis-baie-moins-cher.txt puis, plus tard, pieces/18-devis-baie-plus-cher.txt
+Client Quai Levant SAS déjà confirmé (contrôle 00).
+
+L’ordre des clics compte. La date écrite sur le papier ne compte pas : le second fichier porte la date 02/01/2026, plus ancienne, et il doit quand même sortir comme offre plus tardive.
+
+Geste
+1. Déposer 17-devis-baie-moins-cher.txt. Phrase : Classe ce devis. Confirmer dans À traiter. L’article est Baie murale, référence SW-220, prix 420,00 € HT, fournisseur Atelier Rive SAS.
+2. Projets, Nouveau dossier. Nom : Baie Quai. Client : Quai Levant SAS. Créer le dossier, puis l’ouvrir.
+3. Ajouter un produit du catalogue : Baie murale. Quantité 1. Ajouter au projet.
+4. Titre du devis : Devis baie. Cocher la ligne. Établir le devis. Le laisser en cours. Ne pas cliquer Marquer non abouti. Ne pas ouvrir la commande client.
+5. Revenir à l’accueil. Déposer 18-devis-baie-plus-cher.txt. Phrase : Classe ce devis. Confirmer. Prix écrit 510,00 € HT, fournisseur Grossiste Loire SARL.
+6. Nouveau fil. Phrase exacte : Quels devis en attente ont un prix grossiste en hausse ?
+
+Texte attendu
+Titre : Devis en attente et coûts plus élevés
+Lignes concernées : 1
+SW-220 — Devis baie, Quai Levant SAS. Coût du devis 420,00 €. Offre plus tardive 510,00 € HT chez Grossiste Loire SARL.
+Les lignes ne sont pas additionnées.

@@ -1,0 +1,18 @@
+Contrôle — les faits viennent de la pièce
+Pièce : pieces/devis_rive.txt
+
+Geste
+1. Nouveau fil, accueil. Joindre devis_rive.txt. Phrase : Lis cette pièce. Envoyer.
+
+Texte attendu, en tête de la réponse
+Faits de devis_rive.txt, lus sans la phrase.
+Nature : Devis — page 1, en-tête, ligne 1
+Numéro de devis : DEV-RIVE-7 — page 1, en-tête, ligne 1
+Référence : VIS-01 — page 1, en-tête, ligne 5
+Client : Atelier des Rives — page 1, en-tête, ligne 3
+Fournisseur : Quincaillerie Durand — page 1, en-tête, ligne 4
+Date : 04/03/2026 — page 1, en-tête, ligne 2
+Montant écrit : 18,00 € — page 1, en-tête, ligne 6
+Les montants sont ceux de la pièce. Ils ne sont pas recalculés.
+
+La phrase « Lis cette pièce » ne change ni le montant ni le client.

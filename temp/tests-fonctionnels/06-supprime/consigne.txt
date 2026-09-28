@@ -1,0 +1,11 @@
+Contrôle — Supprime tout ça
+Aucune pièce.
+
+Geste
+1. Nouveau fil.
+2. Phrase exacte : Supprime tout ça
+
+Texte attendu
+Aucune action du catalogue ne correspond. Rien n’est enregistré.
+Une action reconnue commence par exemple par « prépare un devis pour … », « ajouter un fournisseur … » ou « que sait-on de … ».
+Aucune fiche n’est retirée.

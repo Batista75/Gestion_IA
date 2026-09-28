@@ -1,0 +1,13 @@
+Contrôle — que sait-on de Marie Dupont
+Pièce : pieces/marie-dupont.txt
+
+Geste
+1. Accueil. Joindre la pièce. Phrase : Classe cette fiche. Envoyer.
+2. Pièces reçues : badge Document, nom marie-dupont.txt.
+3. Nouveau fil. Phrase exacte : que sait-on de Marie Dupont
+
+Texte attendu
+La réponse est une lecture. Elle ne propose pas de créer une commande.
+Si la fiche déposée est retrouvée, le texte cite Marie Dupont. L’adresse affichée est 12 rue des Acacias, 44000 Nantes. Le téléphone, s’il est repris, est 06 12 98 44 07.
+Si aucune fiche n’est retrouvée, la phrase exacte est : Aucune fiche enregistrée ne correspond. Je ne complète pas avec une information absente du dossier.
+Un autre téléphone ou une autre adresse est un échec.

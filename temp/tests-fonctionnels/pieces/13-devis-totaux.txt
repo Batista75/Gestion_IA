@@ -1,0 +1,7 @@
+Devis n° DEV-SOMME-1
+Date : 02/02/2026
+Client : Quai Levant SAS
+Fournisseur : Boulonnerie Nantaise SARL
+Vis plateau | Réf. VIS-02 | 10,00 € HT
+Ecrou cage | Réf. ECR-02 | 20,00 € HT
+Total HT : 99,99 €

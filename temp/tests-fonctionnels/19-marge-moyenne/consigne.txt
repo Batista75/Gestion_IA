@@ -1,0 +1,23 @@
+Contrôle — marge brute moyenne, mois dernier
+Pièce : pieces/20-devis-serveur.txt
+Client Quai Levant SAS déjà confirmé (contrôle 00).
+
+La confirmation faite le jour du test porte la date du jour. La question « le mois dernier » lit le mois civil précédent. Le résultat visible le jour même est donc une moyenne vide. C’est le résultat attendu.
+
+Geste
+1. Déposer la pièce. Phrase : Classe ce devis. Confirmer. Article Serveur baie, référence SRV-19, prix indiqué 1000,00 € HT, total écrit 1 000,00 €.
+2. Ouvrir Produits, la fiche Serveur baie. Catégorie : Serveur. Enregistrer. Faire cela avant d’établir le devis.
+3. Projets, Nouveau dossier. Nom : Baie serveur. Client : Quai Levant SAS. Créer, puis ouvrir.
+4. Ajouter Serveur baie. Quantité 1. Taux de marque 30. Ajouter au projet.
+5. Titre du devis : Devis serveur. Cocher la ligne. Établir le devis.
+6. Ouvrir la commande client.
+7. Sur la carte Commande client, cliquer Confirmer les chiffres. Le message confirme les chiffres de ce document.
+8. Nouveau fil. Trois phrases, l’une après l’autre :
+   Quelle marge brute moyenne sur les serveurs le mois dernier ?
+   Quelle marge brute moyenne le mois dernier ?
+   Quelle marge brute moyenne sur les serveurs ce trimestre ?
+
+Texte attendu
+Première carte. Titre : Marge brute moyenne. La période est le mois civil précédent. Moyenne : aucune ligne. Phrase : Aucune ligne confirmée de cette catégorie sur cette période. La méthode parle d’une moyenne arithmétique des marges déjà calculées et dit que cette lecture additionne des centimes déjà enregistrés.
+Deuxième carte. Phrase : Indiquez la catégorie : serveur, poste, portable, réseau ou prestation.
+Troisième carte. Phrase : Cette période n’est pas encore lue. Le mois dernier est disponible.
