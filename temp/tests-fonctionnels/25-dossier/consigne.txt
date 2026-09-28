@@ -1,0 +1,51 @@
+Contrôle 25 — dossier
+====================
+
+Aucune pièce à déposer. Tout se fait dans l’assistant, après connexion.
+Le client Atelier Nord, le dossier Lampes Nord et le fournisseur Quincaillerie Durand sont déjà au répertoire.
+Les dates d’exemple supposent le 28 septembre 2026.
+Une intervention planifiée est datée de ce jour ou d’un jour plus tard.
+Si le jour a dépassé le 2 octobre 2026, remplacez 2026-10-02 par une date encore à venir.
+Le devis brouillon de Lampes Nord n’est pas une vente confirmée.
+Les heures affichées additionnent les interventions déjà confirmées sur ce dossier.
+Après la consigne 21, cinq interventions valent 1 030,00 €. La sixième, ci-dessous, ajoute 90,00 €, soit 1 120,00 €.
+Câblage n’apparaît dans les réceptions que s’il a été confirmé au reliquat clos, consigne 23.
+
+1. Envoyer : Quelle est la valeur du stock atelier et la part déjà réservée ?
+   Carte « Stock atelier ».
+   Si aucun produit n’a de stock et de coût écrits, la valeur est « non indiqué ».
+   La mesure Réservée est la somme des quantités des lignes des dossiers encore ouverts.
+
+2. Envoyer : Quel matériel a été réceptionné sans intervention planifiée ?
+   Carte « Réceptions sans intervention ».
+   Câblage y est, détail « sans dossier ».
+   Baie commande et Pose site n’y sont pas : leur reliquat n’est pas clos.
+   La méthode dit qu’un reliquat clos sans intervention à venir est listé.
+
+3. Envoyer : Enregistre un achat pour Quincaillerie Durand, désignation Switch spare, dossier Lampes Nord, famille réseau, commandé le 2026-09-01, bon de commande 200,00 €, reliquat clos, chez nous.
+   Carte « Achat à confirmer ». Dossier Lampes Nord. Commande 200,00 €. Reliquat Clos.
+   Cliquer Confirmer.
+   La réponse se termine par « Validation enregistrée. »
+
+4. Envoyer : Enregistre un achat pour Quincaillerie Durand, désignation Latitude 5440, dossier Lampes Nord, famille portable, commandé le 2026-09-01, bon de commande 1 000,00 €, reliquat clos, chez nous.
+   Dossier Lampes Nord. Confirmer.
+
+5. Envoyer : Enregistre une assistance pour Atelier Nord, dossier Lampes Nord, le 2026-10-02, 1 heure, taux horaire 90,00 €.
+   Carte d’intervention. Confirmer.
+
+6. Envoyer : Quel matériel a été réceptionné sans intervention planifiée ?
+   Câblage y est encore.
+   Switch spare et Latitude 5440 n’y sont plus : Lampes Nord a une intervention au 2026-10-02.
+
+7. Envoyer : Quelle est la rentabilité réelle du projet Lampes Nord ?
+   Carte « Rentabilité du dossier ». Filtre Lampes Nord.
+   Matériel 0,00 €. Prestations 0,00 €.
+   Achats 1 200,00 €. Heures 1 120,00 €.
+   La carte dit qu’un devis non confirmé n’entre pas dans les ventes.
+   Le montant 10 000,00 € du brouillon n’apparaît pas.
+   La méthode dit que les quatre nombres restent séparés.
+
+8. Envoyer : Quel matériel acheté pour le chantier Lampes Nord est encore absent du devis ou de la facture constatée ?
+   Carte « Achats non repris ». Switch spare y est.
+   Latitude 5440 n’y est pas : le devis du dossier porte déjà ce nom.
+   La méthode dit qu’aucune facture n’est créée.

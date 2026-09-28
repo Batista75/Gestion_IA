@@ -77,7 +77,11 @@ export type StoredPurchase = {
   delivery: Delivery;
 };
 
-export type PurchasePayload = StoredPurchase & { supplierId: string };
+export type PurchasePayload = StoredPurchase & {
+  supplierId: string;
+  projectId: string;
+  projectName: string;
+};
 
 export type SupplierTerms = {
   supplierName: string;
@@ -98,6 +102,7 @@ export type PurchaseSketch = {
   shipsOn: string;
   tracking: string;
   delivery: Delivery | "";
+  dossierName: string;
   familyConflict: boolean;
   remainderConflict: boolean;
   deliveryConflict: boolean;
@@ -181,6 +186,7 @@ export function readPurchaseEntry(text: string): PurchaseSketch | null {
     remainder: remainders.length === 1 ? remainders[0] ?? "" : "",
     shipsOn: dateAfter(text, /\bexp[ée]dition(?:\s+le)?\s+/i),
     tracking: trackingOf(text),
+    dossierName: dossierNameOf(text),
     delivery: deliveries.length === 1 ? deliveries[0] ?? "" : "",
     familyConflict: families.length > 1,
     remainderConflict: remainders.length > 1,
@@ -246,7 +252,13 @@ export function purchasePayload(value: unknown): PurchasePayload | null {
     shipsOn: raw.shipsOn,
     tracking: raw.tracking.trim(),
     delivery: raw.delivery,
+    projectId: typeof raw.projectId === "string" ? raw.projectId.trim() : "",
+    projectName: typeof raw.projectName === "string" ? raw.projectName.trim() : "",
   };
+}
+
+export function dossierNameOf(text: string): string {
+  return text.match(/\bdossier\s+([^,\n]+)/i)?.[1]?.trim() ?? "";
 }
 
 export function termsPayload(value: unknown): SupplierTermsPayload | null {
@@ -425,6 +437,7 @@ export function purchaseProposalPacket(draft: Omit<PurchasePayload, "supplierId"
       { label: "Livraison", detail: deliveryLabel(draft.delivery) },
       ...(draft.shipsOn ? [{ label: "Expédition", detail: draft.shipsOn }] : []),
       ...(draft.tracking ? [{ label: "Suivi", detail: draft.tracking }] : []),
+      ...(draft.projectName ? [{ label: "Dossier", detail: draft.projectName }] : []),
     ],
     sources: ["Phrase"],
     missing: ["Rien n’est enregistré avant confirmation."],
@@ -460,6 +473,7 @@ export function purchaseFields(draft: Omit<PurchasePayload, "supplierId">): Arra
     { label: "Livraison", value: deliveryLabel(draft.delivery) },
     ...(draft.shipsOn ? [{ label: "Expédition", value: draft.shipsOn }] : []),
     ...(draft.tracking ? [{ label: "Suivi", value: draft.tracking }] : []),
+    ...(draft.projectName ? [{ label: "Dossier", value: draft.projectName }] : []),
   ];
 }
 

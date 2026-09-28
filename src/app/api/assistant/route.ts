@@ -70,6 +70,7 @@ import { resolveIntervention } from "@/lib/intervention-reply";
 import { resolveEquipment } from "@/lib/equipment-reply";
 import { resolvePurchase } from "@/lib/purchase-reply";
 import { resolveClaim } from "@/lib/claim-reply";
+import { resolveDossier } from "@/lib/dossier-reply";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
 import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
 import { searchKnowledge } from "@/lib/knowledge-store";
@@ -346,6 +347,11 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
       packet: claim.packet,
       proposal: claim.proposal,
     };
+  }
+
+  const dossier = await resolveDossier(text);
+  if (dossier) {
+    return { reply: dossier.reply, model: null, source: dossier.source, packet: dossier.packet };
   }
 
   const brief = isNewClientBrief(text) || Boolean(identifyClient(text));

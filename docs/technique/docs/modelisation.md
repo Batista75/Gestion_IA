@@ -23,6 +23,7 @@ Supplier 1 ── * Contact
 Supplier 1 ── * Address
 Supplier 1 ── * Product
 Supplier 1 ── * PurchaseFollowUp
+Project 1 ── * PurchaseFollowUp
 Product 1 ── * QuoteLine
 Product 1 ── * ProjectLine
 Product 1 ── * SupplierOffer * ── 0..1 Supplier
@@ -43,7 +44,7 @@ Sans clé étrangère : Account, AppSetting, CompanyProfile, DocumentMemory,
 CatalogProposal, ClientProposal, ContractProposal, InterventionProposal, InstalledEquipmentProposal, PurchaseFollowUpProposal, SupplierTermsProposal, ClaimProposal, ReturnRequestProposal, RecordEvent, KnowledgeChunk
 ```
 
-Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, produit d’un équipement installé, fichier d’une demande. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une boîte retire ses `StoredFile`.
+Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, produit d’un équipement installé, dossier d’un achat, fichier d’une demande. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une boîte retire ses `StoredFile`.
 
 ## Réglages
 
@@ -104,7 +105,7 @@ Tiers unique, identifié par `nameKey`.
 - `outstandingCents` : encours confirmé, en centimes. Vide tant qu’il n’est pas confirmé.
 - `paymentDays` : délai de paiement confirmé, en jours. Vide tant qu’il n’est pas confirmé.
 - `createdAt`, `updatedAt`.
-- Lien : un fournisseur a plusieurs `Product`, plusieurs `Contact`, plusieurs `Address` et plusieurs `PurchaseFollowUp`. Retirer le fournisseur vide `Product.supplierId` et retire ses contacts, ses adresses et ses achats.
+- Lien : un fournisseur a plusieurs `Product`, plusieurs `Contact`, plusieurs `Address` et plusieurs `PurchaseFollowUp`. Retirer le fournisseur vide `Product.supplierId` et retire ses contacts, ses adresses et ses achats. Retirer un dossier vide `PurchaseFollowUp.projectId`.
 
 ### Contact
 
@@ -420,6 +421,7 @@ Encours et délai encore à confirmer. Confirmer écrit `Supplier.outstandingCen
 Ligne d’achat confirmée. Le bon de commande et la facture reçue sont deux montants recopiés. L’écart, le volume et le total de sous-traitance ne sont pas des colonnes. Ce n’est pas un numéro de facture.
 
 - `supplierId` vers `Supplier`. Retirer le fournisseur retire l’achat.
+- `projectId` vers `Project`, facultatif. Retirer le dossier laisse l’achat et vide le lien. Sans ce lien, l’achat n’entre pas dans la rentabilité du dossier.
 - `designation`, `family`. La sous-traitance est la famille `sous-traitance`.
 - `orderedOn` : date `YYYY-MM-DD`.
 - `orderCents` : montant écrit du bon de commande. `invoiceCents` : montant écrit de la facture reçue, vide si elle n’est pas écrite.
@@ -595,5 +597,6 @@ Priorité haute, pas encore faites :
 - L’âge d’un équipement et le filtre « acheté l’an dernier » sont calculés par `src/domain/equipment.ts` en comparant `InstalledEquipment.installedOn` à une date. Ils ne sont pas stockés. Le niveau de garantie est la valeur déjà enregistrée.
 - L’écart d’un achat est calculé par `src/domain/purchases.ts` : facture reçue moins bon de commande, deux centimes déjà stockés. Le volume et le montant de sous-traitance additionnent des `orderCents` déjà enregistrés. Le retard d’expédition compare `shipsOn` à la date du jour. Aucun de ces résultats n’est stocké.
 - Le nombre de réclamations du mois et le nombre de retours en cours sont des filtres de `src/domain/claims.ts` sur les fiches déjà confirmées. Ils ne sont pas stockés. Le texte affiché est `Claim.note` ou `ReturnRequest.note`, recopié, pas réécrit.
+- La rentabilité d’un dossier, la valeur du stock, la part réservée, les réceptions sans intervention et les achats non repris sont calculés par `src/domain/dossier.ts`. Les quatre nombres de rentabilité additionnent des centimes déjà stockés. La valeur du stock multiplie `Product.stockQty` par le coût déjà écrit. La part réservée additionne les quantités des dossiers ouverts. Aucun de ces résultats n’est stocké. Aucune facture n’est créée.
 - L’application n’attribue pas de numéro de facture ni d’avoir. Une `NotedPiece` recopie la référence déjà écrite. Elle n’enregistre pas de relevé bancaire.
 - La validité de trente jours d’une offre fournisseur, les rôles et les notifications ne sont pas des tables. L’historique de prix est la suite des `SupplierOffer`. `Quote.versionLabel` et `Quote.fingerprint` identifient une offre reçue, sans durée de validité en colonne.

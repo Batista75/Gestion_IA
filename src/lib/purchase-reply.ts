@@ -67,9 +67,16 @@ export async function resolvePurchase(text: string, now = new Date()): Promise<P
   }
   const supplier = suppliers.find((item) => item.name === supplierName);
   if (!supplier) return null;
+  const linked = await linkedProject(text, sketch.dossierName);
+  if (linked.missing) {
+    const packet = purchaseGapPacket(linked.missing);
+    return { reply: safeReply(packet), packet, source: "regle-metier" };
+  }
   const draft: PurchasePayload = {
     supplierId: supplier.id,
     supplierName: supplier.name,
+    projectId: linked.projectId,
+    projectName: linked.projectName,
     designation: sketch.designation,
     family: sketch.family,
     orderedOn: sketch.orderedOn,
@@ -134,6 +141,10 @@ export async function confirmPurchaseProposal(): Promise<{ ok: boolean; summary:
   if (!draft) return { ok: false, summary: "Cette proposition d’achat est illisible." };
   const supplier = await prisma.supplier.findUnique({ where: { id: draft.supplierId }, select: { id: true, name: true } });
   if (!supplier) return { ok: false, summary: "Ce fournisseur est introuvable. L’achat n’est pas enregistré." };
+  if (draft.projectId) {
+    const project = await prisma.project.findUnique({ where: { id: draft.projectId }, select: { id: true } });
+    if (!project) return { ok: false, summary: "Ce dossier est introuvable. L’achat n’est pas enregistré." };
+  }
   await withChangeSource("assistant", () =>
     prisma.purchaseFollowUp.create({
       data: {
@@ -147,6 +158,7 @@ export async function confirmPurchaseProposal(): Promise<{ ok: boolean; summary:
         shipsOn: draft.shipsOn,
         tracking: draft.tracking,
         delivery: draft.delivery,
+        projectId: draft.projectId || null,
         confirmedAt: new Date(),
       },
     }),
@@ -308,6 +320,21 @@ async function loadTerms(): Promise<SupplierTerms[]> {
     if (row.outstandingCents === null || row.paymentDays === null) return [];
     return [{ supplierName: row.name, outstandingCents: row.outstandingCents, paymentDays: row.paymentDays }];
   });
+}
+
+async function linkedProject(
+  text: string,
+  dossierName: string,
+): Promise<{ projectId: string; projectName: string; missing: string }> {
+  if (!/\bdossier\b/i.test(text)) return { projectId: "", projectName: "", missing: "" };
+  if (dossierName.trim().length < 2) return { projectId: "", projectName: "", missing: "Indiquez le dossier." };
+  const projects = await prisma.project.findMany({ select: { id: true, name: true } });
+  const name = uniqueNameMatch(dossierName, projects.map((project) => project.name));
+  const matches = projects.filter((project) => project.name === name);
+  if (!name || matches.length !== 1) return { projectId: "", projectName: "", missing: "Indiquez un seul dossier déjà enregistré." };
+  const project = matches[0];
+  if (!project) return { projectId: "", projectName: "", missing: "Indiquez un seul dossier déjà enregistré." };
+  return { projectId: project.id, projectName: project.name, missing: "" };
 }
 
 function supplierMissing(count: number, label: string): string {
