@@ -18,3 +18,4 @@ Application locale de gestion pour TPE. La spécification est dans `docs/specifi
 - Rien n’est classé dans un projet sans une action explicite de l’utilisateur.
 - Le manuel affiché dans l’interface est `docs/manuel-utilisateur.md`. Tout changement d’écran ou de règle visible met à jour ce fichier. La spécification d’usage reste `docs/specifications-gestion-ia.pdf`.
 - La documentation technique vit dans `docs/technique`. Le DAT (`dat.md`) tient l’architecture, le DCT (`dct.md`) la conception, `modelisation.md` les tables. Un fait n’est écrit que dans la page qui en est responsable. Les autres pages renvoient.
+- À la fin de chaque cycle, proposer un seul objectif suivant, choisi dans ce qui vient d’être livré. L’objectif dit pourquoi maintenant, ce qui est tenu pour fini, et ce qui attend le cycle d’après.
