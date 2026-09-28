@@ -6,9 +6,11 @@ Geste
 2. À traiter. Badge Devis. Détail : client Atelier Nord, fournisseur Quincaillerie Durand, article Lampe atelier, prix indiqué 48,00 € HT, total 48,00 €.
 3. Confirmer. Le message contient la création du client et du produit.
 4. Nouveau fil. Phrase exacte : prépare un devis pour Atelier Nord
-5. Nouveau message. Phrase exacte : prépare un devis pour Atelier Nord, 2 Lampe atelier
+5. Phrase exacte : prépare un devis pour Atelier Nord, 2 Lampe atelier
+6. Projets, Nouveau dossier. Nom : Lampes Nord. Client : Atelier Nord. Créer le dossier.
+7. Revenir à l’accueil, nouveau fil. Phrase exacte : prépare un devis pour Atelier Nord, 2 Lampe atelier
 
 Texte attendu
 Après la phrase sans article : Aucun article du catalogue n’est cité pour Atelier Nord. Le devis n’est pas créé.
-Après la phrase avec l’article : Devis non créé pour Atelier Nord. Lampe atelier : prix catalogue non indiqué, ligne non chiffrée.
-La pièce a écrit un coût d’achat. Le prix de vente catalogue de la fiche produit reste vide, donc aucun brouillon n’est enregistré.
+Après la phrase avec l’article, tant que Lampes Nord n’existe pas : carte Devis brouillon. 2 × Lampe atelier, matériel, prix depuis le coût, unitaire 68,57 €, ligne 137,14 €. Total HT 137,14 €. La phrase dit qu’aucun dossier n’est ouvert et que le brouillon n’est pas enregistré.
+Après la création du dossier et la même phrase : la carte reprend ces montants, le filtre Lampes Nord, et une ligne Brouillon avec un lien vers le devis. La méthode cite le taux de marque 30 %. La validation et l’envoi restent manuels.

@@ -320,6 +320,7 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
       model: null,
       source: prepared.wrote ? ("action" as const) : ("dossier" as const),
       sources: prepared.sources,
+      packet: prepared.packet,
     };
   }
 

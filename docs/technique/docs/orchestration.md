@@ -8,7 +8,7 @@ Ce chapitre fixe l’ordre de traitement. L’architecture est le [DAT](dat.md).
 2. Une question de mesure est lue dans les enregistrements confirmés et rendue en paquet, sans modèle. Le garde-fou et les familles sont dans le [plan du chat](plan-chat.md).
 3. Une question de prix de vente reçoit la règle métier, sans modèle.
 4. `Je confirme.` enregistre la proposition la plus récente, fiche client ou autre fiche. `non` n’écrit rien. Un `oui` qui répond à une hypothèse déjà proposée du parcours reprend ce parcours, il ne confirme pas une fiche absente.
-5. `prépare un devis pour …` suit l’[assistant hybride](devis-hybride.md) : client en SQL, conditions filtrées sur ce client, prix catalogue, brouillon. Le modèle ne calcule pas.
+5. `prépare un devis pour …` suit l’[assistant hybride](devis-hybride.md) : plusieurs lignes, matériel ou prestation, prix catalogue ou coût avec le taux de marque, paquet, brouillon. Le modèle ne calcule pas.
 6. Une question de parcours commercial, de prochaine étape ou de preuve documentaire est répondue depuis l’instruction métier, sans modèle. Un seul projet nommé fait lire ses étapes enregistrées.
 7. Une consultation ou une liste est lue dans les fiches, sans modèle.
 8. Une demande d’ajouter un contact ou une information, ou une correction de fiche client, relit d’abord la fiche déjà enregistrée. Si le nom est unique et que la nouvelle valeur est comprise, une proposition de mise à jour s’ouvre. Les champs non cités restent ceux de la fiche.

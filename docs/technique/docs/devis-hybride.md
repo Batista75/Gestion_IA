@@ -41,12 +41,13 @@ Le modèle n’écrit pas un devis. `prépare un devis pour …` exécute la sui
 1. Recevoir la phrase.
 2. Reconnaître le client déjà enregistré et les articles du catalogue.
 3. Lire les conditions de ce client seulement.
-4. Lire le prix catalogue HT et le stock de chaque article.
-5. Calculer quantité × prix HT × (1 − remise) dans `catalogUnitCents`, `src/domain/pricing.ts`.
-6. Enregistrer le devis en brouillon sur le dossier unique, ou sur le dossier nommé.
-7. Afficher les lignes, le total HT et le lien du devis.
+4. Lire chaque article cité : quantité, et matériel ou prestation. Une catégorie seule (`portables`, `serveurs`, `postes`, `prestations`) ne convient que s’il n’y a qu’un article de cette catégorie.
+5. Lire le prix catalogue HT s’il est écrit, sinon le coût enregistré, et le stock.
+6. Calculer dans `src/domain/pricing.ts`. Le prix catalogue écrit passe par `catalogUnitCents`. Sans prix catalogue, le prix unitaire vient du coût et du taux de marque 30 % (`saleLineFigures`). Le total HT additionne ces montants de ligne déjà calculés.
+7. Enregistrer le devis en brouillon sur le dossier unique, ou sur le dossier nommé, seulement si chaque ligne citée est chiffrée.
+8. Afficher le paquet : lignes, total HT, lien du brouillon. Le modèle ne propose pas les montants.
 
-S’il manque le client, l’article, le prix catalogue ou un dossier unique, rien n’est enregistré. Le message dit ce qui manque. Le total HT du document utilise `saleUnitCents`, le prix déjà calculé, et non la formule de marque. S’il y a plusieurs dossiers, le chiffrage est montré et rien n’est écrit.
+S’il manque le client, l’article, un prix ou un coût, ou un dossier unique, rien n’est enregistré. Le paquet dit ce qui manque. S’il y a plusieurs dossiers, le chiffrage est montré et rien n’est écrit. Un montant en dollars n’est pas converti.
 
 ## Fiabilité
 

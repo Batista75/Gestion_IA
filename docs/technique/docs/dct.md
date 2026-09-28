@@ -26,7 +26,7 @@ Une seule bibliothèque calcule : `src/domain/pricing.ts`.
 
 - Sur un dossier, `quoteFromTargetMarkup` produit le prix de vente et la marge à partir du coût en centimes, du taux de marque et de la remise. Un coût absent laisse le prix non indiqué. Le total n’additionne que les lignes déjà chiffrées.
 - Sur une offre ou un devis reçu, le premier montant lisible du texte devient des centimes. Les lignes ne sont pas additionnées. La formulation de cette règle et les colonnes sont dans la [modélisation](modelisation.md), sur `Quote`, `QuoteLine` et `SupplierOffer`.
-- `prépare un devis pour …` suit le chapitre [Devis hybride](devis-hybride.md). Le total de ce brouillon utilise le prix unitaire déjà calculé.
+- `prépare un devis pour …` suit le chapitre [Devis hybride](devis-hybride.md). Le total de ce brouillon additionne les prix unitaires déjà calculés.
 
 Le modèle de langage ne reçoit pas ces formules à exécuter.
 

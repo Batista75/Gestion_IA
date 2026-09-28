@@ -1,7 +1,9 @@
 import { documentBody } from "@/domain/document-chunks";
-import { quotedItems, discountConflict, negotiatedDiscount } from "@/domain/hybrid-quote";
+import { composeQuote, discountConflict, negotiatedDiscount, quotePacket } from "@/domain/hybrid-quote";
+import type { AnswerPacket } from "@/domain/answer-packet";
+import { safeReply } from "@/domain/answer-packet";
 import { foldText, rankKnowledge, uniqueNameMatch, type KnowledgeDoc } from "@/domain/knowledge";
-import { catalogUnitCents, centsFromStated, formatCents } from "@/domain/pricing";
+import { centsFromStated } from "@/domain/pricing";
 import { prisma } from "@/lib/db";
 import { withChangeSource } from "@/lib/change-source";
 import { withGpuLane } from "@/lib/gpu-lane";
@@ -29,21 +31,27 @@ export async function prepareHybridQuote(text: string): Promise<{
   reply: string;
   wrote: boolean;
   sources: HybridSource[];
+  packet: AnswerPacket;
 }> {
   const clients = await prisma.client.findMany({ select: { id: true, name: true, notes: true } });
   const clientName = uniqueNameMatch(text, clients.map((client) => client.name));
   if (!clientName) {
-    return {
-      wrote: false,
-      sources: [],
-      reply: clients.length === 0
-        ? "Aucun client n’est au répertoire. Le devis n’est pas préparé."
-        : "Nommez un seul client déjà enregistré. Aucune recherche de conditions n’est lancée sans lui.",
-    };
+    const missing = clients.length === 0
+      ? "Aucun client n’est au répertoire. Le devis n’est pas préparé."
+      : "Nommez un seul client déjà enregistré. Aucune recherche de conditions n’est lancée sans lui.";
+    const packet = quotePacket({ clientName: "", projectName: "", lines: [], missing: [missing], href: "" });
+    return { wrote: false, sources: [], reply: safeReply(packet), packet };
   }
   const client = clients.find((item) => item.name === clientName);
   if (!client) {
-    return { wrote: false, sources: [], reply: "Ce client est introuvable." };
+    const packet = quotePacket({
+      clientName,
+      projectName: "",
+      lines: [],
+      missing: ["Ce client est introuvable."],
+      href: "",
+    });
+    return { wrote: false, sources: [], reply: safeReply(packet), packet };
   }
   const products = await prisma.product.findMany({
     select: {
@@ -52,19 +60,13 @@ export async function prepareHybridQuote(text: string): Promise<{
       reference: true,
       statedPrice: true,
       costStated: true,
+      currency: true,
       kind: true,
+      family: true,
       stockQty: true,
-      unit: true,
+      supplier: { select: { name: true } },
     },
   });
-  const items = quotedItems(text, products.map((product) => ({ name: product.name, reference: product.reference })));
-  if (items.length === 0) {
-    return {
-      wrote: false,
-      sources: [],
-      reply: `Aucun article du catalogue n’est cité pour ${client.name}. Le devis n’est pas créé.`,
-    };
-  }
   const agreements = await clientAgreementDocs(client.id);
   const clauseText = agreements.map((doc) => doc.body).join("\n");
   const conflict = discountConflict(clauseText);
@@ -72,49 +74,22 @@ export async function prepareHybridQuote(text: string): Promise<{
   const ranked = await rankClientDocs(agreements, text);
   const cited = ranked.length > 0 ? ranked : agreements.filter((doc) => /remise/i.test(doc.body));
   const sources = cited.slice(0, 5).map((doc) => ({ label: "Conditions", title: doc.title }));
-  const lines: string[] = [];
-  const draftLines: Array<{
-    name: string;
-    kind: string;
-    quantity: number;
-    costCents: number | null;
-    saleUnitCents: number;
-  }> = [];
-  for (const item of items) {
-    const product = products.find((candidate) => foldText(candidate.name) === foldText(item.name));
-    if (!product) continue;
-    const catalog = centsFromStated(product.statedPrice);
-    const stock = product.stockQty === null ? "stock non indiqué" : `stock ${product.stockQty}`;
-    if (catalog === null) {
-      lines.push(`${product.name} : prix catalogue non indiqué, ligne non chiffrée. ${stock}.`);
-      continue;
-    }
-    if (discount === null && conflict) {
-      lines.push(`${product.name} : plusieurs remises dans les conditions de ${client.name}, aucune n’est appliquée.`);
-      continue;
-    }
-    const unit = catalogUnitCents(catalog, discount ?? 0);
-    const priced = formatCents(unit * item.quantity);
-    const remise = discount === null ? "aucune remise écrite" : `remise ${discount} %`;
-    const short = product.stockQty !== null && item.quantity > product.stockQty ? " Quantité supérieure au stock." : "";
-    lines.push(
-      `${item.quantity} × ${product.name} · catalogue ${formatCents(catalog)} · ${remise} · HT ${priced}. ${stock}.${short}`,
-    );
-    draftLines.push({
+  const composed = composeQuote({
+    text,
+    clientName: client.name,
+    discountPercent: discount,
+    discountConflict: conflict,
+    catalog: products.map((product) => ({
       name: product.name,
+      reference: product.reference,
       kind: product.kind === "service" ? "service" : "produit",
-      quantity: item.quantity,
+      family: product.family,
+      currency: product.currency === "USD" ? "USD" : product.currency === "EUR" ? "EUR" : "",
+      statedPriceCents: centsFromStated(product.statedPrice),
       costCents: centsFromStated(product.costStated),
-      saleUnitCents: unit,
-    });
-  }
-  if (draftLines.length === 0) {
-    return {
-      wrote: false,
-      sources,
-      reply: [`Devis non créé pour ${client.name}.`, ...lines].join("\n"),
-    };
-  }
+      stockQty: product.stockQty,
+    })),
+  });
   const projects = await prisma.project.findMany({
     where: { clientId: client.id },
     select: { id: true, name: true },
@@ -125,17 +100,27 @@ export async function prepareHybridQuote(text: string): Promise<{
     : projects.length === 1
       ? projects[0]
       : null;
-  if (!project) {
-    const hint = projects.length === 0
-      ? "Aucun dossier n’est ouvert pour ce client."
-      : `Plusieurs dossiers existent : ${projects.map((item) => item.name).join(", ")}. Nommez-en un.`;
-    return {
-      wrote: false,
-      sources,
-      reply: [`${hint} Le brouillon n’est pas enregistré.`, ...lines].join("\n"),
-    };
+  const missing = [...composed.missing];
+  const ready = composed.lines.length > 0 && composed.missing.length === 0;
+  if (!ready) {
+    if (composed.lines.length > 0) missing.push("Le brouillon n’est pas enregistré.");
+  } else if (!project) {
+    missing.push(
+      projects.length === 0
+        ? "Aucun dossier n’est ouvert pour ce client. Le brouillon n’est pas enregistré."
+        : `Plusieurs dossiers existent : ${projects.map((item) => item.name).join(", ")}. Nommez-en un. Le brouillon n’est pas enregistré.`,
+    );
   }
-  const total = draftLines.reduce((sum, line) => sum + line.saleUnitCents * line.quantity, 0);
+  if (!project || !ready) {
+    const packet = quotePacket({
+      clientName: client.name,
+      projectName: project?.name ?? "",
+      lines: composed.lines,
+      missing,
+      href: "",
+    });
+    return { wrote: false, sources, reply: safeReply(packet), packet };
+  }
   const created = await withChangeSource("assistant", async () => {
     const document = await prisma.saleDocument.create({
       data: {
@@ -144,15 +129,21 @@ export async function prepareHybridQuote(text: string): Promise<{
         status: "brouillon",
         title: `Devis ${client.name}`,
         lines: {
-          create: draftLines.map((line) => ({
-            name: line.name,
-            kind: line.kind,
-            quantity: line.quantity,
-            costCents: line.costCents,
-            saleUnitCents: line.saleUnitCents,
-            markupPercent: 0,
-            discountPercent: discount ?? 0,
-          })),
+          create: composed.lines.map((line) => {
+            const product = products.find((candidate) => foldText(candidate.name) === foldText(line.name));
+            return {
+              name: line.name,
+              kind: line.kind,
+              quantity: line.quantity,
+              costCents: line.costCents,
+              saleUnitCents: line.saleUnitCents,
+              markupPercent: line.markupPercent,
+              discountPercent: line.discountPercent,
+              productId: product?.id,
+              family: product?.family ?? line.family,
+              supplierName: product?.supplier?.name ?? "",
+            };
+          }),
         },
       },
     });
@@ -160,22 +151,20 @@ export async function prepareHybridQuote(text: string): Promise<{
       data: {
         projectId: project.id,
         kind: "devis",
-        body: `Brouillon de devis pour ${client.name}. Total HT ${formatCents(total)}.`,
+        body: `Brouillon de devis pour ${client.name}.`,
       },
     });
     return document.id;
   });
-  return {
-    wrote: true,
-    sources,
-    reply: [
-      `Brouillon enregistré pour ${client.name}, dossier ${project.name}.`,
-      ...lines,
-      `Total HT ${formatCents(total)}.`,
-      "La validation et l’envoi restent manuels.",
-      `Ouvrir le devis : /projets/${project.id}/documents/${created}`,
-    ].join("\n"),
-  };
+  const href = `/projets/${project.id}/documents/${created}`;
+  const packet = quotePacket({
+    clientName: client.name,
+    projectName: project.name,
+    lines: composed.lines,
+    missing: ["La validation et l’envoi restent manuels."],
+    href,
+  });
+  return { wrote: true, sources, reply: safeReply(packet), packet };
 }
 
 async function rankClientDocs(docs: KnowledgeDoc[], query: string) {
