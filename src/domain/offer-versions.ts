@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { headerFields, readPieceHeader, statedCurrency, type PieceHeader } from "./piece-header.ts";
 
 export type OfferLine = {
   product: string;
@@ -57,13 +58,14 @@ export type DocumentReading = {
   offers: OfferVersion[];
   pricedLines: OfferLine[];
   parties: DocumentParties;
+  header: PieceHeader;
 };
 
 const PRICE =
   /(\d{1,6}(?:[ \u00a0]\d{3})*(?:[,.]\d{1,4})?)\s*(?:€|eur)\s*(ht|ttc)?/i;
 
 export function readOfferFile(text: string, filename: string): DocumentReading {
-  const parts = splitDocuments(text);
+  const parts = splitDocuments(text).filter((part) => part.length > 80);
   const readings = (parts.length > 0 ? parts : [text]).map((part) => readSingle(part, filename));
   if (readings.length === 1) return readings[0] ?? readSingle("", filename);
   const primary = readings.find((reading) => reading.kind !== "document" && reading.kind !== "autre") ?? readings[0];
@@ -77,12 +79,21 @@ export function readOfferFile(text: string, filename: string): DocumentReading {
       clientName: readings.map((reading) => reading.parties.clientName).find(Boolean) ?? "",
       supplierName: readings.map((reading) => reading.parties.supplierName).find(Boolean) ?? "",
     },
+    header: primary?.header ?? readPieceHeader(""),
     enrichment: readings.map((reading) => reading.enrichment).join("\n\n"),
   };
 }
 
 function readSingle(text: string, filename: string): DocumentReading {
-  const parties = partiesOf(text);
+  const header = readPieceHeader(text);
+  const detected = partiesOf(text);
+  const named = header.supplierName && header.clientName;
+  const parties = named
+    ? { clientName: header.clientName, supplierName: header.supplierName }
+    : {
+        clientName: partyUsable(detected.clientName) ? detected.clientName : header.clientName,
+        supplierName: partyUsable(detected.supplierName) ? detected.supplierName : header.supplierName,
+      };
   const parsed = [text]
     .map((part) => parseOffer(part, filename))
     .filter((offer): offer is OfferVersion => offer !== null)
@@ -103,7 +114,8 @@ function readSingle(text: string, filename: string): DocumentReading {
     offers,
     pricedLines,
     parties,
-    enrichment: enrichmentOf(filename, kind, text, offers, pricedLines, parties),
+    header,
+    enrichment: enrichmentOf(filename, kind, text, offers, pricedLines, parties, header),
   };
 }
 
@@ -551,7 +563,7 @@ function partiesOf(text: string): DocumentParties {
 function legalEntities(text: string): string[] {
   const found: string[] = [];
   const pattern =
-    /([A-Z0-9][\p{L}0-9&'’-]+(?:[^\S\n]+[\p{L}0-9&'’-]+){0,3})[^\S\n]+(SARL|SAS|SASU|SA|GmbH|Ltd|LLC|OÜ|OY|Inc\.?|BV|AG)(?![\p{L}\p{N}])/giu;
+    /([A-Z0-9][\p{L}0-9&'’-]+(?:[^\S\n]+[\p{L}0-9&'’-]+){0,3})[^\S\n]+(SARL|SAS|SASU|SA|EURL|GmbH|Ltd|LLC|OÜ|OY|Inc\.?|BV|AG|Ltée|LTEE|Ltee)(?![\p{L}\p{N}])/giu;
   for (const match of text.matchAll(pattern)) {
     const name = clean(`${match[1] ?? ""} ${match[2] ?? ""}`);
     if (name.length < 4) continue;
@@ -571,6 +583,12 @@ function addresseeName(text: string, supplier: string): string {
     return clean(line).slice(0, 160);
   }
   return "";
+}
+
+function partyUsable(name: string): boolean {
+  const value = name.trim();
+  if (!value || /^[A-Z0-9-]{2,16}$/.test(value)) return false;
+  return true;
 }
 
 function isStreet(line: string): boolean {
@@ -621,8 +639,7 @@ function writtenCommercial(text: string): WrittenCommercial {
     .filter(Boolean)
     .join(". ")
     .slice(0, 500);
-  const sample = `${statedTotalHt}\n${text.slice(0, 4000)}`;
-  const currency = /\$|\bUSD\b/i.test(sample) && !/€|\bEUR\b/i.test(sample) ? "USD" : /€|\bEUR\b/i.test(sample) ? "EUR" : "";
+  const currency = statedCurrency(`${statedTotalHt}\n${text.slice(0, 4000)}`);
   return {
     clientName: "",
     currency,
@@ -668,6 +685,7 @@ function enrichmentOf(
   offers: OfferVersion[],
   pricedLines: OfferLine[],
   parties: DocumentParties,
+  header: PieceHeader,
 ): string {
   const head = [
     `Pièce : ${filename}`,
@@ -675,6 +693,8 @@ function enrichmentOf(
     parties.clientName ? `Client : ${parties.clientName}` : "",
     parties.supplierName ? `Fournisseur : ${parties.supplierName}` : "",
     ...statedCommercialNotes(text),
+    ...headerFields(header).map((field) => `${field.label} : ${field.value}`),
+    header.method,
   ].filter(Boolean);
   if (offers.length > 0) {
     const blocks = offers.map((offer) => {
@@ -697,7 +717,13 @@ function enrichmentOf(
       ...pricedLines.map((line) => linePhrase(line)),
     ].join("\n");
   }
-  const excerpt = text.trim().replace(/\s+/g, " ").slice(0, 900);
+  const excerpt = text
+    .replace(/\bIBAN\s*:[^.\n]*/gi, "")
+    .replace(/\b(?:BIC|SWIFT)\s*:[^.\n]*/gi, "")
+    .replace(/\b(?:transit|sort code|n° de compte|n°\s+d['’]institution|account(?:\s+no)?|compte)\s*[:|][^|\n]*/gi, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 900);
   if (!excerpt) {
     return [...head, "Fichier conservé. Le texte n’a pas pu être extrait."].join("\n");
   }
@@ -921,6 +947,7 @@ function fieldsOf(
           : `${supplierName} · à créer`
         : "Non identifié",
     },
+    ...headerFields(reading.header),
     { label: "Produits", value: products.join("\n") || "Aucun produit chiffré" },
     {
       label: "Suite",
@@ -999,6 +1026,7 @@ function summaryOf(
       ? `Projet déjà ouvert : ${projectName}. La pièce reste hors dossier tant que vous ne demandez pas de l’y rattacher.`
       : "Aucun projet n’est ouvert depuis cette pièce.",
   );
+  if (reading.header.currency || reading.header.totalHt || reading.header.totalDue) lines.push(reading.header.method);
   lines.push("Rien n’est écrit tant que la proposition n’est pas confirmée.");
   return lines.join("\n");
 }

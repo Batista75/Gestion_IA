@@ -145,3 +145,31 @@ test("le meilleur tarif reprend le classement déjà fait", () => {
   const missing = bestTariffPacket("", [], "");
   assert.match(missing.missing[0] ?? "", /référence/);
 });
+
+test("une devise écrite ou une date écrite reste dans le paquet", () => {
+  const quoted: AnswerPacket = {
+    title: "Devis lu",
+    period: "",
+    filters: [],
+    measures: [
+      { label: "Livre", value: "£20,550.00" },
+      { label: "Franc", value: "33 240,75 CHF" },
+      { label: "Dollar canadien", value: "35,700.00 $ CAD" },
+      { label: "Acompte", value: "$16,137.50" },
+      { label: "TPS", value: "9.975%" },
+    ],
+    rows: [
+      { label: "Émission", detail: "16 novembre 2026" },
+      { label: "Validité", detail: "November 02, 2026" },
+    ],
+    sources: [],
+    missing: [],
+    method: "Les montants sont recopiés.",
+  };
+  const phrase = "£20,550.00, 33 240,75 CHF, 35,700.00 $ CAD, $16,137.50, 9.975 %, 16 novembre 2026, November 02, 2026.";
+  assert.equal(narrativeFits(quoted, phrase), true);
+  assert.equal(narrativeFits(quoted, renderPacket(quoted)), true);
+  assert.equal(foreignFigures(quoted, "12 postes").length, 0);
+  assert.equal(narrativeFits(quoted, "Le total serait 9 000,00 €."), false);
+  assert.equal(narrativeFits(quoted, "Valable jusqu’au December 02, 2026."), false);
+});

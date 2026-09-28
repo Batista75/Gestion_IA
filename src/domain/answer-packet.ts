@@ -106,13 +106,28 @@ type Figure = { key: string; label: string };
 function figuresOf(text: string): Figure[] {
   const found: Figure[] = [];
   const source = text.replace(/[\u00a0\u202f]/g, " ");
-  for (const match of source.matchAll(/(\d{1,3}(?: \d{3})+|\d+)(?:[,.](\d{1,2}))?\s*(€|eur|usd|\$)/gi)) {
-    const cents = toCents(match[1] ?? "", match[2] ?? "");
-    const currency = /usd|\$/i.test(match[3] ?? "") ? "USD" : "EUR";
+  const money = /(?:(£|\$|€)\s*)?(\d{1,3}(?:[ \u00a0]\d{3})+|\d{1,3}(?:,\d{3})+|\d+)(?:([,.])(\d{2}))?(?!\d)\s*(€|eur|usd|gbp|chf|cad|£|\$)?/gi;
+  for (const match of source.matchAll(money)) {
+    const pre = match[1] ?? "";
+    const post = match[5] ?? "";
+    if (!pre && !post) continue;
+    const cents = moneyCents(match[2] ?? "", match[3] ?? "", match[4] ?? "");
     if (cents === null) continue;
+    const after = source.slice(match.index ?? 0, (match.index ?? 0) + match[0].length + 8);
+    const currency = moneyCurrency(`${pre}${post}`, after);
     found.push({ key: `money:${currency}:${cents}`, label: match[0].trim() });
   }
-  for (const match of source.matchAll(/(\d{1,3}(?:[,.]\d{1,2})?)\s*%/g)) {
+  for (const match of source.matchAll(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),\s*(\d{4})\b/gi)) {
+    const month = englishMonth(match[1] ?? "");
+    if (!month) continue;
+    found.push({ key: `date:${match[3]}-${month}-${(match[2] ?? "").padStart(2, "0")}`, label: match[0] });
+  }
+  for (const match of source.matchAll(/\b(\d{1,2})\s+(janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)\s+(\d{4})\b/gi)) {
+    const month = frenchMonth(match[2] ?? "");
+    if (!month) continue;
+    found.push({ key: `date:${match[3]}-${month}-${(match[1] ?? "").padStart(2, "0")}`, label: match[0] });
+  }
+  for (const match of source.matchAll(/(\d{1,3}(?:[,.]\d{1,3})?)\s*%/g)) {
     const raw = (match[1] ?? "").replace(",", ".");
     const value = Number(raw);
     if (!Number.isFinite(value)) continue;
@@ -137,10 +152,30 @@ function figureKeys(text: string): string[] {
   return figuresOf(text).map((figure) => figure.key);
 }
 
-function toCents(whole: string, fraction: string): number | null {
-  const major = whole.replace(/ /g, "");
+function moneyCurrency(token: string, after: string): string {
+  if (/\bCAD\b/i.test(after)) return "CAD";
+  if (/£|\bgbp\b/i.test(token)) return "GBP";
+  if (/\bchf\b/i.test(token)) return "CHF";
+  if (/\busd\b|\$/i.test(token)) return "USD";
+  return "EUR";
+}
+
+function moneyCents(whole: string, separator: string, fraction: string): number | null {
+  const major = separator === "." ? whole.replace(/[ ,]/g, "") : whole.replace(/[ .]/g, "");
   if (!/^\d+$/.test(major)) return null;
   const minor = (fraction || "0").padEnd(2, "0").slice(0, 2);
   const cents = Number(major) * 100 + Number(minor);
   return Number.isSafeInteger(cents) ? cents : null;
 }
+
+function englishMonth(name: string): string {
+  const month = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"].indexOf(name.toLowerCase());
+  return month < 0 ? "" : String(month + 1).padStart(2, "0");
+}
+
+function frenchMonth(name: string): string {
+  const folded = name.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+  const month = ["janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout", "septembre", "octobre", "novembre", "decembre"].indexOf(folded);
+  return month < 0 ? "" : String(month + 1).padStart(2, "0");
+}
+
