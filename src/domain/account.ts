@@ -1,5 +1,13 @@
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export const devAdmin = {
+  firstName: "Admin",
+  lastName: "Local",
+  email: "admin@atelier.local",
+  password: "Admin-local-1",
+  role: "admin",
+} as const;
+
 export function readAccountDraft(input: {
   firstName: string;
   lastName: string;

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { AppShell } from "@/components/app-shell";
-import { currentActor } from "@/lib/actor";
+import { currentSession } from "@/lib/actor";
 import { prisma } from "@/lib/db";
 import "./globals.css";
 
@@ -34,14 +34,16 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       company = "Société locale";
     }
   }
-  const operator = bare ? "" : await currentActor();
+  const session = bare ? null : await currentSession();
+  const operator = session?.mark ?? "";
+  const role = session?.role ?? "";
   return (
     <html
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
-        {bare ? children : <AppShell company={company} operator={operator}>{children}</AppShell>}
+        {bare ? children : <AppShell company={company} operator={operator} role={role}>{children}</AppShell>}
       </body>
     </html>
   );

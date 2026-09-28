@@ -23,6 +23,7 @@ model Account {
   firstName    String
   lastName     String
   passwordHash String
+  role         String   @default("utilisateur")
   createdAt    DateTime @default(now())
 }
 

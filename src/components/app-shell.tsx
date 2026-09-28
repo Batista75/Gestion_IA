@@ -141,10 +141,12 @@ function SideBar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
 export function AppShell({
   company,
   operator,
+  role = "",
   children,
 }: {
   company: string;
   operator: string;
+  role?: string;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -220,6 +222,9 @@ export function AppShell({
           </form>
           <span className="hidden max-w-40 truncate text-sm text-muted-foreground xl:inline">{company}</span>
           <span className="hidden max-w-28 truncate text-sm sm:inline">{operator}</span>
+          {role === "admin" ? (
+            <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">Admin</span>
+          ) : null}
           <form action={logoutAction}>
             <button type="submit" className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium hover:bg-muted">
               Quitter

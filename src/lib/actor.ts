@@ -1,14 +1,18 @@
 import { currentOperatorMark } from "@/domain/operator";
-import { readSessionToken, SESSION_COOKIE } from "@/lib/session";
+import { readSessionToken, SESSION_COOKIE, type Session } from "@/lib/session";
 
-export async function currentActor(): Promise<string> {
+export async function currentSession(): Promise<Session | null> {
   try {
     const { cookies } = await import("next/headers");
     const jar = await cookies();
-    const session = readSessionToken(jar.get(SESSION_COOKIE)?.value);
-    if (session?.mark) return session.mark;
+    return readSessionToken(jar.get(SESSION_COOKIE)?.value);
   } catch {
-    // Hors d’une requête HTTP, le journal garde la marque par défaut.
+    return null;
   }
+}
+
+export async function currentActor(): Promise<string> {
+  const session = await currentSession();
+  if (session?.mark) return session.mark;
   return currentOperatorMark();
 }

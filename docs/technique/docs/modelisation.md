@@ -48,10 +48,11 @@ Une seule ligne, `id` = `local`.
 
 ### Account
 
-Accès à l’application. Tant qu’aucune ligne n’existe, `/connexion` crée le premier compte. Ensuite l’adresse et le mot de passe sont exigés. Un second compte ne se crée pas ici.
+Accès à l’application. Tant qu’aucune ligne n’existe, `/connexion` crée le premier compte, au rôle `admin`. Ensuite l’adresse et le mot de passe sont exigés. En développement, `ensureDevAdmin` crée `admin@atelier.local` s’il manque. Le mot de passe initial est `Admin-local-1`. Ce compte n’est pas créé hors du mode développement.
 
 - `email` unique, en minuscules.
 - `firstName`, `lastName`. La marque affichée est l’initiale du prénom et le nom.
+- `role` : `admin` ou `utilisateur`. Défaut `utilisateur`.
 - `passwordHash` : empreinte scrypt. Le mot de passe en clair n’est pas stocké.
 - `createdAt`.
 - Le cookie `gestion_session` est signé pour 14 jours. Il porte l’identifiant et la marque. Le navigateur ne peut pas le lire.

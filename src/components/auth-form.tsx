@@ -8,9 +8,15 @@ import { Label } from "@/components/ui/label";
 
 const initial: AuthState = { message: null };
 
-export function AuthForm({ mode }: { mode: "creer" | "entrer" }) {
+export function AuthForm({
+  mode,
+  devAdmin = null,
+}: {
+  mode: "creer" | "entrer";
+  devAdmin?: { email: string; password: string } | null;
+}) {
   if (mode === "creer") return <CreateAccess />;
-  return <EnterAccess />;
+  return <EnterAccess devAdmin={devAdmin} />;
 }
 
 function CreateAccess() {
@@ -48,9 +54,9 @@ function CreateAccess() {
   );
 }
 
-function EnterAccess() {
+function EnterAccess({ devAdmin }: { devAdmin: { email: string; password: string } | null }) {
   const [state, action, pending] = useActionState(loginAction, initial);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(devAdmin?.email ?? "");
   const [password, setPassword] = useState("");
   const ready = email.trim().length > 0 && password.length > 0;
   return (
@@ -61,6 +67,26 @@ function EnterAccess() {
           Entrez l’adresse et le mot de passe de cette machine. Les dossiers restent fermés tant que la connexion n’est pas faite.
         </p>
       </div>
+      {devAdmin ? (
+        <div className="grid gap-2 rounded-lg bg-muted px-3 py-3">
+          <p className="text-sm font-medium">Compte admin de développement</p>
+          <p className="text-sm">
+            {devAdmin.email}
+            <span className="text-muted-foreground"> · {devAdmin.password}</span>
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 w-fit px-4"
+            onClick={() => {
+              setEmail(devAdmin.email);
+              setPassword(devAdmin.password);
+            }}
+          >
+            Utiliser le compte admin
+          </Button>
+        </div>
+      ) : null}
       <Field id="email" label="Adresse e-mail" value={email} onChange={setEmail} type="email" autoComplete="username" />
       <Field id="password" label="Mot de passe" value={password} onChange={setPassword} type="password" autoComplete="current-password" />
       <Button type="submit" disabled={!ready || pending} className="min-h-11 px-4">

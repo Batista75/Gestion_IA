@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readAccountDraft, readLogin } from "../src/domain/account.ts";
+import { devAdmin, readAccountDraft, readLogin } from "../src/domain/account.ts";
 import { hashPassword, verifyPassword } from "../src/lib/password.ts";
 import { readSessionToken, signSession } from "../src/lib/session.ts";
 
@@ -50,9 +50,17 @@ test("le mot de passe stocké se vérifie sans être relu", () => {
   assert.equal("error" in empty, true);
 });
 
+test("le compte admin de développement a un accès valide", () => {
+  const ready = readAccountDraft({ ...devAdmin, confirm: devAdmin.password });
+  assert.equal("error" in ready, false);
+  if ("error" in ready) return;
+  assert.equal(ready.email, "admin@atelier.local");
+  assert.equal(devAdmin.role, "admin");
+});
+
 test("une session signée expire et une session altérée est refusée", () => {
   const token = signSession({ id: "compte", mark: "J Smith" });
-  assert.deepEqual(readSessionToken(token), { id: "compte", mark: "J Smith" });
+  assert.deepEqual(readSessionToken(token), { id: "compte", mark: "J Smith", role: "" });
   assert.equal(readSessionToken(`${token}x`), null);
   assert.equal(readSessionToken(undefined), null);
 });

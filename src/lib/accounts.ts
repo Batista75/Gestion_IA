@@ -1,5 +1,5 @@
 import { operatorMark } from "@/domain/operator";
-import { readAccountDraft, readLogin } from "@/domain/account";
+import { devAdmin, readAccountDraft, readLogin } from "@/domain/account";
 import { prisma } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { signSession, type Session } from "@/lib/session";
@@ -29,10 +29,31 @@ export async function openFirstAccount(input: {
       firstName: draft.firstName,
       lastName: draft.lastName,
       passwordHash: hashPassword(draft.password),
+      role: "admin",
     },
   });
-  const session = { id: row.id, mark };
+  const session = { id: row.id, mark, role: "admin" };
   return { token: signSession(session), session };
+}
+
+export async function ensureDevAdmin(): Promise<void> {
+  if (process.env.NODE_ENV !== "development") return;
+  const existing = await prisma.account.findUnique({ where: { email: devAdmin.email } });
+  if (existing) {
+    if (existing.role !== devAdmin.role) {
+      await prisma.account.update({ where: { id: existing.id }, data: { role: devAdmin.role } });
+    }
+    return;
+  }
+  await prisma.account.create({
+    data: {
+      email: devAdmin.email,
+      firstName: devAdmin.firstName,
+      lastName: devAdmin.lastName,
+      passwordHash: hashPassword(devAdmin.password),
+      role: devAdmin.role,
+    },
+  });
 }
 
 export async function openSession(input: {
@@ -46,6 +67,6 @@ export async function openSession(input: {
     return { error: "Ces identifiants ne correspondent pas. Vérifiez l’adresse e-mail et le mot de passe." };
   }
   const mark = operatorMark(row.firstName, row.lastName) || row.email;
-  const session = { id: row.id, mark };
+  const session = { id: row.id, mark, role: row.role };
   return { token: signSession(session), session };
 }
