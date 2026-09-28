@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { writtenCurrency } from "@/domain/article";
+import { familyLabel } from "@/domain/measures";
 
 const emptyState: FormState = { message: null, ok: false };
 
@@ -64,6 +65,7 @@ export type ProductRecord = {
   currency: string;
   vatNote: string;
   kind: string;
+  family: string;
   stockQty: number | null;
   sourceNote: string;
   sourceUrl: string;
@@ -304,7 +306,7 @@ function ProductFields({
       <TextField prefix={prefix} label="Désignation" name="name" required defaultValue={record?.name} />
       <TextField prefix={prefix} label="Référence" name="reference" defaultValue={record?.reference} />
       <div className="grid gap-2">
-        <Label htmlFor={`${prefix}-kind`}>Famille</Label>
+        <Label htmlFor={`${prefix}-kind`}>Type</Label>
         <select
           id={`${prefix}-kind`}
           name="kind"
@@ -313,6 +315,23 @@ function ProductFields({
         >
           <option value="produit">Produit</option>
           <option value="service">Service</option>
+        </select>
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor={`${prefix}-family`}>Catégorie</Label>
+        <select
+          id={`${prefix}-family`}
+          name="family"
+          defaultValue={record?.family || ""}
+          className="h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground"
+        >
+          <option value="">Non classé</option>
+          <option value="serveur">Serveur</option>
+          <option value="poste">Poste de travail</option>
+          <option value="portable">Portable</option>
+          <option value="reseau">Réseau</option>
+          <option value="prestation">Prestation</option>
+          <option value="autre">Autre</option>
         </select>
       </div>
       <TextField prefix={prefix} label="Coût unitaire" name="costStated" defaultValue={record?.costStated} />
@@ -483,6 +502,7 @@ function ArticleFacts({ record }: { record: ProductRecord }) {
   return (
     <p className="text-sm">
       {record.kind === "service" ? "Service" : "Produit"}
+      {familyLabel(record.family) ? ` · ${familyLabel(record.family)}` : ""}
       {" · "}
       {cost ? `Coût unitaire ${cost}` : "Coût unitaire non indiqué"}
       {currency ? ` · ${currency}` : ""}

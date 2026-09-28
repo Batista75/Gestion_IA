@@ -328,8 +328,10 @@ model Product {
   supplier    Supplier?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  family       String    @default("")
   lines        QuoteLine[]
   projectLines ProjectLine[]
+  saleLines    SaleDocumentLine[]
   offers       SupplierOffer[]
 
   @@index([source])
@@ -544,7 +546,11 @@ model SaleDocumentLine {
   saleUnitCents   Int?
   markupPercent   Int          @default(30)
   discountPercent Int          @default(0)
+  productId       String?
+  product         Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+  family          String       @default("")
   createdAt       DateTime     @default(now())
 
   @@index([documentId])
+  @@index([productId])
 }

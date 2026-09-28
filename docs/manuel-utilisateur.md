@@ -78,7 +78,7 @@ La [vue Articles](/produits) s’ouvre sur un tableau : référence, désignatio
 - **Issu d’un devis** : titre du devis et un produit par ligne, ou un fichier confirmé depuis l’accueil. Chaque confirmation de devis ajoute une version : prix indiqué et conditions. Une version ne remplace pas la précédente.
 - **Saisi par l’assistant** : quand vous lui demandez d’ajouter un produit.
 
-Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **Saisie manuelle** limitent la liste. Une fiche peut porter à la fois une saisie et plusieurs devis. La carte **Versions de devis** liste chaque prix et chaque condition, sans les fusionner. **Supprimer le produit** retire la fiche et ses lignes. **Supprimer cette version** retire un devis et laisse le produit. Le lien **Événements** ouvre les créations, corrections et suppressions de produit.
+La **Catégorie** (serveur, poste de travail, portable, réseau, prestation, autre) se choisit sur la fiche. Elle est recopiée sur la ligne de vente quand le devis du dossier est établi. Les filtres **Tous**, **Issus d’un devis**, **Saisis par l’assistant** et **Saisie manuelle** limitent la liste. Une fiche peut porter à la fois une saisie et plusieurs devis. La carte **Versions de devis** liste chaque prix et chaque condition, sans les fusionner. **Supprimer le produit** retire la fiche et ses lignes. **Supprimer cette version** retire un devis et laisse le produit. Le lien **Événements** ouvre les créations, corrections et suppressions de produit.
 
 ## Projets
 
@@ -127,7 +127,7 @@ Exemple de la spécification : coût `700`, marque `30`, remise `10`. Le prix af
 
 ## Assistant
 
-L’assistant est l’accueil, [au même endroit](/#assistant), et en bas de chaque dossier projet. La page ouverte, le projet, le document ouvert et les noms des pièces jointes partent avec le message. Les phrases déjà reconnues suivent une règle métier : consulter, lister, corriger, préparer un devis. Une demande plus libre est encore transmise au modèle. Cette transmission libre n’est pas la cible : la [spécification V2](/documentation/v2) décrit la chaîne où le modèle interprète et les règles exécutent. L’assistant n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes.
+L’assistant est l’accueil, [au même endroit](/#assistant), et en bas de chaque dossier projet. La page ouverte, le projet, le document ouvert et les noms des pièces jointes partent avec le message. Les phrases déjà reconnues suivent une règle métier : consulter, lister, corriger, préparer un devis. Une demande plus libre est encore transmise au modèle. Cette transmission libre n’est pas la cible : la [spécification V2](/documentation/v2) décrit la chaîne où le modèle interprète et les règles exécutent. L’assistant n’émet pas de facture et ne calcule pas un prix. Une question de prix de vente reçoit la règle métier et renvoie vers Ventes. Une question de mesure reçoit un paquet : meilleur tarif d’une référence, marge moyenne du mois dernier sur une catégorie, devis en attente dont le coût fournisseur a monté, dernière commande d’un client, procès-verbal déjà indexé. Les chiffres de ce paquet viennent des enregistrements, pas du modèle. Une phrase qui ajouterait un montant absent du paquet est retenue.
 
 Il distingue cinq demandes :
 

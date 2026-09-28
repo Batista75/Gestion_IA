@@ -121,6 +121,7 @@ Article produit ou service. `nameKey` est unique. Le catalogue est unique : une 
 
 - `name`, `reference`, `unit` (défaut `u`), `description`.
 - `kind` : `produit` ou `service`.
+- `family` : catégorie fermée, `serveur`, `poste`, `portable`, `reseau`, `prestation`, `autre`, ou vide. Elle est recopiée sur la ligne de vente au moment du devis.
 - `source` : origine de la fiche. Valeurs écrites par l’application : `manuel`, `assistant`, `devis`, `fiche`, ou le type de la pièce d’origine.
 - `statedPrice`, `currency`, `vatNote`, `costStated` : textes saisis. `costStated` reprend le prix écrit de la dernière `SupplierOffer`. Le modèle ne les recalcule pas.
 - `stockQty` : entier facultatif.
@@ -212,6 +213,7 @@ Aucune colonne de numéro. La réimpression est décrite dans le [DCT](dct.md).
 ### SaleDocumentLine
 
 - `kind` défaut `produit`, `name`, `supplierName`.
+- `productId` vers `Product`, vidé si le produit est supprimé. `family` recopie la catégorie du produit au moment où la ligne est créée.
 - `quantity` entier, défaut 1.
 - `costCents`, `saleUnitCents` : entiers facultatifs, en centimes.
 - `markupPercent` défaut 30, `discountPercent` défaut 0.

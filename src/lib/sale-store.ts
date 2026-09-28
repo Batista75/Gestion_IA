@@ -19,7 +19,7 @@ async function trace(projectId: string, kind: string, body: string) {
   await prisma.projectEvent.create({ data: { projectId, kind, body } });
 }
 
-function snapshot(line: StoredLine) {
+function snapshot(line: StoredLine & { productId?: string | null; family?: string }) {
   return {
     kind: line.kind === "service" ? "service" : "produit",
     name: line.name,
@@ -28,6 +28,8 @@ function snapshot(line: StoredLine) {
     costCents: line.costCents,
     markupPercent: line.markupPercent,
     discountPercent: line.discountPercent,
+    productId: line.productId ?? null,
+    family: line.family ?? "",
   };
 }
 
@@ -159,6 +161,7 @@ export async function establishQuote(projectId: string, lineIds: string[], title
   if (unique.length === 0) throw new Error("Sélectionnez au moins un produit ou un service.");
   const lines = await prisma.projectLine.findMany({
     where: { projectId, id: { in: unique } },
+    include: { product: { select: { family: true } } },
     orderBy: { createdAt: "asc" },
   });
   if (lines.length !== unique.length) throw new Error("Une ligne sélectionnée ne fait pas partie de ce projet.");
@@ -169,7 +172,9 @@ export async function establishQuote(projectId: string, lineIds: string[], title
       kind: "devis",
       status: "en_cours",
       title: label,
-      lines: { create: lines.map(snapshot) },
+      lines: {
+        create: lines.map((line) => snapshot({ ...line, family: line.product?.family ?? "" })),
+      },
     },
   });
   const totals = saleOperationTotals(lines.map((line) => figuresOf(line)));

@@ -278,6 +278,7 @@ function productFields(formData: FormData) {
     description: String(formData.get("description") ?? ""),
     supplierName: String(formData.get("supplierName") ?? ""),
     kind: String(formData.get("kind") ?? ""),
+    family: String(formData.get("family") ?? ""),
     costStated: String(formData.get("costStated") ?? ""),
     currency: String(formData.get("currency") ?? "").trim().toUpperCase(),
     sourceNote: String(formData.get("sourceNote") ?? ""),

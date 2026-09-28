@@ -110,10 +110,10 @@ Ce lot reste le dernier. Il ne crée pas d’encaissement ni de rapprochement ba
 
 Chaque lot se termine par une fonction de domaine testée sans modèle, une question exemple qui affiche le paquet, et une phrase du manuel. Les colonnes nouvelles sont décrites dans la modélisation au moment où le lot les crée. L’état ci-dessous est mis à jour quand le lot est livré. Ce n’est pas le tableau de Réalisations, ni le lot de modélisation déjà clos.
 
-Avancement du chantier : 0 sur 11, soit 0 %. Seul un lot marqué livré compte.
+Avancement du chantier : 2 sur 11, soit 18 %. Seul un lot marqué livré compte.
 
-1. **Paquet et garde-fou.** Type du paquet, affichage, contrôle des chiffres dans une phrase. Aucune moyenne métier. État : pas commencé.
-2. **Mesures sur l’existant.** Famille de produit, lien produit sur la ligne de vente, marge moyenne, classement d’offres, devis en attente face à une offre plus récente, dernière commande, recherche du procès-verbal indexé. État : pas commencé.
+1. **Paquet et garde-fou.** Type du paquet, affichage, contrôle des chiffres dans une phrase. Aucune moyenne métier. État : livré.
+2. **Mesures sur l’existant.** Famille de produit, lien produit sur la ligne de vente, marge moyenne, classement d’offres, devis en attente face à une offre plus récente, dernière commande, recherche du procès-verbal indexé. État : livré.
 3. **Devis à plusieurs lignes.** Quantités et prestations nommées dans `prépare un devis pour …`, prix par la bibliothèque déjà en place. État : pas commencé.
 4. **Contrats.** Échéance à 30 jours et montant récurrent mensuel. État : pas commencé.
 5. **Temps.** Taux moyen, heures non facturées, récapitulatif de forfait, délai moyen d’intervention. État : pas commencé.
@@ -124,4 +124,4 @@ Avancement du chantier : 0 sur 11, soit 0 %. Seul un lot marqué livré compte.
 10. **Brouillons.** Relance, tracking, cotation spéciale. Le contrôle de chiffres du lot 1 est requis. Rien n’est envoyé. État : pas commencé.
 11. **Dates de trésorerie.** Liste de la semaine à partir de dates et de montants déjà écrits. Sans banque et sans pénalité. État : pas commencé.
 
-Le lot 1 est le premier qui répond dans le chat. Le lot 0 est son préalable, parce qu’un chiffre dit par le modèle sans paquet ne serait pas vérifiable.
+Les deux premiers lots répondent dans le chat. Le paquet précède la mesure : un chiffre dit hors du paquet est retenu.

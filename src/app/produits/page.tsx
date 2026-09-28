@@ -10,6 +10,7 @@ import { DataBoard } from "@/components/data-board";
 import { ProductManager } from "@/components/product-manager";
 import { shownUnitCost, writtenCurrency } from "@/domain/article";
 import { productOrigin } from "@/domain/catalog";
+import { familyLabel } from "@/domain/measures";
 import { formatOfferCents } from "@/domain/pricing";
 import { compareOffers } from "@/domain/supplier-offer";
 import { listProducts } from "@/lib/catalog-store";
@@ -36,7 +37,7 @@ export default async function ProductsPage({
       intro="Un article est un produit ou un service. Le coût affiché est celui de la dernière offre fournisseur. Les autres offres restent sur la fiche, avec le prix écrit et sa valeur en centimes. La source ouvre la pièce d’origine quand elle existe."
       basePath="/produits"
       query={{ q: query, source }}
-      headers={["Référence", "Désignation", "Famille", "Coût unitaire", "Devise", "Fournisseur", "Date de saisie", "Source", "Édition"]}
+      headers={["Référence", "Désignation", "Type", "Coût unitaire", "Devise", "Fournisseur", "Date de saisie", "Source", "Édition"]}
       rows={products.map((product) => {
         const latest = product.offers[0];
         const cost = latest?.statedCost || shownUnitCost(
@@ -57,7 +58,7 @@ export default async function ProductsPage({
         return [
         { text: product.reference || "—" },
         { text: product.name },
-        { text: product.kind === "service" ? "Service" : "Produit" },
+        { text: [product.kind === "service" ? "Service" : "Produit", familyLabel(product.family)].filter(Boolean).join(" · ") },
         { text: product.offers.length > 1 ? `${cost || "non indiqué"} · ${product.offers.length} offres` : cost || "non indiqué" },
         { text: currency || "non indiqué" },
         { text: latest?.supplier?.name || latest?.supplierName || product.supplier?.name || "—" },
@@ -99,6 +100,7 @@ export default async function ProductsPage({
         currency: product.currency.trim() || writtenCurrency(shownUnitCost(product.costStated, product.lines.map((line) => line.statedPrice))),
         vatNote: product.vatNote,
         kind: product.kind,
+        family: product.family,
         stockQty: product.stockQty,
         sourceNote: product.sourceNote,
         sourceUrl: product.sourceUrl,

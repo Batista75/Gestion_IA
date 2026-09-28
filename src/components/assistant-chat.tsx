@@ -11,6 +11,7 @@ import { ProposalBoard, type PendingProposal } from "@/components/proposal-board
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { AnswerPacket } from "@/domain/answer-packet";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { provenanceLabel } from "@/domain/provenance";
 import type { StoredTurn } from "@/lib/conversations";
@@ -24,6 +25,7 @@ type ChatMeta = {
   proposal?: { fields: Field[] } | null;
   sources?: SourceRef[];
   understanding?: UnderstandingCard | null;
+  packet?: AnswerPacket | null;
 };
 type ChatMessage = UIMessage<ChatMeta>;
 
@@ -346,6 +348,7 @@ function MessageRow({
   const proposal = message.metadata?.proposal?.fields ?? [];
   const sources = message.metadata?.sources ?? [];
   const understanding = message.metadata?.understanding ?? null;
+  const packet = message.metadata?.packet ?? null;
 
   const mine = message.role === "user";
   const version = provenanceLabel(message.metadata?.modelVersion ?? "");
@@ -371,7 +374,7 @@ function MessageRow({
           ))}
         </ul>
       ) : null}
-      {text ? <p className="text-sm leading-6 whitespace-pre-wrap">{text}</p> : null}
+      {packet ? <PacketCard packet={packet} /> : text ? <p className="text-sm leading-6 whitespace-pre-wrap">{text}</p> : null}
       {live && !text ? (
         <span className="inline-flex items-center gap-1 py-1" role="status" aria-label="Réponse en cours">
           <span className="size-1.5 animate-pulse rounded-full bg-current" />
@@ -423,6 +426,7 @@ function toUi(turns: StoredTurn[]): ChatMessage[] {
       proposal: turn.proposal,
       sources: turn.sources,
       understanding: turn.understanding,
+      packet: turn.packet,
     },
     parts: [
       ...turn.steps.map((step, index) => ({
@@ -437,6 +441,42 @@ function toUi(turns: StoredTurn[]): ChatMessage[] {
       { type: "text" as const, text: turn.content, state: "done" as const },
     ],
   }));
+}
+
+function PacketCard({ packet }: { packet: AnswerPacket }) {
+  return (
+    <div className="grid gap-3 rounded-2xl bg-muted/60 px-4 py-3">
+      <p className="text-sm font-medium leading-6">{packet.title}</p>
+      {packet.period ? <p className="text-sm leading-6">Période : {packet.period}</p> : null}
+      {packet.filters.length > 0 ? (
+        <p className="text-sm leading-6 text-muted-foreground">Filtres : {packet.filters.join(", ")}</p>
+      ) : null}
+      {packet.measures.length > 0 ? (
+        <dl className="grid gap-1 text-sm">
+          {packet.measures.map((measure) => (
+            <div key={measure.label} className="grid grid-cols-[9rem_1fr] gap-2">
+              <dt className="text-muted-foreground">{measure.label}</dt>
+              <dd>{measure.value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {packet.rows.length > 0 ? (
+        <ul className="grid gap-1 text-sm leading-6">
+          {packet.rows.map((row) => (
+            <li key={`${row.label}-${row.detail}`}>
+              <span className="font-medium">{row.label}</span>
+              <span className="text-muted-foreground"> — {row.detail}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {packet.missing.length > 0 ? (
+        <p className="text-sm leading-6">{packet.missing.join(" ")}</p>
+      ) : null}
+      {packet.method ? <p className="text-xs leading-5 text-muted-foreground">{packet.method}</p> : null}
+    </div>
+  );
 }
 
 function roleLabel(message: ChatMessage): string {

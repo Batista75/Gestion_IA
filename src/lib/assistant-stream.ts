@@ -9,6 +9,7 @@ import {
   type UIMessage,
   type UIMessageChunk,
 } from "ai";
+import type { AnswerPacket } from "@/domain/answer-packet";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { retrievalContext, sourceLabel } from "@/domain/knowledge";
 import { rememberTurn } from "@/lib/conversations";
@@ -26,6 +27,7 @@ type Meta = {
   proposal: FieldList | null;
   sources: Array<{ label: string; title: string }>;
   understanding: UnderstandingCard | null;
+  packet: AnswerPacket | null;
 };
 
 type DirectTurn = {
@@ -36,6 +38,7 @@ type DirectTurn = {
   proposal?: FieldList | null;
   sources?: Array<{ label: string; title: string }>;
   understanding?: UnderstandingCard | null;
+  packet?: AnswerPacket | null;
 };
 
 export function streamDirect(input: DirectTurn): Response {
@@ -45,6 +48,7 @@ export function streamDirect(input: DirectTurn): Response {
     proposal: input.proposal ?? null,
     sources: input.sources ?? [],
     understanding: input.understanding ?? null,
+    packet: input.packet ?? null,
   };
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
@@ -78,6 +82,7 @@ export function streamDirect(input: DirectTurn): Response {
         proposal: input.proposal,
         sources: input.sources,
         understanding: input.understanding,
+        packet: input.packet,
       });
       writer.write({ type: "finish", messageMetadata: metadata });
     },
@@ -106,6 +111,7 @@ export async function streamModel(input: {
     proposal: null,
     sources: [],
     understanding: null,
+    packet: null,
   };
 
   const stream = createUIMessageStream({

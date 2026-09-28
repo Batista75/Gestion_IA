@@ -1,3 +1,4 @@
+import { readPacket, type AnswerPacket } from "@/domain/answer-packet";
 import { readUnderstanding, type UnderstandingCard } from "@/domain/completeness";
 import { stampProvenance } from "@/domain/provenance";
 import { uniqueNameMatch } from "@/domain/knowledge";
@@ -12,6 +13,7 @@ export type StoredTurn = {
   proposal: { fields: Array<{ label: string; value: string }> } | null;
   sources: Array<{ label: string; title: string }>;
   understanding: UnderstandingCard | null;
+  packet: AnswerPacket | null;
   modelVersion: string;
 };
 
@@ -34,6 +36,7 @@ export async function rememberTurn(input: {
   proposal?: { fields: Array<{ label: string; value: string }> } | null;
   sources?: Array<{ label: string; title: string }>;
   understanding?: UnderstandingCard | null;
+  packet?: AnswerPacket | null;
   linkText?: string;
   modelVersion?: string;
 }): Promise<void> {
@@ -66,7 +69,7 @@ export async function rememberTurn(input: {
       content,
       source: input.source ?? "",
       steps: input.steps ?? [],
-      proposal: storedProposal(input.proposal, input.understanding),
+      proposal: storedProposal(input.proposal, input.understanding, input.packet),
       sources: input.sources ?? [],
       ...stampProvenance(messageVersion(input), input.proposal?.fields ?? []),
     },
@@ -163,6 +166,7 @@ function presentConversation(row: {
       proposal: proposalOf(message.proposal),
       sources: sourceList(message.sources),
       understanding: readUnderstanding(message.proposal),
+      packet: readPacket(message.proposal),
       modelVersion: message.modelVersion,
     })),
   };
@@ -182,11 +186,13 @@ function messageVersion(input: { role: string; source?: string; modelVersion?: s
 function storedProposal(
   proposal: { fields: Array<{ label: string; value: string }> } | null | undefined,
   understanding: UnderstandingCard | null | undefined,
-): { fields?: Array<{ label: string; value: string }>; understanding?: UnderstandingCard } | undefined {
-  if (!proposal && !understanding) return undefined;
+  packet: AnswerPacket | null | undefined,
+): { fields?: Array<{ label: string; value: string }>; understanding?: UnderstandingCard; packet?: AnswerPacket } | undefined {
+  if (!proposal && !understanding && !packet) return undefined;
   return {
     ...(proposal ? { fields: proposal.fields } : {}),
     ...(understanding ? { understanding } : {}),
+    ...(packet ? { packet } : {}),
   };
 }
 

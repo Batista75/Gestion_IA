@@ -1,3 +1,5 @@
+import { readProductFamily } from "./measures.ts";
+
 export type PartyInput = {
   name: string;
   siren: string;
@@ -14,6 +16,7 @@ export type ProductInput = {
   description: string;
   supplierName: string;
   kind?: string;
+  family?: string;
   costStated?: string;
   currency?: string;
   sourceNote?: string;
@@ -281,6 +284,7 @@ export function validateProduct(
       description: clip(input.description, 1000),
       supplierName: input.supplierName.trim().replace(/\s+/g, " "),
       kind: input.kind === "service" ? "service" : "produit",
+      family: readProductFamily(input.family ?? ""),
       costStated: clip(input.costStated ?? "", 80),
       currency: input.currency === "USD" ? "USD" : input.currency === "EUR" ? "EUR" : "",
       sourceNote: clip(input.sourceNote ?? "", 500),

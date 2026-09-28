@@ -5,16 +5,17 @@ Ce chapitre fixe l’ordre de traitement. L’architecture est le [DAT](dat.md).
 `POST /api/assistant` reçoit le fil, au plus 40 messages. Le dernier message utilisateur est enregistré, puis traité dans cet ordre.
 
 1. Une phrase parlée du type « Créer le projet : … Le projet consiste à … », ou un tableau collé, est enregistrée tout de suite.
-2. Une question de prix de vente reçoit la règle métier, sans modèle.
-3. `Je confirme.` enregistre la proposition la plus récente, fiche client ou autre fiche. `non` n’écrit rien. Un `oui` qui répond à une hypothèse déjà proposée du parcours reprend ce parcours, il ne confirme pas une fiche absente.
-4. `prépare un devis pour …` suit l’[assistant hybride](devis-hybride.md) : client en SQL, conditions filtrées sur ce client, prix catalogue, brouillon. Le modèle ne calcule pas.
-5. Une question de parcours commercial, de prochaine étape ou de preuve documentaire est répondue depuis l’instruction métier, sans modèle. Un seul projet nommé fait lire ses étapes enregistrées.
-6. Une consultation ou une liste est lue dans les fiches, sans modèle.
-7. Une demande d’ajouter un contact ou une information, ou une correction de fiche client, relit d’abord la fiche déjà enregistrée. Si le nom est unique et que la nouvelle valeur est comprise, une proposition de mise à jour s’ouvre. Les champs non cités restent ceux de la fiche.
-8. Une phrase de client ouvre une proposition.
-9. Une phrase de fournisseur, de produit, de projet court ou de devis ouvre une proposition. Elle n’écrit pas.
-10. Un commentaire sur une fiche client en attente produit une nouvelle proposition.
-11. Un nom seul déjà connu, sans verbe d’action, demande s’il faut consulter ou modifier.
+2. Une question de mesure est lue dans les enregistrements confirmés et rendue en paquet, sans modèle. Le garde-fou et les familles sont dans le [plan du chat](plan-chat.md).
+3. Une question de prix de vente reçoit la règle métier, sans modèle.
+4. `Je confirme.` enregistre la proposition la plus récente, fiche client ou autre fiche. `non` n’écrit rien. Un `oui` qui répond à une hypothèse déjà proposée du parcours reprend ce parcours, il ne confirme pas une fiche absente.
+5. `prépare un devis pour …` suit l’[assistant hybride](devis-hybride.md) : client en SQL, conditions filtrées sur ce client, prix catalogue, brouillon. Le modèle ne calcule pas.
+6. Une question de parcours commercial, de prochaine étape ou de preuve documentaire est répondue depuis l’instruction métier, sans modèle. Un seul projet nommé fait lire ses étapes enregistrées.
+7. Une consultation ou une liste est lue dans les fiches, sans modèle.
+8. Une demande d’ajouter un contact ou une information, ou une correction de fiche client, relit d’abord la fiche déjà enregistrée. Si le nom est unique et que la nouvelle valeur est comprise, une proposition de mise à jour s’ouvre. Les champs non cités restent ceux de la fiche.
+9. Une phrase de client ouvre une proposition.
+10. Une phrase de fournisseur, de produit, de projet court ou de devis ouvre une proposition. Elle n’écrit pas.
+11. Un commentaire sur une fiche client en attente produit une nouvelle proposition.
+12. Un nom seul déjà connu, sans verbe d’action, demande s’il faut consulter ou modifier.
 
 S’il ne reste rien de tout cela, `decideFree` dans `src/domain/intent-catalog.ts` tranche. Une intention du catalogue encore sans exécution passe par `blockingQuestion` dans `src/domain/completeness.ts` : le premier champ sous son seuil produit une seule question. Rien n’est écrit. La même réponse porte une fiche de compréhension. Le projet, le type ou le fournisseur se corrigent sur cette fiche (`Fiche : projet …, type …, fournisseur …`) sans remplacer le message d’origine.
 

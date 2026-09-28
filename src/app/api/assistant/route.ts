@@ -63,6 +63,8 @@ import { loadDocumentMemory, saveDocumentMemory } from "@/lib/document-memory";
 import { factsForNames } from "@/lib/document-facts";
 import { attachConversationProject, resolveContext } from "@/lib/context-envelope";
 import { asksHybridQuote } from "@/domain/hybrid-quote";
+import type { AnswerPacket } from "@/domain/answer-packet";
+import { resolveMeasure } from "@/lib/measure-reply";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
 import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
 import { searchKnowledge } from "@/lib/knowledge-store";
@@ -82,6 +84,7 @@ type DirectReply = {
   source: "ollama" | "regle-metier" | "action" | "proposition" | "dossier";
   proposal?: ProposalView["proposal"];
   sources?: SourceRef[];
+  packet?: AnswerPacket;
 };
 
 export async function POST(request: Request) {
@@ -150,11 +153,12 @@ export async function POST(request: Request) {
     if (direct) {
       return streamDirect({
         conversationId,
-        reply: prefixFacts(direct.reply, await pieceFacts(snapshot)),
+        reply: direct.packet ? direct.reply : prefixFacts(direct.reply, await pieceFacts(snapshot)),
         source: direct.source,
         step: stepFor(direct.source),
         proposal: direct.proposal,
         sources: direct.sources,
+        packet: direct.packet,
       });
     }
   }
@@ -277,6 +281,11 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
   if (!planIsEmpty(plan)) {
     const saved = await withChangeSource("assistant", () => applyBusinessPlan(plan));
     return { reply: saved.summary, model: null, source: "action" as const };
+  }
+
+  const measured = await resolveMeasure(text);
+  if (measured) {
+    return { reply: measured.reply, model: null, source: "regle-metier" as const, packet: measured.packet };
   }
 
   const brief = isNewClientBrief(text) || Boolean(identifyClient(text));
