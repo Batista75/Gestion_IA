@@ -121,8 +121,9 @@ export function composeQuote(input: {
   catalog: QuoteCatalogItem[];
   discountPercent: number | null;
   discountConflict: boolean;
+  ignoreNames?: string[];
 }): { lines: ComposedLine[]; missing: string[] } {
-  const chunks = requestChunks(input.text, input.clientName);
+  const chunks = requestChunks(input.text, input.clientName, input.ignoreNames ?? []);
   if (chunks.length === 0) {
     return {
       lines: [],
@@ -210,15 +211,18 @@ export function quotePacket(input: {
   };
 }
 
-function requestChunks(text: string, clientName: string): string[] {
-  const named = clientName.trim();
-  const withoutClient =
-    named.length >= 2 ? text.replace(new RegExp(escapeRegExp(named), "i"), " ") : text;
-  const rest = withoutClient.replace(/^[\s\S]*?\bdevis\b/i, " ");
+function requestChunks(text: string, clientName: string, ignoreNames: string[]): string[] {
+  let source = text;
+  for (const name of [clientName, ...ignoreNames]) {
+    const named = name.trim();
+    if (named.length < 2) continue;
+    source = source.replace(new RegExp(escapeRegExp(named), "ig"), " ");
+  }
+  const rest = source.replace(/^[\s\S]*?\bdevis\b/i, " ");
   return rest
     .split(/[,;]|\bet\b/i)
-    .map((part) => part.replace(/^\s*(?:pour|le|la|les|un|une|du|des|de|client)\b\s*/i, "").trim())
-    .filter((part) => part.length >= 2 && !/^(?:devis|client)$/i.test(part));
+    .map((part) => part.replace(/^\s*(?:pour|le|la|les|un|une|du|des|de|client|dossier)\b\s*/i, "").trim())
+    .filter((part) => part.length >= 2 && !/^(?:devis|client|dossier)$/i.test(part));
 }
 
 function escapeRegExp(value: string): string {

@@ -74,9 +74,14 @@ export async function prepareHybridQuote(text: string): Promise<{
   const ranked = await rankClientDocs(agreements, text);
   const cited = ranked.length > 0 ? ranked : agreements.filter((doc) => /remise/i.test(doc.body));
   const sources = cited.slice(0, 5).map((doc) => ({ label: "Conditions", title: doc.title }));
+  const projects = await prisma.project.findMany({
+    where: { clientId: client.id },
+    select: { id: true, name: true },
+  });
   const composed = composeQuote({
     text,
     clientName: client.name,
+    ignoreNames: projects.map((project) => project.name),
     discountPercent: discount,
     discountConflict: conflict,
     catalog: products.map((product) => ({
@@ -89,10 +94,6 @@ export async function prepareHybridQuote(text: string): Promise<{
       costCents: centsFromStated(product.costStated),
       stockQty: product.stockQty,
     })),
-  });
-  const projects = await prisma.project.findMany({
-    where: { clientId: client.id },
-    select: { id: true, name: true },
   });
   const named = uniqueNameMatch(text, projects.map((project) => project.name));
   const project = named

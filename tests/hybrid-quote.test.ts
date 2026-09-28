@@ -158,6 +158,21 @@ test("deux articles de la même catégorie posent une seule question", () => {
   assert.equal(packet.measures.length, 0);
 });
 
+test("le nom du dossier cité n’est pas un article", () => {
+  const composed = composeQuote({
+    text: "prépare un devis pour Atelier Nord, dossier Lampes Nord, 2 Lampe atelier",
+    clientName: "Atelier Nord",
+    ignoreNames: ["Lampes Nord"],
+    catalog: [lamp],
+    discountPercent: 0,
+    discountConflict: false,
+  });
+  assert.equal(composed.lines.length, 1);
+  assert.equal(composed.lines[0]?.name, "Lampe atelier");
+  assert.equal(composed.lines[0]?.quantity, 2);
+  assert.equal(composed.missing.some((line) => /Lampes Nord/.test(line)), false);
+});
+
 test("une prestation ne prend pas un article matériel", () => {
   const composed = composeQuote({
     text: "prépare un devis pour Atelier Nord, préparation en atelier",
