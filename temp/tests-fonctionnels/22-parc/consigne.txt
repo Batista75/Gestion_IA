@@ -1,0 +1,35 @@
+Contrôle 22 — parc et garanties
+==============================
+
+Aucune pièce à déposer. Tout se fait dans l’assistant, après connexion.
+Le client Atelier Nord est déjà ouvert. Aucun dossier n’est demandé.
+Les dates d’exemple supposent le 28 septembre 2026.
+« L’an dernier » est l’année civile 2025. « Plus de 5 ans » veut dire installé avant le 2021-09-28.
+Si le jour a changé, la limite des cinq ans change avec lui. L’année civile précédente change au 1er janvier.
+
+1. Envoyer : Enregistre un équipement pour Atelier Nord.
+   La carte « Équipement à confirmer » demande la garantie.
+   Aucun bouton Confirmer.
+
+2. Envoyer : Enregistre un serveur installé pour Atelier Nord, désignation Baie 2019, le 2019-04-01, garantie 4 h.
+   Désignation Baie 2019. Installé le 2019-04-01. Garantie 4 h. Cliquer Confirmer.
+   La réponse se termine par « Validation enregistrée. »
+
+3. Envoyer : Enregistre un poste installé pour Atelier Nord, désignation Tour accueil, le 2025-06-01, garantie J+1.
+   Garantie J+1. Confirmer.
+
+4. Envoyer : Enregistre un serveur installé pour Atelier Nord, désignation Baie recente, le 2025-02-01, garantie 4 h.
+   Désignation Baie recente. Garantie 4 h. Confirmer.
+
+5. Envoyer : Enregistre un portable installé pour Atelier Nord, désignation Salon 2026, le 2026-01-15, garantie standard.
+   Garantie Standard. Confirmer.
+
+6. Envoyer : Quelle extension de garantie J+1 ou 4 h sur le matériel acheté l’an dernier ?
+   Carte « Garanties souscrites ». Équipements 2.
+   Tour accueil et Baie recente y sont. Baie 2019 et Salon 2026 n’y sont pas.
+   La méthode dit que la date d’installation est comparée à l’année civile précédente.
+
+7. Envoyer : Quel est le parc de serveurs ou de postes de plus de 5 ans ?
+   Carte « Parc de plus de cinq ans ». Équipements 1. Baie 2019 y est.
+   Tour accueil, Baie recente et Salon 2026 n’y sont pas.
+   La période dit installé avant 2021-09-28. La méthode dit que l’âge est cette comparaison de dates.

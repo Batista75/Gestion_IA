@@ -10,6 +10,8 @@ Cette page liste chaque modèle, ses champs utiles, ses liens et ce que l’appl
 Client 1 ── * Project
 Client 1 ── * Contract
 Client 1 ── * Intervention
+Client 1 ── * InstalledEquipment
+Product 1 ── * InstalledEquipment
 Project 1 ── * Intervention
 Organization 1 ── 0..1 Client
 Organization 1 ── 0..1 Supplier
@@ -35,10 +37,10 @@ StoredFile 1 ── * DocumentProposal
 StoredFile 1 ── * Demand
 
 Sans clé étrangère : Account, AppSetting, CompanyProfile, DocumentMemory,
-CatalogProposal, ClientProposal, ContractProposal, InterventionProposal, RecordEvent, KnowledgeChunk
+CatalogProposal, ClientProposal, ContractProposal, InterventionProposal, InstalledEquipmentProposal, RecordEvent, KnowledgeChunk
 ```
 
-Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, fichier d’une demande. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une boîte retire ses `StoredFile`.
+Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, produit d’un équipement installé, fichier d’une demande. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une boîte retire ses `StoredFile`.
 
 ## Réglages
 
@@ -89,7 +91,7 @@ Tiers unique, identifié par `nameKey`.
 - Interlocuteur : `contactName`, `contactRole`, `email`, `phone`.
 - `notes`, `reference`, `sector`, `currency`.
 - `createdAt`, `updatedAt`.
-- Lien : un client a plusieurs `Project`, plusieurs `Contact`, plusieurs `Address`, plusieurs `Contract` et plusieurs `Intervention`. Retirer le client vide `Project.clientId` et retire ses contacts, ses adresses, ses contrats et ses interventions.
+- Lien : un client a plusieurs `Project`, plusieurs `Contact`, plusieurs `Address`, plusieurs `Contract`, plusieurs `Intervention` et plusieurs `InstalledEquipment`. Retirer le client vide `Project.clientId` et retire ses contacts, ses adresses, ses contrats, ses interventions et ses équipements.
 
 ### Supplier
 
@@ -124,7 +126,7 @@ Article produit ou service. `nameKey` est unique. Le catalogue est unique : une 
 
 - `name`, `reference`, `unit` (défaut `u`), `description`.
 - `kind` : `produit` ou `service`.
-- `family` : catégorie fermée, `serveur`, `poste`, `portable`, `reseau`, `prestation`, `autre`, ou vide. Elle est recopiée sur la ligne de vente au moment du devis.
+- `family` : catégorie fermée, `serveur`, `poste`, `portable`, `reseau`, `prestation`, `autre`, ou vide. Elle est recopiée sur la ligne de vente au moment du devis. Un `InstalledEquipment` peut pointer vers ce produit ; supprimer le produit vide `productId`.
 - `source` : origine de la fiche. Valeurs écrites par l’application : `manuel`, `assistant`, `devis`, `fiche`, ou le type de la pièce d’origine.
 - `statedPrice`, `currency`, `vatNote`, `costStated` : textes saisis. `costStated` reprend le prix écrit de la dernière `SupplierOffer`. Le modèle ne les recalcule pas.
 - `stockQty` : entier facultatif.
@@ -368,6 +370,28 @@ Intervention confirmée. La durée et le taux sont stockés. Le taux moyen, le t
 - `confirmedAt` : moment de la validation.
 - `createdAt`.
 
+### InstalledEquipmentProposal
+
+Équipement installé encore à confirmer. Confirmer crée l’`InstalledEquipment`. Rejeter n’écrit pas d’équipement.
+
+- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `payload` : client, produit facultatif, désignation, famille fermée (`serveur`, `poste`, `portable`, `reseau`, `prestation`, `autre`), date d’installation, niveau de garantie (`h4`, `j1`, `standard`, `aucune`).
+- `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
+- `createdAt`.
+
+### InstalledEquipment
+
+Équipement installé confirmé. L’âge et le filtre « acheté l’an dernier » ne sont pas des colonnes : ce sont des comparaisons de `installedOn`.
+
+- `clientId` vers `Client`. Retirer le client retire l’équipement.
+- `productId` vers `Product`, facultatif, vidé si le produit est supprimé.
+- `designation` : texte écrit, ou le nom du produit retenu.
+- `family` : la même liste fermée que `Product.family`.
+- `installedOn` : date `YYYY-MM-DD`.
+- `warranty` : `h4` (4 h), `j1` (J+1), `standard` ou `aucune`.
+- `confirmedAt` : moment de la validation. Sans cette date, l’équipement n’existe pas.
+- `createdAt`.
+
 ## Assistant
 
 ### Conversation
@@ -487,5 +511,6 @@ Priorité haute, pas encore faites :
 - Le prix de vente, la marge et les totaux de dossier sont calculés par `src/domain/pricing.ts` à partir des centimes déjà stockés.
 - Le montant mensuel d’un contrat est calculé par `src/domain/contracts.ts` à partir de `Contract.amountCents` et de la périodicité. Il n’est pas stocké. Le total mensuel additionne ces montants déjà calculés. L’échéance à 30 jours compare `endsOn` à la date du jour.
 - Le taux moyen, le total d’heures et le délai moyen d’une intervention sont calculés par `src/domain/interventions.ts` à partir des taux, des minutes et des dates déjà enregistrés. Ils ne sont pas stockés.
+- L’âge d’un équipement et le filtre « acheté l’an dernier » sont calculés par `src/domain/equipment.ts` en comparant `InstalledEquipment.installedOn` à une date. Ils ne sont pas stockés. Le niveau de garantie est la valeur déjà enregistrée.
 - L’application n’attribue pas de numéro de facture ni d’avoir. Une `NotedPiece` recopie la référence déjà écrite. Elle n’enregistre pas de relevé bancaire.
 - La validité de trente jours d’une offre fournisseur, les rôles et les notifications ne sont pas des tables. L’historique de prix est la suite des `SupplierOffer`. `Quote.versionLabel` et `Quote.fingerprint` identifient une offre reçue, sans durée de validité en colonne.

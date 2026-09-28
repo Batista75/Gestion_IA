@@ -145,6 +145,7 @@ model Client {
   addresses      Address[]
   contracts      Contract[]
   interventions  Intervention[]
+  equipments     InstalledEquipment[]
   organizationId String?       @unique
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
@@ -292,6 +293,38 @@ model Intervention {
   @@index([occurredOn])
 }
 
+/** Équipement installé encore à confirmer. La fiche `InstalledEquipment` n’existe qu’après validation. */
+model InstalledEquipmentProposal {
+  id           String    @id @default(cuid())
+  status       String    @default("en_attente")
+  payload      Json
+  modelVersion String    @default("")
+  confidence   Json      @default("[]")
+  validatedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([status])
+}
+
+/** Équipement installé confirmé. L’âge et le filtre « an dernier » ne sont pas des colonnes. */
+model InstalledEquipment {
+  id           String    @id @default(cuid())
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  productId    String?
+  product      Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  designation  String
+  family       String
+  installedOn  String
+  warranty     String
+  confirmedAt  DateTime
+  createdAt    DateTime  @default(now())
+
+  @@index([clientId])
+  @@index([productId])
+  @@index([installedOn])
+}
+
 model RecordEvent {
   id         String   @id @default(cuid())
   entityType String
@@ -405,6 +438,7 @@ model Product {
   projectLines ProjectLine[]
   saleLines    SaleDocumentLine[]
   offers       SupplierOffer[]
+  equipments   InstalledEquipment[]
 
   @@index([source])
 }

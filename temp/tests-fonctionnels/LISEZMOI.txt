@@ -37,5 +37,6 @@ Contrôles
 19-marge-moyenne — catégorie Serveur, confirmation du jour, mois précédent vide.
 20-contrats — proposition, confirmation, échéance à 30 jours, montant mensuel.
 21-interventions — taux moyen, heures non facturées, tickets, délai.
+22-parc — garanties de l’an dernier, parc de plus de cinq ans.
 
 Le jeu de projets déjà présent dans temp/ reste à part. Il ne remplace pas ces consignes.

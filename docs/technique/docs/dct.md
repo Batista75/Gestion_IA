@@ -29,6 +29,7 @@ Une seule bibliothèque calcule : `src/domain/pricing.ts`.
 - `prépare un devis pour …` suit le chapitre [Devis hybride](devis-hybride.md). Le total de ce brouillon additionne les prix unitaires déjà calculés.
 - Un contrat confirmé porte un type fermé, un début, une fin, une périodicité et le montant de la période en centimes. L’échéance à 30 jours compare ces dates. Le montant mensuel divise le montant déjà enregistré. Les deux s’affichent en paquet.
 - Une intervention confirmée porte un type fermé, une date, une durée en minutes et un taux en centimes. Le taux moyen, le total d’heures et le délai moyen se calculent sur ces valeurs déjà enregistrées.
+- Un équipement installé confirmé porte le client, la désignation, la date d’installation et un niveau de garantie fermé. L’âge et le filtre de l’an dernier comparent cette date. Le modèle ne les estime pas.
 
 Le modèle de langage ne reçoit pas ces formules à exécuter.
 
