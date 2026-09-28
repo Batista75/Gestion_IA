@@ -106,7 +106,7 @@ export function readContractEntry(text: string): ContractEntry | null {
   if (!/\b(enregistre|enregistrer|proposer|proposez|propose|ajoute|ajouter|creer|saisir|saisis)\b/.test(folded)) {
     return null;
   }
-  if (!/\bcontrats?\b/.test(folded)) return null;
+  if (!/\bcontrats?\b/.test(folded.replace(/\bsous contrat\b/g, " "))) return null;
   if (/\$|\busd\b/i.test(text)) {
     return { ready: false, missing: "Montant en dollars. Le contrat en euro n’est pas proposé." };
   }

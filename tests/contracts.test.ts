@@ -12,6 +12,7 @@ import {
   readContractQuestion,
   type StoredContract,
 } from "../src/domain/contracts.ts";
+import { readInterventionEntry } from "../src/domain/interventions.ts";
 import { formatCents } from "../src/domain/pricing.ts";
 
 const maintenance: StoredContract = {
@@ -94,6 +95,8 @@ test("une phrase de contrat incomplète pose une seule question", () => {
     assert.equal(ready.draft.periodicity, "annuel");
     assert.equal(ready.draft.amountCents, 120000);
   }
+  assert.equal(readContractEntry("Enregistre une panne sur site sous contrat pour Atelier Nord"), null);
+  assert.equal(readInterventionEntry("Enregistre une panne sur site sous contrat pour Atelier Nord, le 2026-09-18, 2 heures, taux horaire 95,00 €")?.ready, true);
   assert.equal(
     contractPayload({
       clientId: "c1",

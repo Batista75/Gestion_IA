@@ -164,7 +164,7 @@ export function readInterventionEntry(text: string): InterventionEntry | null {
           : "Indiquez si le taux est horaire ou journalier.",
     };
   }
-  const rateCents = centsFromWritten(moneyText(text));
+  const rateCents = rateAmount(text);
   if (rateCents === null) return { ready: false, missing: "Indiquez le montant du taux." };
   const kind = kinds[0];
   const rateUnit = units[0];
@@ -516,6 +516,14 @@ function readDuration(folded: string): number | null {
 
 function readToken(text: string, pattern: RegExp): string {
   return text.match(pattern)?.[1] ?? "";
+}
+
+function rateAmount(text: string): number | null {
+  const cleaned = moneyText(text)
+    .replace(/\btickets?\s+[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*/gi, " ")
+    .replace(/\bfactur[ée]e?\s+(?:sur\s+)?[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*/gi, " ");
+  const marked = cleaned.match(/(\d{1,3}(?:[ .\u00a0]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:€|eur)\b/i);
+  return centsFromWritten(marked?.[0] ?? cleaned);
 }
 
 function moneyText(text: string): string {

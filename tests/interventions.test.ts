@@ -160,6 +160,7 @@ test("une intervention incomplète pose une seule question, et la phrase complè
     assert.equal(ticket.draft.kind, "assistance");
     assert.equal(ticket.draft.ticket, "T-18");
     assert.equal(ticket.draft.durationMinutes, 180);
+    assert.equal(ticket.draft.rateCents, 8000);
   }
   const fault = readInterventionEntry(
     "Enregistre une panne sur site sous contrat pour Atelier Nord, dossier Lampes Nord, le 2026-09-18, 2 heures, taux horaire 95,00 €, demande le 2026-09-16, arrivée le 2026-09-18",
