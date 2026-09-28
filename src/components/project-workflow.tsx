@@ -19,7 +19,8 @@ import {
 } from "@/domain/trade-workflow";
 
 const initial: TradeState = { message: null, ok: false };
-const fieldClass = "h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm";
+const fieldClass =
+  "h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm transition-colors duration-150 focus-visible:border-ring focus-visible:outline-none";
 
 export function ProjectWorkflow({
   projectId,
@@ -42,19 +43,17 @@ export function ProjectWorkflow({
   const done = records.filter((record) => record.status === "fait").length;
 
   return (
-    <section id="parcours" className="order-1 grid scroll-mt-6 gap-3 lg:sticky lg:top-4 lg:order-2 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="grid gap-1">
-          <h2 className="text-lg font-semibold">Parcours du métier</h2>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            {TRADE_TITLE}. {done} preuve{done > 1 ? "s" : ""} sur {steps.length}. Prochaine étape : {next.order}. {next.title}.
-          </p>
-        </div>
+    <section id="parcours" className="flex h-full min-h-0 flex-col gap-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {TRADE_TITLE}. {done} preuve{done > 1 ? "s" : ""} sur {steps.length}. Prochaine étape : {next.order}. {next.title}.
+        </p>
         <Link href="/documentation/metier" className="text-sm font-medium underline-offset-4 hover:underline">
           Lire l’instruction métier
         </Link>
       </div>
-      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+      <div className="grid min-h-0 flex-1 gap-3 overflow-auto lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
+      <ol className="grid content-start gap-2 sm:grid-cols-2 lg:overflow-auto lg:pr-1 xl:grid-cols-3">
         {steps.map((item) => {
           const record = records.find((entry) => entry.key === item.key) ?? null;
           const status = record?.status ?? "a_faire";
@@ -65,18 +64,18 @@ export function ProjectWorkflow({
                 type="button"
                 aria-pressed={active}
                 onClick={() => setSelected(item.key)}
-                className={`grid h-full w-full gap-1 rounded-lg border p-3 text-left ${
+                className={`grid h-full w-full content-start gap-1 rounded-lg border bg-card p-2.5 text-left transition-colors duration-150 hover:bg-muted/30 ${
                   active ? "border-foreground" : "border-border"
                 }`}
               >
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">
+                  <span className="text-sm font-medium">
                     {item.order}. {item.title}
                   </span>
                   <Badge variant={status === "fait" ? "default" : "secondary"}>{stepStatusLabel(status)}</Badge>
                   {item.key === next.key ? <Badge variant="outline">Prochaine</Badge> : null}
                 </span>
-                <span className="text-sm leading-5 text-muted-foreground">{item.proof}</span>
+                <span className="line-clamp-2 text-xs leading-4 text-muted-foreground">{item.proof}</span>
                 {record?.proofRef ? <span className="text-sm">Réf. {record.proofRef}</span> : null}
               </button>
             </li>
@@ -90,6 +89,7 @@ export function ProjectWorkflow({
         record={records.find((entry) => entry.key === step.key) ?? null}
         records={records}
       />
+      </div>
     </section>
   );
 }
@@ -109,7 +109,7 @@ function StepForm({
   const status = record?.status ?? "a_faire";
   const warning = advanceWarning(step.key, records);
   return (
-    <form action={action} className="grid gap-3 rounded-lg border border-border p-3">
+    <form action={action} className="grid content-start gap-3 rounded-lg border border-border bg-card p-3 shadow-sm lg:overflow-auto">
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="stepKey" value={step.key} />
       <div className="grid gap-1">
@@ -129,8 +129,8 @@ function StepForm({
           .
         </p>
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-2">
+      <div className="grid gap-3">
+        <div className="space-y-1.5">
           <Label htmlFor={`status-${step.key}`}>Situation</Label>
           <select id={`status-${step.key}`} name="status" defaultValue={status} className={fieldClass}>
             <option value="a_faire">À faire</option>
@@ -138,17 +138,17 @@ function StepForm({
             <option value="fait">Preuve enregistrée</option>
           </select>
         </div>
-        <div className="grid gap-2">
+        <div className="space-y-1.5">
           <Label htmlFor={`proof-${step.key}`}>Référence de la preuve</Label>
           <Input id={`proof-${step.key}`} name="proofRef" defaultValue={record?.proofRef ?? ""} placeholder="Référence indiquée sur la pièce" />
         </div>
-        <div className="grid gap-2 sm:col-span-2">
+        <div className="space-y-1.5">
           <Label htmlFor={`note-${step.key}`}>Note</Label>
           <Input id={`note-${step.key}`} name="proofNote" defaultValue={record?.proofNote ?? ""} placeholder="Date, réserves, signataire" />
         </div>
       </div>
       <FormMessage state={state} />
-      <Button type="submit" variant="outline" disabled={pending} className="min-h-11 w-fit px-4">
+      <Button type="submit" variant="outline" disabled={pending} className="w-fit">
         {pending ? "Enregistrement…" : "Enregistrer l’étape"}
       </Button>
     </form>

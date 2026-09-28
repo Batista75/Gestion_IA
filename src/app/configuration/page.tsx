@@ -29,7 +29,7 @@ export default async function ConfigurationPage() {
           L’identité de l’entreprise et son logo figurent sur les documents. Le serveur d’inférence, le type de modèle et la clé d’API se règlent ensuite.
         </p>
       </div>
-      <div className="grid min-h-0 flex-1 gap-3 overflow-auto xl:grid-cols-2 xl:overflow-hidden">
+      <div className="grid min-h-0 flex-1 gap-3 overflow-auto xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)] xl:overflow-hidden">
       <Card className="min-h-0 xl:overflow-auto">
         <CardHeader>
           <CardTitle>Entreprise</CardTitle>

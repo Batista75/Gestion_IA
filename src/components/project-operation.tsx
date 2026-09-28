@@ -68,212 +68,268 @@ export type CatalogChoice = {
   costLabel: string;
 };
 
-const fieldClass = "h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm";
+const fieldClass =
+  "h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm transition-colors duration-150 focus-visible:border-ring focus-visible:outline-none";
+const cellClass = "px-2 py-2 align-middle";
+const numberCell = `${cellClass} text-right tabular-nums whitespace-nowrap`;
+const headClass = "bg-muted px-2 py-2 font-medium";
+const detailsClass = "rounded-md border border-border p-3 transition-colors duration-150 hover:bg-muted/30";
 
-export function ProjectOperation({
+export function ProjectLines({
   projectId,
   lines,
-  documents,
   products,
   suppliers,
 }: {
   projectId: string;
   lines: OperationLine[];
-  documents: OperationDocument[];
   products: CatalogChoice[];
+  suppliers: Array<{ id: string; name: string }>;
+}) {
+  const figures = lines.map((line) => saleLineFigures(line));
+  const totals = saleOperationTotals(figures);
+  const names = suppliers.map((supplier) => supplier.name);
+
+  return (
+    <section id="produits" className="flex h-full min-h-0 flex-col gap-3">
+      <p className="shrink-0 text-sm text-muted-foreground">
+        Le prix de vente HT vient du coût, du taux de marque et de la remise. Les montants restent hors taxes.
+      </p>
+      <AddLineForm projectId={projectId} products={products} open={lines.length === 0} />
+      {lines.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Aucun produit ni service sur ce dossier. Ajoutez-en un pour préparer le devis.
+        </p>
+      ) : (
+        <>
+          <div className="relative min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-card">
+            <table className="w-full min-w-[60rem] border-collapse text-sm">
+              <caption className="sr-only">Lignes du dossier</caption>
+              <thead className="sticky top-0 z-10">
+                <tr className="border-b border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
+                  <th className={`${headClass} w-10`}>
+                    <span className="sr-only">Pour le devis</span>
+                  </th>
+                  <th className={headClass}>Désignation</th>
+                  <th className={`${headClass} w-20 text-right`}>Qté</th>
+                  <th className={`${headClass} w-28 text-right`}>Coût HT</th>
+                  <th className={`${headClass} w-20 text-right`}>Marque %</th>
+                  <th className={`${headClass} w-20 text-right`}>Remise %</th>
+                  <th className={`${headClass} w-44`}>Fournisseur</th>
+                  <th className={`${headClass} w-32 text-right`}>Vente HT</th>
+                  <th className={`${headClass} w-28 text-right`}>Marge</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lines.map((line, index) => (
+                  <LineRow key={line.id} line={line} figures={figures[index]!} names={names} />
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border bg-muted/40 font-medium">
+                  <td className={cellClass} colSpan={3}>
+                    Total des lignes chiffrées
+                  </td>
+                  <td className={numberCell}>{formatCents(totals.costCents)}</td>
+                  <td className={cellClass} colSpan={3}>
+                    {totals.missing > 0 ? (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {totals.missing} ligne{totals.missing > 1 ? "s" : ""} sans coût, hors total
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className={numberCell}>{formatCents(totals.netCents)}</td>
+                  <td className={numberCell}>{formatCents(totals.marginCents)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-start gap-2">
+            <UpdateLinesForm projectId={projectId} lines={lines} />
+            <ConfirmLinesForm projectId={projectId} />
+            <QuoteForm projectId={projectId} />
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+export function ProjectDocuments({
+  projectId,
+  documents,
+  suppliers,
+}: {
+  projectId: string;
+  documents: OperationDocument[];
   suppliers: Array<{ id: string; name: string }>;
 }) {
   const quotes = documents.filter((document) => document.kind === "devis" && document.status !== "non_abouti");
   const lost = documents.filter((document) => document.kind === "devis" && document.status === "non_abouti");
   const customerOrders = documents.filter((document) => document.kind === "commande_client");
   const supplierOrders = documents.filter((document) => document.kind === "commande_fournisseur");
-  const figures = lines.map((line) => saleLineFigures(line));
-  const totals = saleOperationTotals(figures);
 
   return (
-    <div className="grid gap-6">
-      <section id="produits" className="grid scroll-mt-6 gap-3">
-        <h2 className="text-lg font-semibold">Produits et services</h2>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Le catalogue est le même pour tous les dossiers. Le prix de vente HT vient du coût du produit, du taux de marque et de la remise. La marge se modifie ici, puis se confirme. Les montants restent hors taxes.
-        </p>
-        <AddLineForm projectId={projectId} products={products} />
-        {lines.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Aucun produit ni service sur ce dossier. Ajoutez-en un pour préparer le devis.
-          </p>
-        ) : (
-          <div className="grid gap-3">
-            <ul className="grid gap-3">
-              {lines.map((line, index) => (
-                <LineEditor
-                  key={line.id}
-                  line={line}
-                  figures={figures[index]!}
-                  quoteForm="project-quote"
-                  updateForm="project-lines"
-                  suppliers={suppliers}
-                />
-              ))}
-            </ul>
-            <p className="text-sm leading-6">
-              Total des lignes chiffrées : coût {formatCents(totals.costCents)}, prix de vente {formatCents(totals.netCents)}, marge {formatCents(totals.marginCents)}.
-              {totals.missing > 0
-                ? ` ${totals.missing} ligne${totals.missing > 1 ? "s" : ""} sans coût, prix de vente non calculé.`
-                : ""}
-            </p>
-            <UpdateLinesForm projectId={projectId} lines={lines} />
-            <ConfirmLinesForm projectId={projectId} />
-            <QuoteForm projectId={projectId} />
-          </div>
-        )}
-      </section>
-
-      <DocumentList
-        id="devis"
-        suppliers={suppliers}
-        title="Devis"
-        empty="Aucun devis pour ce projet. Sélectionnez une ou plusieurs lignes, puis établissez le devis."
-        projectId={projectId}
-        documents={quotes}
-      />
-      <DocumentList
-        id="devis-non-aboutis"
-        suppliers={suppliers}
-        title="Devis non aboutis"
-        empty="Aucun devis non abouti."
-        projectId={projectId}
-        documents={lost}
-      />
-      <DocumentList
-        id="commandes-client"
-        suppliers={suppliers}
-        title="Commandes client"
-        empty="Aucune commande client. Elle s’ouvre depuis un devis en cours."
-        projectId={projectId}
-        documents={customerOrders}
-      />
-      <DocumentList
-        id="commandes-fournisseur"
-        suppliers={suppliers}
-        title="Commandes fournisseur"
-        empty="Aucune commande fournisseur. Elle s’ouvre depuis une commande client, avec un fournisseur nommé."
-        projectId={projectId}
-        documents={supplierOrders}
-      />
-      <p className="text-sm">
-        <Link href={`/projets/${projectId}/facture`} className="font-medium underline-offset-4 hover:underline">
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <p className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+        <span>Un devis s’établit depuis Produits. La commande client s’ouvre depuis un devis en cours.</span>
+        <Link href={`/projets/${projectId}/facture`} className="font-medium text-foreground underline-offset-4 hover:underline">
           Voir la facture client
         </Link>
       </p>
-      <p className="text-sm text-muted-foreground">
-        Les pièces déjà enregistrées sur le dossier restent dans l’actualité. Le{" "}
-        <Link href="/ventes" className="font-medium text-foreground underline-offset-4 hover:underline">
-          simulateur de prix
-        </Link>{" "}
-        ne crée pas de devis.
-      </p>
+      <div className="relative grid min-h-0 flex-1 gap-3 overflow-auto xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)] xl:overflow-hidden">
+        <div className="relative grid min-h-0 content-start gap-4 xl:overflow-auto xl:pr-1">
+          <DocumentList
+            id="devis"
+            suppliers={suppliers}
+            title="Devis"
+            empty="Aucun devis pour ce projet. Cochez des lignes dans Produits, puis établissez le devis."
+            projectId={projectId}
+            documents={quotes}
+          />
+          {lost.length > 0 ? (
+            <details id="devis-non-aboutis" className={detailsClass}>
+              <summary className="cursor-pointer text-sm font-medium">Devis non aboutis · {lost.length}</summary>
+              <div className="pt-3">
+                <DocumentList suppliers={suppliers} title="" empty="" projectId={projectId} documents={lost} />
+              </div>
+            </details>
+          ) : null}
+        </div>
+        <div className="relative grid min-h-0 content-start gap-4 xl:overflow-auto xl:pr-1">
+          <DocumentList
+            id="commandes-client"
+            suppliers={suppliers}
+            title="Commandes client"
+            empty="Aucune commande client. Elle s’ouvre depuis un devis en cours."
+            projectId={projectId}
+            documents={customerOrders}
+          />
+          <DocumentList
+            id="commandes-fournisseur"
+            suppliers={suppliers}
+            title="Commandes fournisseur"
+            empty="Aucune commande fournisseur. Elle s’ouvre depuis une commande client, avec un fournisseur nommé."
+            projectId={projectId}
+            documents={supplierOrders}
+          />
+        </div>
+      </div>
     </div>
   );
 }
 
-function AddLineForm({ projectId, products }: { projectId: string; products: CatalogChoice[] }) {
+function AddLineForm({ projectId, products, open }: { projectId: string; products: CatalogChoice[]; open: boolean }) {
   const [state, action, pending] = useActionState(addLineAction, initial);
   return (
-    <form action={action} className="grid gap-3 rounded-lg border border-border p-3">
-      <input type="hidden" name="projectId" value={projectId} />
-      <p className="text-sm font-medium">Ajouter un produit du catalogue</p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-2 sm:col-span-2">
-          <Label htmlFor="productId">Produit ou service</Label>
-          <select id="productId" name="productId" defaultValue="" required className={fieldClass}>
-            <option value="">Choisir dans le catalogue</option>
-            {products.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.name}
-                {product.kind === "service" ? " · service" : ""}
-                {product.supplierName ? ` · ${product.supplierName}` : ""}
-                {product.costLabel ? ` · coût ${product.costLabel}` : ""}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs leading-5 text-muted-foreground">
-            Ce catalogue est commun à tous les dossiers. Un produit nouveau se crée dans{" "}
-            <Link href="/produits" className="font-medium text-foreground underline-offset-4 hover:underline">
-              Produits
-            </Link>
-            .
-          </p>
+    <details className={`shrink-0 ${detailsClass}`} open={open || undefined}>
+      <summary className="cursor-pointer text-sm font-medium">Ajouter un produit du catalogue</summary>
+      <form action={action} className="grid gap-2 pt-3">
+        <input type="hidden" name="projectId" value={projectId} />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,6rem))_auto] lg:items-end">
+          <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+            <Label htmlFor="productId">Produit ou service</Label>
+            <select id="productId" name="productId" defaultValue="" required className={fieldClass}>
+              <option value="">Choisir dans le catalogue</option>
+              {products.map((product) => (
+                <option key={product.id} value={product.id}>
+                  {product.name}
+                  {product.kind === "service" ? " · service" : ""}
+                  {product.supplierName ? ` · ${product.supplierName}` : ""}
+                  {product.costLabel ? ` · coût ${product.costLabel}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="line-qty">Quantité</Label>
+            <Input id="line-qty" name="quantity" defaultValue="1" inputMode="numeric" className="text-right" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="line-markup">Marque %</Label>
+            <Input id="line-markup" name="markup" defaultValue="30" inputMode="numeric" className="text-right" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="line-discount">Remise %</Label>
+            <Input id="line-discount" name="discount" defaultValue="0" inputMode="numeric" className="text-right" />
+          </div>
+          <Button type="submit" disabled={pending || products.length === 0}>
+            {pending ? "Ajout…" : "Ajouter au projet"}
+          </Button>
         </div>
-        <div className="grid gap-2">
-          <Label htmlFor="line-qty">Quantité</Label>
-          <Input id="line-qty" name="quantity" defaultValue="1" inputMode="numeric" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="line-markup">Taux de marque (%)</Label>
-          <Input id="line-markup" name="markup" defaultValue="30" inputMode="numeric" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="line-discount">Remise (%)</Label>
-          <Input id="line-discount" name="discount" defaultValue="0" inputMode="numeric" />
-        </div>
-      </div>
-      <FormMessage state={state} />
-      <Button type="submit" disabled={pending || products.length === 0} className="min-h-11 w-fit px-4">
-        {pending ? "Ajout…" : "Ajouter au projet"}
-      </Button>
-    </form>
+        <p className="text-xs text-muted-foreground">
+          Ce catalogue est commun à tous les dossiers. Un produit nouveau se crée dans{" "}
+          <Link href="/produits" className="font-medium text-foreground underline-offset-4 hover:underline">
+            Produits
+          </Link>
+          .
+        </p>
+        <FormMessage state={state} />
+      </form>
+    </details>
   );
 }
 
-function LineEditor({
+function LineRow({
   line,
   figures,
-  quoteForm,
-  updateForm,
-  suppliers,
+  names,
 }: {
   line: OperationLine;
   figures: ReturnType<typeof saleLineFigures>;
-  quoteForm: string;
-  updateForm: string;
-  suppliers: Array<{ id: string; name: string }>;
+  names: string[];
 }) {
+  const discounted = figures.unitListCents !== null && figures.unitListCents !== figures.unitNetCents;
   return (
-    <li className="grid gap-3 rounded-lg border border-border p-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-          <input form={quoteForm} type="checkbox" name="lineId" value={line.id} className="size-4" />
-          {line.name}
-        </label>
-        <Badge variant="secondary">{line.kind === "service" ? "Service" : "Produit"}</Badge>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Field label="Quantité" name={`qty_${line.id}`} form={updateForm} defaultValue={String(line.quantity)} />
-        <Field label="Coût HT" name={`cost_${line.id}`} form={updateForm} defaultValue={centsInput(line.costCents)} />
-        <Field label="Marque %" name={`markup_${line.id}`} form={updateForm} defaultValue={String(line.markupPercent)} />
-        <Field label="Remise %" name={`discount_${line.id}`} form={updateForm} defaultValue={String(line.discountPercent)} />
-        <NameSelect
-          label="Fournisseur"
-          name={`supplier_${line.id}`}
-          form={updateForm}
-          value={line.supplierName}
-          names={suppliers.map((supplier) => supplier.name)}
+    <tr className="border-b border-border transition-colors duration-150 last:border-0 hover:bg-muted/30">
+      <td className={cellClass}>
+        <input
+          form="project-quote"
+          type="checkbox"
+          name="lineId"
+          value={line.id}
+          className="size-4"
+          aria-label={`Mettre ${line.name} dans le devis`}
         />
-      </div>
-      <p className="text-sm leading-6">
-        Prix de vente HT {formatCents(figures.lineNetCents)}
-        {figures.unitListCents !== null && figures.unitListCents !== figures.unitNetCents
-          ? ` · avant remise ${formatCents(figures.lineCostCents === null ? null : figures.unitListCents! * line.quantity)}`
-          : ""}
-        {" · "}marge {formatCents(figures.lineMarginCents)}
-        {line.confirmedLabel ? ` · confirmé le ${line.confirmedLabel}` : " · non confirmé"}
-      </p>
-    </li>
+      </td>
+      <td className={cellClass}>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">{line.name}</span>
+          <Badge variant="secondary">{line.kind === "service" ? "Service" : "Produit"}</Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {line.confirmedLabel ? `Confirmé le ${line.confirmedLabel}` : "Non confirmé"}
+        </p>
+      </td>
+      <td className={cellClass}>
+        <CellInput label={`Quantité de ${line.name}`} name={`qty_${line.id}`} form="project-lines" defaultValue={String(line.quantity)} />
+      </td>
+      <td className={cellClass}>
+        <CellInput label={`Coût HT de ${line.name}`} name={`cost_${line.id}`} form="project-lines" defaultValue={centsInput(line.costCents)} />
+      </td>
+      <td className={cellClass}>
+        <CellInput label={`Marque de ${line.name}`} name={`markup_${line.id}`} form="project-lines" defaultValue={String(line.markupPercent)} />
+      </td>
+      <td className={cellClass}>
+        <CellInput label={`Remise de ${line.name}`} name={`discount_${line.id}`} form="project-lines" defaultValue={String(line.discountPercent)} />
+      </td>
+      <td className={cellClass}>
+        <NameSelect label={`Fournisseur de ${line.name}`} name={`supplier_${line.id}`} form="project-lines" value={line.supplierName} names={names} />
+      </td>
+      <td className={numberCell}>
+        {formatCents(figures.lineNetCents)}
+        {discounted ? (
+          <span className="block text-xs text-muted-foreground">
+            avant remise {formatCents(figures.lineCostCents === null ? null : figures.unitListCents! * line.quantity)}
+          </span>
+        ) : null}
+      </td>
+      <td className={numberCell}>{formatCents(figures.lineMarginCents)}</td>
+    </tr>
   );
 }
 
-function Field({
+function CellInput({
   label,
   name,
   form,
@@ -285,10 +341,15 @@ function Field({
   defaultValue: string;
 }) {
   return (
-    <div className="grid gap-2">
-      <Label htmlFor={name}>{label}</Label>
-      <input id={name} name={name} form={form} defaultValue={defaultValue} className={fieldClass} />
-    </div>
+    <input
+      aria-label={label}
+      id={name}
+      name={name}
+      form={form}
+      defaultValue={defaultValue}
+      inputMode="decimal"
+      className={`${fieldClass} text-right tabular-nums`}
+    />
   );
 }
 
@@ -307,29 +368,26 @@ function NameSelect({
 }) {
   const options = value && !names.includes(value) ? [value, ...names] : names;
   return (
-    <div className="grid gap-2">
-      <Label htmlFor={name}>{label}</Label>
-      <select id={name} name={name} form={form} defaultValue={value} className={fieldClass}>
-        <option value="">Non nommé</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </div>
+    <select aria-label={label} id={name} name={name} form={form} defaultValue={value} className={fieldClass}>
+      <option value="">Non nommé</option>
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
   );
 }
 
 function UpdateLinesForm({ projectId, lines }: { projectId: string; lines: OperationLine[] }) {
   const [state, action, pending] = useActionState(updateLinesAction, initial);
   return (
-    <form id="project-lines" action={action} className="flex flex-wrap items-center gap-3">
+    <form id="project-lines" action={action} className="grid gap-1">
       <input type="hidden" name="projectId" value={projectId} />
       {lines.map((line) => (
         <input key={line.id} type="hidden" name="existingId" value={line.id} />
       ))}
-      <Button type="submit" disabled={pending} className="min-h-11 px-4">
+      <Button type="submit" disabled={pending}>
         {pending ? "Actualisation…" : "Actualiser les chiffres"}
       </Button>
       <FormMessage state={state} />
@@ -340,9 +398,9 @@ function UpdateLinesForm({ projectId, lines }: { projectId: string; lines: Opera
 function ConfirmLinesForm({ projectId }: { projectId: string }) {
   const [state, action, pending] = useActionState(confirmLinesAction, initial);
   return (
-    <form action={action} className="flex flex-wrap items-center gap-3">
+    <form action={action} className="grid gap-1">
       <input type="hidden" name="projectId" value={projectId} />
-      <Button type="submit" variant="outline" disabled={pending} className="min-h-11 px-4">
+      <Button type="submit" variant="outline" disabled={pending}>
         {pending ? "Confirmation…" : "Confirmer les chiffres du dossier"}
       </Button>
       <FormMessage state={state} />
@@ -353,19 +411,19 @@ function ConfirmLinesForm({ projectId }: { projectId: string }) {
 function QuoteForm({ projectId }: { projectId: string }) {
   const [state, action, pending] = useActionState(quoteAction, initial);
   return (
-    <form id="project-quote" action={action} className="grid gap-3 rounded-lg bg-muted p-3">
+    <form id="project-quote" action={action} className="ml-auto grid gap-1">
       <input type="hidden" name="projectId" value={projectId} />
-      <div className="grid gap-2">
-        <Label htmlFor="quote-title">Titre du devis</Label>
-        <Input id="quote-title" name="title" placeholder="Devis atelier" />
+      <div className="flex flex-wrap items-center gap-2">
+        <Label htmlFor="quote-title" className="sr-only">
+          Titre du devis
+        </Label>
+        <Input id="quote-title" name="title" placeholder="Titre du devis" className="w-56" />
+        <Button type="submit" disabled={pending}>
+          {pending ? "Établissement…" : "Établir le devis"}
+        </Button>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Cochez une ou plusieurs lignes. Le devis reprend leur coût, leur prix de vente et leur marge à cet instant.
-      </p>
+      <p className="text-xs text-muted-foreground">Cochez les lignes. Le devis reprend leurs chiffres à cet instant.</p>
       <FormMessage state={state} />
-      <Button type="submit" disabled={pending} className="min-h-11 w-fit px-4">
-        {pending ? "Établissement…" : "Établir le devis"}
-      </Button>
     </form>
   );
 }
@@ -378,7 +436,7 @@ function DocumentList({
   documents,
   suppliers,
 }: {
-  id: string;
+  id?: string;
   title: string;
   empty: string;
   projectId: string;
@@ -386,12 +444,17 @@ function DocumentList({
   suppliers: Array<{ id: string; name: string }>;
 }) {
   return (
-    <section id={id} className="grid scroll-mt-6 gap-3">
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <section id={id} className="grid gap-2">
+      {title ? (
+        <h2 className="text-base font-semibold">
+          {title}
+          {documents.length > 0 ? <span className="font-normal text-muted-foreground"> · {documents.length}</span> : null}
+        </h2>
+      ) : null}
       {documents.length === 0 ? (
         <p className="text-sm text-muted-foreground">{empty}</p>
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid gap-2">
           {documents.map((document) => (
             <DocumentCard key={document.id} projectId={projectId} document={document} suppliers={suppliers} />
           ))}
@@ -415,7 +478,7 @@ function DocumentCard({
   const totals = saleOperationTotals(figures);
   const editable = (document.status === "en_cours" || document.status === "brouillon") && !document.confirmedLabel;
   return (
-    <li className="grid gap-3 rounded-lg border border-border p-3">
+    <li className="grid gap-2 rounded-lg border border-border bg-card p-3 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         <p className="font-medium">{document.title}</p>
         <Badge variant="secondary">{saleKindLabel(document.kind)}</Badge>
@@ -447,34 +510,72 @@ function DocumentCard({
         />
       ) : null}
       {document.supplierName ? <p className="text-sm">Fournisseur {document.supplierName}</p> : null}
-      <ul className="grid gap-2">
-        {document.lines.map((line, index) => (
-          <li key={line.id} className="grid gap-2 text-sm leading-6">
-            <p>
-              {line.kind === "service" ? "Service" : "Produit"} {line.name}
-              {line.supplierName ? ` · ${line.supplierName}` : ""}
-            </p>
-            {editable ? (
-              <div className="grid gap-2 sm:grid-cols-4">
-                <Field label="Quantité" name={`qty_${line.id}`} form={formId} defaultValue={String(line.quantity)} />
-                <Field label="Coût HT" name={`cost_${line.id}`} form={formId} defaultValue={centsInput(line.costCents)} />
-                <Field label="Marque %" name={`markup_${line.id}`} form={formId} defaultValue={String(line.markupPercent)} />
-                <Field label="Remise %" name={`discount_${line.id}`} form={formId} defaultValue={String(line.discountPercent)} />
-              </div>
-            ) : (
-              <p>
-                Quantité {line.quantity} · coût {formatCents(line.costCents === null ? null : line.costCents * line.quantity)} · marque {line.markupPercent} %
-              </p>
-            )}
-            <p>
-              Prix de vente HT {formatCents(figures[index]?.lineNetCents ?? null)} · marge {formatCents(figures[index]?.lineMarginCents ?? null)}
-            </p>
-          </li>
-        ))}
-      </ul>
-      <p className="text-sm">
-        Total : coût {formatCents(totals.missing > 0 ? null : totals.costCents)}, prix de vente {formatCents(totals.missing > 0 ? null : totals.netCents)}, marge {formatCents(totals.missing > 0 ? null : totals.marginCents)}.
-        {document.confirmedLabel ? ` Chiffres confirmés le ${document.confirmedLabel}.` : " Chiffres non confirmés."}
+      <div className="overflow-x-auto rounded-md border border-border">
+        <table className={`w-full border-collapse text-sm ${editable ? "min-w-[34rem]" : ""}`}>
+          <caption className="sr-only">Lignes de {document.title}</caption>
+          <thead>
+            <tr className="border-b border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
+              <th className={headClass}>Désignation</th>
+              <th className={`${headClass} ${editable ? "w-20" : "w-12"} text-right`}>Qté</th>
+              <th className={`${headClass} ${editable ? "w-28" : "w-24"} text-right whitespace-nowrap`}>Coût HT</th>
+              <th className={`${headClass} ${editable ? "w-20" : "w-16"} text-right`}>Marque</th>
+              {editable ? <th className={`${headClass} w-20 text-right`}>Remise %</th> : null}
+              <th className={`${headClass} w-24 text-right whitespace-nowrap`}>Vente HT</th>
+              <th className={`${headClass} w-24 text-right`}>Marge</th>
+            </tr>
+          </thead>
+          <tbody>
+            {document.lines.map((line, index) => (
+              <tr key={line.id} className="border-b border-border last:border-0">
+                <td className={cellClass}>
+                  <span className="font-medium">{line.name}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {line.kind === "service" ? "Service" : "Produit"}
+                    {line.supplierName ? ` · ${line.supplierName}` : ""}
+                  </span>
+                </td>
+                {editable ? (
+                  <>
+                    <td className={cellClass}>
+                      <CellInput label={`Quantité de ${line.name}`} name={`qty_${line.id}`} form={formId} defaultValue={String(line.quantity)} />
+                    </td>
+                    <td className={cellClass}>
+                      <CellInput label={`Coût HT de ${line.name}`} name={`cost_${line.id}`} form={formId} defaultValue={centsInput(line.costCents)} />
+                    </td>
+                    <td className={cellClass}>
+                      <CellInput label={`Marque de ${line.name}`} name={`markup_${line.id}`} form={formId} defaultValue={String(line.markupPercent)} />
+                    </td>
+                    <td className={cellClass}>
+                      <CellInput label={`Remise de ${line.name}`} name={`discount_${line.id}`} form={formId} defaultValue={String(line.discountPercent)} />
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className={numberCell}>{line.quantity}</td>
+                    <td className={numberCell}>{formatCents(line.costCents === null ? null : line.costCents * line.quantity)}</td>
+                    <td className={numberCell}>{line.markupPercent} %</td>
+                  </>
+                )}
+                <td className={numberCell}>{formatCents(figures[index]?.lineNetCents ?? null)}</td>
+                <td className={numberCell}>{formatCents(figures[index]?.lineMarginCents ?? null)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-border bg-muted/40 font-medium">
+              <td className={cellClass} colSpan={2}>
+                Total
+              </td>
+              <td className={numberCell}>{formatCents(totals.missing > 0 ? null : totals.costCents)}</td>
+              <td className={cellClass} colSpan={editable ? 2 : 1} />
+              <td className={numberCell}>{formatCents(totals.missing > 0 ? null : totals.netCents)}</td>
+              <td className={numberCell}>{formatCents(totals.missing > 0 ? null : totals.marginCents)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {document.confirmedLabel ? `Chiffres confirmés le ${document.confirmedLabel}.` : "Chiffres non confirmés."}
       </p>
       {editable ? <DocumentUpdateForm formId={formId} projectId={projectId} document={document} /> : null}
       <div className="flex flex-wrap gap-2">
@@ -550,8 +651,8 @@ function AttachPiece({
   const [reference, setReference] = useState("");
   const ready = reference.trim().length >= 2;
   return (
-    <details>
-      <summary className="min-h-11 cursor-pointer text-sm font-medium">{summary}</summary>
+    <details className={detailsClass}>
+      <summary className="cursor-pointer text-sm font-medium">{summary}</summary>
       <form action={action} className="grid max-w-md gap-2 pt-2">
         <input type="hidden" name="projectId" value={projectId} />
         <input type="hidden" name="saleParentId" value={saleParentId} />
@@ -578,13 +679,12 @@ function AttachPiece({
             value={reference}
             onChange={(event) => setReference(event.target.value)}
             maxLength={80}
-            className="min-h-11"
           />
         </div>
         <p className="text-xs leading-5 text-muted-foreground">
           Cette référence est recopiée. L’application ne l’invente pas et n’émet pas la pièce.
         </p>
-        <Button type="submit" disabled={!ready || pending} className="min-h-11 w-fit px-4">
+        <Button type="submit" disabled={!ready || pending} className="w-fit">
           {pending ? "Enregistrement…" : "Rattacher"}
         </Button>
         <FormMessage state={state} />
@@ -610,7 +710,7 @@ function DocumentUpdateForm({
       {document.lines.map((line) => (
         <input key={line.id} type="hidden" name="existingId" value={line.id} />
       ))}
-      <Button type="submit" variant="outline" disabled={pending} className="min-h-11 px-4">
+      <Button type="submit" variant="outline" disabled={pending}>
         {pending ? "Actualisation…" : "Actualiser ce document"}
       </Button>
       <FormMessage state={state} />
@@ -634,7 +734,7 @@ function SimpleDocumentForm({
     <form action={dispatch} className="grid gap-2">
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="documentId" value={documentId} />
-      <Button type="submit" variant="outline" disabled={pending} className="min-h-11 px-4">
+      <Button type="submit" variant="outline" disabled={pending}>
         {pending ? "En cours…" : label}
       </Button>
       <FormMessage state={state} />
@@ -667,7 +767,7 @@ function SupplierOrderForm({
           ))}
         </select>
       </div>
-      <Button type="submit" disabled={pending} className="min-h-11 px-4">
+      <Button type="submit" disabled={pending}>
         {pending ? "Ouverture…" : "Établir la commande fournisseur"}
       </Button>
       <FormMessage state={state} />

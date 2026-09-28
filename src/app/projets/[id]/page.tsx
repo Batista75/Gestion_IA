@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClientPicker } from "@/components/client-picker";
 import { DeliveryForm } from "@/components/delivery-form";
-import { ProjectOperation } from "@/components/project-operation";
+import { ProjectDocuments, ProjectLines } from "@/components/project-operation";
 import { ProjectWorkflow } from "@/components/project-workflow";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -58,7 +58,12 @@ export default async function ProjectPage({
 }) {
   const { id } = await params;
   const requested = (await searchParams).onglet;
-  const tab = requested === "livraison" || requested === "affaire" ? requested : "apercu";
+  const tab =
+    requested === "affaire"
+      ? "produits"
+      : requested === "livraison" || requested === "produits" || requested === "pieces" || requested === "parcours"
+        ? requested
+        : "apercu";
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
@@ -105,41 +110,43 @@ export default async function ProjectPage({
   const deliveryLines = deliverySummary(delivery);
 
   return (
-    <div className="grid min-h-0 gap-3" data-onglet={tab}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex h-full min-h-0 flex-col gap-3" data-onglet={tab}>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div className="grid gap-0.5">
           <h1 className="text-xl font-semibold tracking-tight">{project.name}</h1>
           <p className="text-sm text-muted-foreground">{project.status}{project.reference ? ` · ${project.reference}` : ""}</p>
         </div>
-        <Link href="/projets" className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3")}>
+        <Link href="/projets" className={buttonVariants({ variant: "outline" })}>
           Tous les projets
         </Link>
       </div>
 
-      <nav className="flex flex-wrap gap-2 text-sm" aria-label="Volets du dossier">
+      <nav className="flex shrink-0 flex-wrap gap-2 text-sm" aria-label="Volets du dossier">
         {(
           [
             ["apercu", "Aperçu"],
             ["livraison", "Livraison"],
-            ["affaire", "Produits, devis et parcours"],
+            ["produits", "Produits"],
+            ["pieces", "Devis et commandes"],
+            ["parcours", "Parcours"],
           ] as const
         ).map(([key, label]) => (
           <Link
             key={key}
             href={`/projets/${project.id}?onglet=${key}`}
             aria-current={tab === key ? "page" : undefined}
-            className={cn(buttonVariants({ variant: tab === key ? "default" : "outline" }), "h-9 px-3")}
+            className={cn(buttonVariants({ variant: tab === key ? "default" : "outline" }), "transition-colors duration-150")}
           >
             {label}
           </Link>
         ))}
-        <Link href={`/evenements?projet=${project.id}`} className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3")}>
+        <Link href={`/evenements?projet=${project.id}`} className={buttonVariants({ variant: "ghost" })}>
           Événements
         </Link>
       </nav>
 
       {tab === "apercu" ? (
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid min-h-0 flex-1 content-start gap-3 overflow-auto lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Client</CardTitle>
@@ -196,7 +203,7 @@ export default async function ProjectPage({
       ) : null}
 
       {tab === "livraison" ? (
-      <Card id="livraison">
+      <Card id="livraison" className="min-h-0 flex-1 overflow-auto">
         <CardHeader>
           <CardTitle>Livraison</CardTitle>
           <CardDescription>
@@ -209,76 +216,78 @@ export default async function ProjectPage({
       </Card>
       ) : null}
 
-      {tab === "affaire" ? (
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <div className="order-2 grid min-w-0 gap-6 lg:order-1">
-      <ProjectOperation
-        projectId={project.id}
-        products={products.map((product) => ({
-          id: product.id,
-          name: product.name,
-          kind: product.kind,
-          supplierName: product.supplier?.name ?? "",
-          costLabel: product.costStated,
-        }))}
-        suppliers={suppliers}
-        lines={project.lines.map((line) => ({
-          id: line.id,
-          name: line.name,
-          kind: line.kind,
-          supplierName: line.supplierName,
-          quantity: line.quantity,
-          costCents: line.costCents,
-          markupPercent: line.markupPercent,
-          discountPercent: line.discountPercent,
-          confirmedLabel: line.confirmedAt ? line.confirmedAt.toLocaleString("fr-FR") : null,
-        }))}
-        documents={project.sales.map((document) => ({
-          id: document.id,
-          kind: document.kind,
-          status: document.status,
-          title: document.title,
-          supplierName: document.supplierName,
-          createdLabel: document.createdAt.toLocaleString("fr-FR"),
-          confirmedLabel: document.confirmedAt ? document.confirmedAt.toLocaleString("fr-FR") : null,
-          parent: document.parent,
-          pieces: document.notedPieces.map(toPiece),
-          lines: document.lines.map((line) => ({
-            id: line.id,
-            name: line.name,
-            kind: line.kind,
-            supplierName: line.supplierName,
-            quantity: line.quantity,
-            costCents: line.costCents,
-            saleUnitCents: line.saleUnitCents,
-            markupPercent: line.markupPercent,
-            discountPercent: line.discountPercent,
-            confirmedLabel: null,
-          })),
-        }))}
-      />
+      {tab === "produits" ? (
+        <div className="min-h-0 flex-1">
+          <ProjectLines
+            projectId={project.id}
+            products={products.map((product) => ({
+              id: product.id,
+              name: product.name,
+              kind: product.kind,
+              supplierName: product.supplier?.name ?? "",
+              costLabel: product.costStated,
+            }))}
+            suppliers={suppliers}
+            lines={project.lines.map((line) => ({
+              id: line.id,
+              name: line.name,
+              kind: line.kind,
+              supplierName: line.supplierName,
+              quantity: line.quantity,
+              costCents: line.costCents,
+              markupPercent: line.markupPercent,
+              discountPercent: line.discountPercent,
+              confirmedLabel: line.confirmedAt ? line.confirmedAt.toLocaleString("fr-FR") : null,
+            }))}
+          />
+        </div>
+      ) : null}
 
-      <section id="actualite" className="grid scroll-mt-6 gap-2">
-        <h2 className="text-lg font-semibold">Événements</h2>
-        <p className="text-sm text-muted-foreground">
-          Les traces de ce dossier sont regroupées avec les autres opérations.
-        </p>
-        <Link href={`/evenements?projet=${project.id}`} className="text-sm font-medium underline-offset-4 hover:underline">
-          Voir les événements de ce dossier
-        </Link>
-      </section>
-      </div>
-      <ProjectWorkflow
-        projectId={project.id}
-        steps={TRADE_STEPS}
-        records={project.steps.map((step) => ({
-          key: step.stepKey,
-          status: readStepStatus(step.status),
-          proofRef: step.proofRef,
-          proofNote: step.proofNote,
-        }))}
-      />
-      </div>
+      {tab === "pieces" ? (
+        <div className="min-h-0 flex-1">
+          <ProjectDocuments
+            projectId={project.id}
+            suppliers={suppliers}
+            documents={project.sales.map((document) => ({
+              id: document.id,
+              kind: document.kind,
+              status: document.status,
+              title: document.title,
+              supplierName: document.supplierName,
+              createdLabel: document.createdAt.toLocaleString("fr-FR"),
+              confirmedLabel: document.confirmedAt ? document.confirmedAt.toLocaleString("fr-FR") : null,
+              parent: document.parent,
+              pieces: document.notedPieces.map(toPiece),
+              lines: document.lines.map((line) => ({
+                id: line.id,
+                name: line.name,
+                kind: line.kind,
+                supplierName: line.supplierName,
+                quantity: line.quantity,
+                costCents: line.costCents,
+                saleUnitCents: line.saleUnitCents,
+                markupPercent: line.markupPercent,
+                discountPercent: line.discountPercent,
+                confirmedLabel: null,
+              })),
+            }))}
+          />
+        </div>
+      ) : null}
+
+      {tab === "parcours" ? (
+        <div className="min-h-0 flex-1">
+          <ProjectWorkflow
+            projectId={project.id}
+            steps={TRADE_STEPS}
+            records={project.steps.map((step) => ({
+              key: step.stepKey,
+              status: readStepStatus(step.status),
+              proofRef: step.proofRef,
+              proofNote: step.proofNote,
+            }))}
+          />
+        </div>
       ) : null}
     </div>
   );

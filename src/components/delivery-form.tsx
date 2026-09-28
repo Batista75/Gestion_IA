@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DELIVERY_MODES, type DeliveryDraft } from "@/domain/delivery";
 
 const initial: DeliveryState = { message: null, ok: false };
-const fieldClass = "h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm";
+const fieldClass = "h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm transition-colors duration-150";
 
 export function DeliveryForm({ projectId, delivery }: { projectId: string; delivery: DeliveryDraft }) {
   const [state, action, pending] = useActionState(saveDeliveryAction, initial);
@@ -18,11 +18,11 @@ export function DeliveryForm({ projectId, delivery }: { projectId: string; deliv
     <form action={action} className="grid gap-3">
       <input type="hidden" name="projectId" value={projectId} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-2">
+        <div className="space-y-1.5">
           <Label htmlFor="delivery-recipient">Destinataire</Label>
-          <Input id="delivery-recipient" name="recipient" defaultValue={delivery.recipient} className="h-11" placeholder="Nom sur le bon de livraison" />
+          <Input id="delivery-recipient" name="recipient" defaultValue={delivery.recipient} placeholder="Nom sur le bon de livraison" />
         </div>
-        <div className="grid gap-2">
+        <div className="space-y-1.5">
           <Label htmlFor="delivery-mode">Mode</Label>
           <select id="delivery-mode" name="mode" defaultValue={delivery.mode} className={fieldClass}>
             {DELIVERY_MODES.map((mode) => (
@@ -33,44 +33,44 @@ export function DeliveryForm({ projectId, delivery }: { projectId: string; deliv
           </select>
         </div>
       </div>
-      <div className="grid gap-2">
+      <div className="space-y-1.5">
         <Label htmlFor="delivery-address">Adresse</Label>
-        <Input id="delivery-address" name="address" defaultValue={delivery.address} className="h-11" placeholder="Peut différer de l’adresse de facturation" />
+        <Input id="delivery-address" name="address" defaultValue={delivery.address} placeholder="Peut différer de l’adresse de facturation" />
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="grid gap-2">
+        <div className="space-y-1.5">
           <Label htmlFor="delivery-postal">Code postal</Label>
-          <Input id="delivery-postal" name="postalCode" defaultValue={delivery.postalCode} className="h-11" />
+          <Input id="delivery-postal" name="postalCode" defaultValue={delivery.postalCode} />
         </div>
-        <div className="grid gap-2">
+        <div className="space-y-1.5">
           <Label htmlFor="delivery-city">Ville</Label>
-          <Input id="delivery-city" name="city" defaultValue={delivery.city} className="h-11" />
+          <Input id="delivery-city" name="city" defaultValue={delivery.city} />
         </div>
-        <div className="grid gap-2">
+        <div className="space-y-1.5">
           <Label htmlFor="delivery-country">Pays</Label>
-          <Input id="delivery-country" name="country" defaultValue={delivery.country} className="h-11" />
+          <Input id="delivery-country" name="country" defaultValue={delivery.country} />
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="grid gap-2">
+        <div className="space-y-1.5">
           <Label htmlFor="delivery-contact">Contact sur place</Label>
-          <Input id="delivery-contact" name="contact" defaultValue={delivery.contact} className="h-11" />
+          <Input id="delivery-contact" name="contact" defaultValue={delivery.contact} />
         </div>
-        <div className="grid gap-2">
+        <div className="space-y-1.5">
           <Label htmlFor="delivery-phone">Téléphone</Label>
-          <Input id="delivery-phone" name="phone" defaultValue={delivery.phone} className="h-11" />
+          <Input id="delivery-phone" name="phone" defaultValue={delivery.phone} />
         </div>
-        <div className="grid gap-2">
+        <div className="space-y-1.5">
           <Label htmlFor="delivery-slot">Date ou créneau</Label>
-          <Input id="delivery-slot" name="slot" defaultValue={delivery.slot} className="h-11" placeholder="15 octobre, 14 h" />
+          <Input id="delivery-slot" name="slot" defaultValue={delivery.slot} placeholder="15 octobre, 14 h" />
         </div>
       </div>
-      <div className="grid gap-2">
+      <div className="space-y-1.5">
         <Label htmlFor="delivery-note">Consignes</Label>
         <Textarea id="delivery-note" name="note" rows={2} defaultValue={delivery.note} placeholder="Accès, quai, horaires, réserves" />
       </div>
       <FormMessage state={state} />
-      <Button type="submit" disabled={pending} className="min-h-11 w-fit px-4">
+      <Button type="submit" disabled={pending} className="w-fit">
         {pending ? "Enregistrement…" : "Enregistrer la livraison"}
       </Button>
     </form>
