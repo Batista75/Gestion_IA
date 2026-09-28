@@ -10,6 +10,7 @@ import { cn } from "cn";
 const daily = [
   { href: "/", label: "Accueil" },
   { href: "/projets", label: "Projets" },
+  { href: "/evenements", label: "Événements" },
   { href: "/clients", label: "Clients" },
   { href: "/fournisseurs", label: "Fournisseurs" },
   { href: "/produits", label: "Produits" },

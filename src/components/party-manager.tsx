@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import type { FormState } from "@/app/catalog-actions";
 import { addressKindLabel, formatAddress } from "@/domain/address";
@@ -59,7 +60,6 @@ export type PartyRecord = {
     country: string;
     isPrimary: boolean;
   }>;
-  history?: Array<{ id: string; at: string; source: string; actor?: string; summary: string }>;
   counterpart?: { label: string; href: string } | null;
 };
 
@@ -207,18 +207,12 @@ export function PartyManager({
                       <p className="text-xs text-muted-foreground">
                         Mis à jour le {record.updatedLabel}
                       </p>
-                      {record.history && record.history.length > 0 ? (
-                        <div className="grid gap-1">
-                          <p className="text-sm font-medium">Modifications</p>
-                          <ul className="grid gap-1">
-                            {record.history.map((event) => (
-                              <li key={event.id} className="text-xs leading-5 break-words text-muted-foreground">
-                                {event.at} · {event.actor || event.source} · {event.summary}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
+                      <Link
+                        href={`/evenements?fiche=${record.id}`}
+                        className="text-sm font-medium underline-offset-4 hover:underline"
+                      >
+                        Événements de cette fiche
+                      </Link>
                       <ConfirmDelete
                         action={deleteAction}
                         id={record.id}

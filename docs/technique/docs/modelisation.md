@@ -172,7 +172,7 @@ Une ligne par étape et par projet. Couple unique `(projectId, stepKey)`.
 
 ### ProjectEvent
 
-Actualité du dossier. Distincte de `RecordEvent`.
+Action du dossier. Distincte de `RecordEvent`. L’écran `/evenements` réunit les deux. Supprimer une trace retire la ligne, pas le dossier.
 
 - `kind`, `body`.
 - `fileId` : identifiant de fichier en texte, sans clé étrangère.
@@ -375,7 +375,7 @@ Index de recherche dans PostgreSQL. Une ligne par source. Couple unique `(source
 
 ### RecordEvent
 
-Journal des créations, mises à jour et suppressions de `Client`, `Supplier`, `Product` et `Project`. Pas de clé étrangère : la ligne reste si la fiche est supprimée.
+Journal des créations, mises à jour et suppressions de `Client`, `Supplier`, `Product` et `Project`. Pas de clé étrangère : la ligne reste si la fiche est supprimée. L’écran `/evenements` filtre ces lignes et celles de `ProjectEvent`. Supprimer les cases cochées retire la trace, pas la fiche.
 
 - `entityType` : `client`, `supplier`, `product`, `project`.
 - `entityId`, `entityName`.

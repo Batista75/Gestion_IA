@@ -1,51 +1,28 @@
 import Link from "next/link";
 import { ProjectForm } from "@/components/project-form";
-import { currentActor } from "@/lib/actor";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
-  const who = await currentActor();
-  const [projects, clients, changes, actions] = await Promise.all([
+  const [projects, clients] = await Promise.all([
     prisma.project.findMany({
       orderBy: { createdAt: "desc" },
       include: { client: { select: { name: true } } },
     }),
     prisma.client.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    prisma.recordEvent.findMany({
-      where: { entityType: "project" },
-      orderBy: { createdAt: "desc" },
-      take: 80,
-    }),
-    prisma.projectEvent.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 80,
-      include: { project: { select: { name: true } } },
-    }),
   ]);
-  const logs = [
-    ...changes.map((entry) => ({
-      id: `fiche-${entry.id}`,
-      at: entry.createdAt,
-      who: entry.actor.trim() || who,
-      label: "Modification",
-      text: `${entry.entityName} · ${entry.summary}`,
-    })),
-    ...actions.map((entry) => ({
-      id: `action-${entry.id}`,
-      at: entry.createdAt,
-      who,
-      label: "Action",
-      text: `${entry.project.name} · ${entry.body}`,
-    })),
-  ].sort((left, right) => right.at.getTime() - left.at.getTime());
 
   return (
-    <div className="grid gap-4 lg:h-[calc(100vh-7.5rem)] lg:grid-rows-2">
-      <section className="grid min-h-0 content-start gap-3 overflow-auto">
+    <div className="grid gap-4">
+      <section className="grid content-start gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Projets</h1>
+          <div className="grid gap-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Projets</h1>
+            <Link href="/evenements" className="text-sm font-medium underline-offset-4 hover:underline">
+              Événements des dossiers
+            </Link>
+          </div>
           <details className="group">
             <summary className="inline-flex min-h-11 cursor-pointer list-none items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground [&::-webkit-details-marker]:hidden">
               Nouveau dossier
@@ -92,31 +69,6 @@ export default async function ProjectsPage() {
             </tbody>
           </table>
         </div>
-      </section>
-      <section className="grid min-h-0 content-start gap-3 overflow-auto rounded-lg border border-border bg-card p-4">
-        <div className="grid gap-1">
-          <h2 className="text-lg font-semibold tracking-tight">Modifications et actions</h2>
-          <p className="text-sm text-muted-foreground">
-            L’auteur est l’initiale du prénom suivie du nom. La personne connectée est {who}.
-          </p>
-        </div>
-        {logs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucune modification ni action enregistrée.</p>
-        ) : (
-          <ol className="grid gap-2">
-            {logs.map((entry) => (
-              <li key={entry.id} className="text-sm leading-6">
-                <span className="text-muted-foreground">{entry.at.toLocaleString("fr-FR")}</span>
-                {" · "}
-                <span className="font-medium">{entry.who}</span>
-                {" · "}
-                {entry.label}
-                {" · "}
-                {entry.text}
-              </li>
-            ))}
-          </ol>
-        )}
       </section>
     </div>
   );

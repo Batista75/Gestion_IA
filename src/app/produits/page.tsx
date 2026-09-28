@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   createProductAction,
   createQuoteAction,
@@ -5,10 +6,8 @@ import {
   deleteQuoteAction,
   updateProductAction,
 } from "@/app/catalog-actions";
-import { ChangeJournal } from "@/components/change-journal";
 import { DataBoard } from "@/components/data-board";
 import { ProductManager } from "@/components/product-manager";
-import { listRecordEvents } from "@/lib/record-journal";
 import { shownUnitCost, writtenCurrency } from "@/domain/article";
 import { productOrigin } from "@/domain/catalog";
 import { formatOfferCents } from "@/domain/pricing";
@@ -28,10 +27,7 @@ export default async function ProductsPage({
   const source = ["devis", "assistant", "manuel"].includes(params.source ?? "")
     ? (params.source ?? "")
     : "";
-  const [products, journal] = await Promise.all([
-    listProducts(query, source),
-    listRecordEvents("product", 40),
-  ]);
+  const products = await listProducts(query, source);
 
   return (
     <div className="grid gap-6">
@@ -73,7 +69,13 @@ export default async function ProductsPage({
       empty="Aucun article ne correspond à cette recherche."
       filters={source ? <input type="hidden" name="source" value={source} /> : undefined}
     />
-    <ChangeJournal entries={journal.slice(0, 12)} />
+    <p className="text-sm text-muted-foreground">
+      Les créations et les corrections sont dans{" "}
+      <Link href="/evenements?type=produit" className="font-medium text-foreground underline-offset-4 hover:underline">
+        Événements
+      </Link>
+      .
+    </p>
     <ProductManager
       query={query}
       source={source}

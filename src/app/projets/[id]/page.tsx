@@ -73,7 +73,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         },
       },
       steps: true,
-      events: { orderBy: { createdAt: "asc" } },
       client: true,
     },
   });
@@ -117,7 +116,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           ["#devis", "Devis"],
           ["#commandes-client", "Commandes client"],
           ["#commandes-fournisseur", "Commandes fournisseur"],
-          ["#actualite", "Actualité"],
+          ["#actualite", "Événements"],
         ].map(([href, label]) => (
           <a key={href} href={href} className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-3")}>
             {label}
@@ -241,19 +240,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       />
 
       <section id="actualite" className="grid scroll-mt-6 gap-2">
-        <h2 className="text-lg font-semibold">Actualité</h2>
-        {project.events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucun événement enregistré.</p>
-        ) : (
-          <ol className="grid gap-2">
-            {project.events.map((event) => (
-              <li key={event.id} className="text-sm leading-6">
-                <span className="text-muted-foreground">{event.createdAt.toLocaleString("fr-FR")} · </span>
-                {event.body}
-              </li>
-            ))}
-          </ol>
-        )}
+        <h2 className="text-lg font-semibold">Événements</h2>
+        <p className="text-sm text-muted-foreground">
+          Les traces de ce dossier sont regroupées avec les autres opérations.
+        </p>
+        <Link href={`/evenements?projet=${project.id}`} className="text-sm font-medium underline-offset-4 hover:underline">
+          Voir les événements de ce dossier
+        </Link>
       </section>
       </div>
       <ProjectWorkflow

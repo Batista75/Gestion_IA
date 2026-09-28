@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   addAddressAction,
   addContactAction,
@@ -5,11 +6,9 @@ import {
   deleteClientAction,
   updateClientAction,
 } from "@/app/catalog-actions";
-import { ChangeJournal } from "@/components/change-journal";
 import { DataBoard } from "@/components/data-board";
 import { PartyManager } from "@/components/party-manager";
 import { listClients } from "@/lib/catalog-store";
-import { listRecordEvents } from "@/lib/record-journal";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +18,7 @@ export default async function ClientsPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "" } = await searchParams;
-  const [clients, journal] = await Promise.all([listClients(q), listRecordEvents("client", 40)]);
+  const clients = await listClients(q);
   return (
     <div className="grid gap-6">
     <DataBoard
@@ -43,7 +42,13 @@ export default async function ClientsPage({
       ])}
       empty="Aucun client ne correspond à cette recherche."
     />
-    <ChangeJournal entries={journal.slice(0, 12)} />
+    <p className="text-sm text-muted-foreground">
+      Les créations et les corrections sont dans{" "}
+      <Link href="/evenements?type=client" className="font-medium text-foreground underline-offset-4 hover:underline">
+        Événements
+      </Link>
+      .
+    </p>
     <PartyManager
       title=""
       intro="Le formulaire enregistre la fiche. L’assistant identifie d’abord les informations, puis demande confirmation."
@@ -59,7 +64,6 @@ export default async function ClientsPage({
       addAddressAction={addAddressAction}
       records={clients.map((client) => ({
         ...toRecord(client),
-        history: journal.filter((event) => event.entityId === client.id).slice(0, 6),
       }))}
     />
     </div>

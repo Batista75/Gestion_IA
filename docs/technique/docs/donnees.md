@@ -4,7 +4,7 @@ Chaque table, ses champs et ses liens sont dans [Modélisation des données](mod
 
 Chaque création, mise à jour et suppression d’un client, d’un fournisseur, d’un produit ou d’un projet écrit une ligne `RecordEvent` : type, identifiant, nom, action, résumé, source et horodatage. Le résumé ne cite que les champs qui changent, sous la forme `ancien → nouveau`. Un champ vide à l’origine est « non renseigné », un champ vidé est « retiré ». Une mise à jour sans différence n’écrit pas de ligne.
 
-La source vient du contexte d’appel : `assistant` pour une confirmation, un dossier parlé ou une pièce confirmée ; `formulaire` pour les écrans ; sinon `application`. L’écriture est branchée sur le client Prisma. Clients, Fournisseurs, Produits et Projets affichent les dernières lignes. L’actualité d’un projet reste distincte : elle décrit le dossier, le journal décrit les changements de fiche.
+La source vient du contexte d’appel : `assistant` pour une confirmation, un dossier parlé ou une pièce confirmée ; `formulaire` pour les écrans ; sinon `application`. L’écriture est branchée sur le client Prisma. La rubrique `/evenements` réunit les lignes `RecordEvent` et `ProjectEvent`. Le filtre porte sur le texte, le type, une fiche ou un dossier. Supprimer les lignes cochées retire la trace. La fiche, le projet et les pièces restent. Les autres écrans renvoient vers cette rubrique.
 
 L’auteur est l’initiale du prénom et le nom (`operatorMark` dans `src/domain/operator.ts`) de la personne connectée. `RecordEvent.actor` garde cette marque. Sans session, la marque par défaut reste J Smith. Le mot de passe est une empreinte scrypt sur `Account`.
 
