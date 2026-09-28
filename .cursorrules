@@ -1,0 +1,39 @@
+# Gestion IA
+
+Application locale de gestion pour une TPE. Next.js (App Router), React, TypeScript, Tailwind, Prisma, PostgreSQL sur la machine. L’interface sert sur le port 3847.
+
+Avant d’écrire du code Next.js, lire le guide dans `node_modules/next/dist/docs/`. Cette version s’écarte de l’usage courant.
+
+## Montants et assistant
+
+- Les montants, la TVA et les numéros de pièce viennent de `src/domain/pricing.ts` et des règles du domaine. Un modèle de langage ne les calcule pas.
+- L’assistant appelle Ollama sur le réseau local (`OLLAMA_BASE_URL`, par défaut `http://192.168.1.5:11434`). Aucun texte n’est envoyé vers un service d’IA public.
+- Rien n’est classé dans un projet, ni créé comme client, fournisseur, produit ou dossier, sans une action explicite de l’utilisateur.
+
+## Pièces déposées
+
+- Ne pas envoyer le PDF au modèle. La lecture recopie la devise, les totaux, les mentions de taxe et la validité écrits sur la pièce.
+- Ne pas additionner les lignes. Ne pas convertir GBP, CHF, CAD ou USD en euros. `convertToEur` sert au prix de vente, pas à l’ingestion.
+- Ne pas stocker IBAN, RIB, BIC, SWIFT, transit, institution ou numéro de compte. Les masquer dans les extraits d’enrichissement.
+- Une facture d’acompte reste une facture. Un relevé n’écrit qu’un fichier. La classification d’un relevé n’est pas un rapprochement bancaire.
+
+## Écran
+
+- La fenêtre d’un écran d’ordinateur ne défile pas. Le menu et la barre restent visibles. Seul le cadre actif défile.
+- Un dossier n’affiche qu’un volet à la fois. Dans un dossier, l’assistant reste calé en bas.
+- Tout changement d’écran ou de règle visible met à jour `docs/manuel-utilisateur.md`. La spécification d’usage reste `docs/specifications-gestion-ia.pdf`.
+
+## Documentation
+
+- Le DAT (`docs/technique/docs/dat.md`) tient l’architecture, le DCT (`docs/technique/docs/dct.md`) la conception, `modelisation.md` les tables. Un fait n’est écrit que dans la page qui en est responsable. Les autres pages renvoient.
+
+## Fin de cycle
+
+- Proposer un seul objectif suivant, choisi dans ce qui vient d’être livré. Dire pourquoi maintenant, ce qui est tenu pour fini, et ce qui attend le cycle d’après.
+- Donner l’état des deux chantiers. Le chat est la liste de lots de `docs/technique/docs/plan-chat.md` : « N sur 11, soit P % ». L’ingestion est celle de `docs/technique/docs/plan-ingestion.md` : « N sur 8, soit P % ». Mettre à jour la phrase dans la même cycle que l’état d’un lot. Ne pas ajouter de lot pour faire monter le compte.
+
+## Code
+
+- Les fichiers de `src/domain` importés par les tests Node s’importent entre eux avec l’extension `.ts`, sans alias `@/`.
+- La cible TypeScript est ES2017 : pas de groupes nommés dans les expressions régulières.
+- Les tests passent par `npm test`. Le contrôle de types est `./node_modules/.bin/tsc --noEmit`.
