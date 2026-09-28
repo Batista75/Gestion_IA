@@ -87,7 +87,7 @@ function SideBar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-border bg-card print:hidden lg:static",
+        "fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-border bg-card print:hidden lg:static lg:h-dvh",
         open ? "block" : "hidden lg:block",
       )}
     >
@@ -179,7 +179,7 @@ export function AppShell({
   }, []);
 
   return (
-    <div className="min-h-full lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
+    <div className="min-h-full lg:grid lg:h-dvh lg:grid-cols-[16rem_minmax(0,1fr)] lg:overflow-hidden">
       <Suspense fallback={<div className="hidden border-r border-border lg:block" />}>
         <SideBar open={open} onNavigate={() => setOpen(false)} />
       </Suspense>
@@ -191,11 +191,11 @@ export function AppShell({
           onClick={() => setOpen(false)}
         />
       ) : null}
-      <div className="min-w-0">
-        <header className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-border bg-card px-3 print:hidden sm:px-4">
+      <div className="flex min-h-dvh min-w-0 flex-col lg:h-dvh lg:min-h-0">
+        <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card px-3 print:hidden sm:px-4">
           <button
             type="button"
-            className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium lg:hidden"
+            className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium lg:hidden"
             aria-expanded={open}
             onClick={() => setOpen(true)}
           >
@@ -215,7 +215,7 @@ export function AppShell({
               name="q"
               placeholder="Rechercher"
               autoComplete="off"
-              className="h-11 w-full rounded-lg border border-input bg-background pr-10 pl-9 text-sm"
+              className="h-9 w-full rounded-lg border border-input bg-background pr-10 pl-9 text-sm"
             />
             <kbd className="pointer-events-none absolute top-1/2 right-2 hidden -translate-y-1/2 rounded border border-border px-1.5 text-xs text-muted-foreground sm:inline">
               /
@@ -227,12 +227,12 @@ export function AppShell({
             <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">Admin</span>
           ) : null}
           <form action={logoutAction}>
-            <button type="submit" className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium hover:bg-muted">
+            <button type="submit" className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium hover:bg-muted">
               Quitter
             </button>
           </form>
         </header>
-        <main className="px-4 py-6 sm:px-6">{children}</main>
+        <main className="flex min-h-0 flex-1 flex-col overflow-auto px-4 py-3 sm:px-5">{children}</main>
       </div>
     </div>
   );

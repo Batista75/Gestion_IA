@@ -96,8 +96,8 @@ export default async function HomePage({
   const notices = alerts.filter((alert) => alert.href !== "/#a-traiter");
 
   return (
-    <div className="grid gap-6">
-      <section className="flex h-[calc(100dvh-8.5rem)] min-h-[28rem] flex-col gap-3">
+    <div className="grid min-h-0 flex-1 gap-3 max-xl:overflow-auto xl:grid-cols-[minmax(0,1fr)_18rem] xl:overflow-hidden">
+      <section className="flex max-xl:min-h-[22rem] min-h-0 flex-col gap-2">
         {notices.length > 0 ? (
           <ul className="flex shrink-0 flex-wrap gap-2">
             {notices.map((alert) => (
@@ -113,11 +113,11 @@ export default async function HomePage({
           </ul>
         ) : null}
         {pending.length > 0 ? (
-          <details id="a-traiter" open className="shrink-0 scroll-mt-6 rounded-2xl border border-border bg-card">
-            <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm font-medium">
+          <details id="a-traiter" open className="max-h-36 shrink-0 overflow-auto rounded-xl border border-border bg-card">
+            <summary className="sticky top-0 min-h-9 cursor-pointer bg-card px-3 py-2 text-sm font-medium">
               À traiter · {pending.length}
             </summary>
-            <div className="max-h-56 overflow-auto px-4 pb-4">
+            <div className="px-3 pb-3">
               <ProposalBoard proposals={pending} />
             </div>
           </details>
@@ -133,14 +133,15 @@ export default async function HomePage({
         </div>
       </section>
 
-      <section className="grid gap-3">
+      <aside className="grid min-h-0 gap-2 overflow-hidden max-xl:max-h-44 xl:grid-rows-2">
+      <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-1 overflow-hidden">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Projets récents</h2>
+          <h2 className="text-sm font-semibold">Projets récents</h2>
           <Link
             href="/projets"
-            className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+            className="inline-flex h-8 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
-            Tous les projets
+            Tous
           </Link>
         </div>
         {projects.length === 0 ? (
@@ -154,10 +155,10 @@ export default async function HomePage({
             </CardContent>
           </Card>
         ) : (
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+          <ul className="min-h-0 divide-y divide-border overflow-auto rounded-lg border border-border bg-card">
             {projects.map((project) => (
               <li key={project.id}>
-                <Link href={`/projets/${project.id}`} className="grid gap-1 px-3 py-3 hover:bg-muted/60">
+                <Link href={`/projets/${project.id}`} className="grid gap-0.5 px-3 py-2 hover:bg-muted/60">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{project.name}</span>
                     <Badge variant="secondary">{project.status}</Badge>
@@ -176,11 +177,11 @@ export default async function HomePage({
         )}
       </section>
 
-      <details id="pieces" className="scroll-mt-6 rounded-lg border border-border bg-card">
-        <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm font-semibold">
+      <details id="pieces" open className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-border bg-card">
+        <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">
           Pièces reçues{inbox.length > 0 ? ` · ${inbox.length}` : ""}
         </summary>
-        <div className="grid gap-3 px-4 pb-4">
+        <div className="grid min-h-0 gap-2 overflow-auto px-3 pb-3">
         {inbox.length === 0 ? (
           <Card>
             <CardContent className="text-sm text-muted-foreground">
@@ -248,6 +249,7 @@ export default async function HomePage({
         )}
         </div>
       </details>
+      </aside>
     </div>
   );
 }

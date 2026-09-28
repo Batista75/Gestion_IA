@@ -32,12 +32,12 @@ export default async function ProjectsPage() {
             </div>
           </details>
         </div>
-        <div className="overflow-x-auto rounded-lg border border-border bg-card">
+        <div className="max-h-[calc(100dvh-9rem)] overflow-auto rounded-lg border border-border bg-card">
           <table className="w-full min-w-[42rem] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/60 text-left text-xs tracking-wide text-muted-foreground uppercase">
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-border bg-muted text-left text-xs tracking-wide text-muted-foreground uppercase">
                 {["Projet", "Client", "Statut", "Réf.", "Prochaine action", "Ouvert le"].map((header) => (
-                  <th key={header} className="px-3 py-2 font-medium">
+                  <th key={header} className="bg-muted px-3 py-2 font-medium">
                     {header}
                   </th>
                 ))}

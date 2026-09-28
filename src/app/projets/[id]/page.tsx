@@ -49,8 +49,16 @@ function toPiece(piece: {
   };
 }
 
-export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ onglet?: string }>;
+}) {
   const { id } = await params;
+  const requested = (await searchParams).onglet;
+  const tab = requested === "livraison" || requested === "affaire" ? requested : "apercu";
   const project = await prisma.project.findUnique({
     where: { id },
     include: {
@@ -97,34 +105,41 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const deliveryLines = deliverySummary(delivery);
 
   return (
-    <div className="grid gap-6">
+    <div className="grid min-h-0 gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="grid gap-1">
-          <p className="text-sm text-muted-foreground">Vue projet</p>
-          <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
+        <div className="grid gap-0.5">
+          <h1 className="text-xl font-semibold tracking-tight">{project.name}</h1>
+          <p className="text-sm text-muted-foreground">{project.status}{project.reference ? ` · ${project.reference}` : ""}</p>
         </div>
-        <Link href="/projets" className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}>
+        <Link href="/projets" className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3")}>
           Tous les projets
         </Link>
       </div>
 
-      <nav className="flex flex-wrap gap-2 text-sm" aria-label="Sections du dossier">
-        {[
-          ["#parcours", "Parcours"],
-          ["#livraison", "Livraison"],
-          ["#produits", "Produits et services"],
-          ["#devis", "Devis"],
-          ["#commandes-client", "Commandes client"],
-          ["#commandes-fournisseur", "Commandes fournisseur"],
-          ["#actualite", "Événements"],
-        ].map(([href, label]) => (
-          <a key={href} href={href} className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-3")}>
+      <nav className="flex flex-wrap gap-2 text-sm" aria-label="Volets du dossier">
+        {(
+          [
+            ["apercu", "Aperçu"],
+            ["livraison", "Livraison"],
+            ["affaire", "Produits, devis et parcours"],
+          ] as const
+        ).map(([key, label]) => (
+          <Link
+            key={key}
+            href={`/projets/${project.id}?onglet=${key}`}
+            aria-current={tab === key ? "page" : undefined}
+            className={cn(buttonVariants({ variant: tab === key ? "default" : "outline" }), "h-9 px-3")}
+          >
             {label}
-          </a>
+          </Link>
         ))}
+        <Link href={`/evenements?projet=${project.id}`} className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3")}>
+          Événements
+        </Link>
       </nav>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {tab === "apercu" ? (
+      <div className="grid gap-3 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Client</CardTitle>
@@ -178,8 +193,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           </CardContent>
         </Card>
       </div>
+      ) : null}
 
-      <Card id="livraison" className="scroll-mt-6">
+      {tab === "livraison" ? (
+      <Card id="livraison">
         <CardHeader>
           <CardTitle>Livraison</CardTitle>
           <CardDescription>
@@ -190,8 +207,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <DeliveryForm projectId={project.id} delivery={delivery} />
         </CardContent>
       </Card>
+      ) : null}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      {tab === "affaire" ? (
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="order-2 grid min-w-0 gap-6 lg:order-1">
       <ProjectOperation
         projectId={project.id}
@@ -260,6 +279,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         }))}
       />
       </div>
+      ) : null}
     </div>
   );
 }

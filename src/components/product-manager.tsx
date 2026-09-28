@@ -109,8 +109,9 @@ export function ProductManager({
   showFinder?: boolean;
   edition?: string;
 }) {
+  const opened = edition ? records.filter((record) => record.id === edition) : [];
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-3">
       {showHeading ? (
       <div className="grid gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Produits</h1>
@@ -163,7 +164,9 @@ export function ProductManager({
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <details className="rounded-lg border border-border bg-card px-4 py-2">
+        <summary className="cursor-pointer text-sm font-medium">Saisir un article</summary>
+      <div className="grid gap-6 pt-3 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Saisie manuelle</CardTitle>
@@ -189,18 +192,17 @@ export function ProductManager({
           </CardContent>
         </Card>
       </div>
+      </details>
 
-      {records.length === 0 ? (
+      {edition && opened.length === 0 ? (
         <Card>
           <CardContent className="text-sm text-muted-foreground">
-            {query || source
-              ? "Aucun produit ne correspond à ce filtre."
-              : "Aucun produit au catalogue."}
+            Cette fiche n’est plus dans la liste affichée.
           </CardContent>
         </Card>
-      ) : (
+      ) : opened.length > 0 ? (
         <ul className="grid gap-3">
-          {records.map((record) => (
+          {opened.map((record) => (
             <li key={record.id}>
               <Card>
                 <CardHeader>
@@ -284,7 +286,7 @@ export function ProductManager({
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -15,18 +15,20 @@ export const dynamic = "force-dynamic";
 export default async function ClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; fiche?: string }>;
 }) {
-  const { q = "" } = await searchParams;
+  const { q = "", fiche = "" } = await searchParams;
   const clients = await listClients(q);
+  const opened = clients.find((client) => client.id === fiche) ?? null;
+  const keep = q ? `&q=${encodeURIComponent(q)}` : "";
   return (
-    <div className="grid gap-6">
+    <div className="grid min-h-0 gap-3">
     <DataBoard
       title="Liste des clients"
       intro="Particuliers et entreprises. Une fiche peut avoir plusieurs interlocuteurs et plusieurs adresses. Le contact et l’adresse du tableau restent ceux du siège. La recherche porte sur le nom, l’e-mail et le SIREN."
       basePath="/clients"
       query={{ q }}
-      headers={["Nom", "Type", "Adresse", "Code postal", "Ville", "Téléphone", "Mail", "Fonction", "Aussi"]}
+      headers={["Nom", "Type", "Adresse", "Code postal", "Ville", "Téléphone", "Mail", "Fonction", "Aussi", "Fiche"]}
       rows={clients.map((client) => [
         { text: client.name },
         { text: client.kind === "entreprise" ? "Entreprise" : client.kind === "particulier" ? "Particulier" : "Non qualifié" },
@@ -39,6 +41,7 @@ export default async function ClientsPage({
         client.organization?.supplier
           ? { text: client.organization.supplier.name, href: `/fournisseurs?q=${encodeURIComponent(client.organization.supplier.name)}` }
           : { text: "—" },
+        { text: opened?.id === client.id ? "Ouverte" : "Ouvrir", href: `/clients?fiche=${client.id}${keep}` },
       ])}
       empty="Aucun client ne correspond à cette recherche."
     />
@@ -49,23 +52,51 @@ export default async function ClientsPage({
       </Link>
       .
     </p>
-    <PartyManager
-      title=""
-      intro="Le formulaire enregistre la fiche. L’assistant identifie d’abord les informations, puis demande confirmation."
-      showFinder={false}
-      actionPath="/clients"
-      query={q}
-      noun="client"
-      profile="client"
-      createAction={createClientAction}
-      updateAction={updateClientAction}
-      deleteAction={deleteClientAction}
-      addContactAction={addContactAction}
-      addAddressAction={addAddressAction}
-      records={clients.map((client) => ({
-        ...toRecord(client),
-      }))}
-    />
+    {opened ? (
+      <div className="grid gap-2">
+        <Link href={`/clients${q ? `?q=${encodeURIComponent(q)}` : ""}`} className="text-sm font-medium underline-offset-4 hover:underline">
+          Fermer la fiche
+        </Link>
+        <PartyManager
+          title=""
+          intro=""
+          showFinder={false}
+          pane="record"
+          actionPath="/clients"
+          query={q}
+          noun="client"
+          profile="client"
+          createAction={createClientAction}
+          updateAction={updateClientAction}
+          deleteAction={deleteClientAction}
+          addContactAction={addContactAction}
+          addAddressAction={addAddressAction}
+          records={[toRecord(opened)]}
+        />
+      </div>
+    ) : (
+      <details className="rounded-lg border border-border bg-card px-4 py-2">
+        <summary className="cursor-pointer text-sm font-medium">Nouveau client</summary>
+        <div className="pt-3">
+          <PartyManager
+            title=""
+            intro="Le formulaire enregistre la fiche. L’assistant identifie d’abord les informations, puis demande confirmation."
+            showFinder={false}
+            pane="create"
+            actionPath="/clients"
+            query={q}
+            noun="client"
+            profile="client"
+            createAction={createClientAction}
+            updateAction={updateClientAction}
+            deleteAction={deleteClientAction}
+            addContactAction={addContactAction}
+            addAddressAction={addAddressAction}
+            records={[]}
+          />
+        </div>
+      </details>
+    )}
     </div>
   );
 }

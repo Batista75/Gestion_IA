@@ -137,7 +137,7 @@ export function EventBoard({
               : "Aucune trace pour le moment. Une création, une correction ou une action de dossier apparaîtra ici."}
           </p>
         ) : (
-          <ul className="grid gap-1">
+          <ul className="grid max-h-[calc(100dvh-16rem)] gap-1 overflow-auto">
             {rows.map((row) => (
               <li key={row.token}>
                 <label className="flex min-h-11 items-start gap-3 rounded-lg px-2 py-2 text-sm leading-6 hover:bg-muted">

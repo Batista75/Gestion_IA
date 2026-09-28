@@ -41,11 +41,11 @@ export function DataBoard({
   };
 
   return (
-    <section className="grid gap-4">
+    <section className="grid min-h-0 gap-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          {intro ? <p className="max-w-3xl text-sm leading-6 text-muted-foreground">{intro}</p> : null}
+          <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+          {intro ? <p className="max-w-3xl text-sm leading-5 text-muted-foreground">{intro}</p> : null}
         </div>
         {exportView ? (
           <a
@@ -76,12 +76,12 @@ export function DataBoard({
           Filtrer
         </Button>
       </form>
-      <div className="overflow-x-auto rounded-lg border border-border bg-card">
+      <div className="max-h-[calc(100dvh-11rem)] overflow-auto rounded-lg border border-border bg-card">
         <table className="w-full min-w-[46rem] border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/60 text-left text-xs tracking-wide text-muted-foreground uppercase">
+          <thead className="sticky top-0 z-10">
+            <tr className="border-b border-border bg-muted text-left text-xs tracking-wide text-muted-foreground uppercase">
               {headers.map((header) => (
-                <th key={header} className="px-3 py-2 font-medium">
+                <th key={header} className="bg-muted px-3 py-2 font-medium">
                   {header}
                 </th>
               ))}

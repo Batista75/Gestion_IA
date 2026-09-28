@@ -77,6 +77,7 @@ export function PartyManager({
   addContactAction,
   addAddressAction,
   showFinder = true,
+  pane = "both",
 }: {
   title?: string;
   intro: string;
@@ -91,6 +92,7 @@ export function PartyManager({
   deleteAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   addContactAction: (previous: FormState, formData: FormData) => Promise<FormState>;
   addAddressAction: (previous: FormState, formData: FormData) => Promise<FormState>;
+  pane?: "both" | "create" | "record";
 }) {
   return (
     <div className="grid gap-6">
@@ -119,7 +121,8 @@ export function PartyManager({
         </Button>
       </form> : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <div className={pane === "both" ? "grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]" : "grid gap-3"}>
+        {pane === "record" ? null : (
         <Card>
           <CardHeader>
             <CardTitle>Nouveau {noun}</CardTitle>
@@ -137,7 +140,9 @@ export function PartyManager({
             />
           </CardContent>
         </Card>
+        )}
 
+        {pane === "create" ? null : (
         <section className="grid gap-3">
           {records.length === 0 ? (
             <Card>
@@ -239,6 +244,7 @@ export function PartyManager({
             </ul>
           )}
         </section>
+        )}
       </div>
     </div>
   );
