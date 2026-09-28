@@ -1,7 +1,7 @@
 export const defaultOperator = {
   firstName: "Jhon",
   lastName: "Smith",
-  passwordRequired: false,
+  passwordRequired: true,
 };
 
 export function operatorMark(firstName: string, lastName: string): string {

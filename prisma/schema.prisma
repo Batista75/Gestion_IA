@@ -17,6 +17,15 @@ model AppSetting {
   updatedAt   DateTime @updatedAt
 }
 
+model Account {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  firstName    String
+  lastName     String
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
 model CompanyProfile {
   id         String   @id @default("local")
   legalName  String   @default("")

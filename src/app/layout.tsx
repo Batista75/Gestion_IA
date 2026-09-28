@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import { AppShell } from "@/components/app-shell";
+import { currentActor } from "@/lib/actor";
 import { prisma } from "@/lib/db";
 import "./globals.css";
 
@@ -21,20 +23,25 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const path = (await headers()).get("x-gestion-path") ?? "";
+  const bare = path === "/connexion" || path.startsWith("/connexion/");
   let company = "Société locale";
-  try {
-    const row = await prisma.companyProfile.findUnique({ where: { id: "local" } });
-    if (row?.legalName.trim()) company = row.legalName.trim();
-  } catch {
-    company = "Société locale";
+  if (!bare) {
+    try {
+      const row = await prisma.companyProfile.findUnique({ where: { id: "local" } });
+      if (row?.legalName.trim()) company = row.legalName.trim();
+    } catch {
+      company = "Société locale";
+    }
   }
+  const operator = bare ? "" : await currentActor();
   return (
     <html
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
-        <AppShell company={company}>{children}</AppShell>
+        {bare ? children : <AppShell company={company} operator={operator}>{children}</AppShell>}
       </body>
     </html>
   );

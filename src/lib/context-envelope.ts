@@ -1,6 +1,6 @@
 import { readView, type ContextHint, type ContextSnapshot } from "@/domain/context-envelope";
 import { intentCatalog } from "@/domain/intent-catalog";
-import { currentOperatorMark } from "@/domain/operator";
+import { currentActor } from "@/lib/actor";
 import { saleKindLabel } from "@/domain/sale-line";
 import { prisma } from "@/lib/db";
 
@@ -40,7 +40,7 @@ export async function resolveContext(hint: ContextHint): Promise<ContextSnapshot
     recent: events
       .map((event) => [event.action, event.entityName].filter(Boolean).join(" "))
       .filter(Boolean),
-    operator: currentOperatorMark(),
+    operator: await currentActor(),
     role: "opérateur",
     allowed: intentCatalog.filter((item) => item.execution === "regle").map((item) => item.label),
   };

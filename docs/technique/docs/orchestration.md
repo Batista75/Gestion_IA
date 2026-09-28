@@ -30,7 +30,7 @@ Le modèle ne dispose plus que d’outils de lecture : `search_records`, `search
 
 `evaluateShortMessages` dans `src/domain/short-eval.ts` rejoue des phrases courtes sur ces fonctions, sans modèle et sans base. Le tableau est sur Plus. Une phrase qui ne tient pas est un écart. Le contrôle n’écrit rien.
 
-Chaque appel porte une enveloppe construite par l’application, dans `resolveContext`. Le client envoie seulement le chemin de la page et les noms des pièces jointes. Le serveur vérifie le projet et le document dans PostgreSQL, puis ajoute l’opérateur J Smith, le rôle opérateur, les actions déjà autorisées par le catalogue, et les trois dernières modifications de fiche. Un identifiant de projet inconnu est ignoré.
+Chaque appel porte une enveloppe construite par l’application, dans `resolveContext`. Le client envoie seulement le chemin de la page et les noms des pièces jointes. Le serveur vérifie le projet et le document dans PostgreSQL, puis ajoute l’opérateur connecté, le rôle opérateur, les actions déjà autorisées par le catalogue, et les trois dernières modifications de fiche. Un identifiant de projet inconnu est ignoré.
 
 ## Fil et confirmation
 

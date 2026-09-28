@@ -31,7 +31,7 @@ StoredFile 1 ── * Quote
 StoredFile 1 ── * DocumentProposal
 StoredFile 1 ── * Demand
 
-Sans clé étrangère : AppSetting, CompanyProfile, DocumentMemory,
+Sans clé étrangère : Account, AppSetting, CompanyProfile, DocumentMemory,
 CatalogProposal, ClientProposal, RecordEvent, KnowledgeChunk
 ```
 
@@ -45,6 +45,16 @@ Une seule ligne, `id` = `local`.
 
 - `serverUrl`, `apiKey`, `chatModel`, `embedModel`, `rerankModel` : adresse et modèles Ollama du poste.
 - `updatedAt`.
+
+### Account
+
+Accès à l’application. Tant qu’aucune ligne n’existe, `/connexion` crée le premier compte. Ensuite l’adresse et le mot de passe sont exigés. Un second compte ne se crée pas ici.
+
+- `email` unique, en minuscules.
+- `firstName`, `lastName`. La marque affichée est l’initiale du prénom et le nom.
+- `passwordHash` : empreinte scrypt. Le mot de passe en clair n’est pas stocké.
+- `createdAt`.
+- Le cookie `gestion_session` est signé pour 14 jours. Il porte l’identifiant et la marque. Le navigateur ne peut pas le lire.
 
 ### CompanyProfile
 
@@ -371,7 +381,7 @@ Journal des créations, mises à jour et suppressions de `Client`, `Supplier`, `
 - `action` : `création`, `mise à jour`, `suppression`.
 - `summary` : champs changés, forme `ancien → nouveau`. Une mise à jour sans différence n’écrit pas de ligne.
 - `source` : `assistant`, `formulaire`, ou `application`.
-- `actor` défaut `J Smith`.
+- `actor` : marque de la personne connectée. Hors session, la marque par défaut reste `J Smith`.
 - `createdAt`.
 
 ## Fichiers hors tables

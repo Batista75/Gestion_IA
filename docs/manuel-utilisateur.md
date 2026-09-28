@@ -8,6 +8,8 @@ Dernière mise à jour : 27 septembre 2026. Le menu Configuration règle le serv
 
 Sur la machine Ubuntu, ouvrez [l’accueil](/). L’adresse locale est `http://127.0.0.1:3847`.
 
+La première visite ouvre **Créer l’accès** : prénom, nom, adresse e-mail et mot de passe d’au moins 8 caractères, saisi deux fois. **Créer l’accès** reste inactif tant que ces champs ne sont pas valides. Les visites suivantes demandent l’adresse et le mot de passe. **Entrer** reste inactif tant que les deux sont vides. Un identifiant incorrect indique de vérifier l’adresse et le mot de passe, sans préciser lequel. **Quitter**, dans la barre, ferme la session. Les pages et les fichiers restent inaccessibles sans ce cookie. La santé de la base, `GET /api/health`, reste ouverte.
+
 Le menu du quotidien est à gauche : **Accueil**, **Projets**, **Clients**, **Fournisseurs**, **Produits**. **Autres** ouvre le reste : devis, achats, échéances, banque, journal, pilotage, analyses, documents, modèles, configuration, manuel, Plus. La page en cours est indiquée dans la barre et par le lien surligné.
 
 **Nouveau dossier** est sur la page Projets. Les regroupements et l’historique des lignes restent accessibles par leur adresse. La barre du haut porte la recherche, avec une loupe. La touche **/** y place le curseur, sauf quand vous écrivez déjà dans un champ. Sur un grand écran, le nom de l’entreprise est à droite. Sur un téléphone, **Menu** ouvre le rail ; **Échap** le referme. Chaque liste a une recherche, un nombre de lignes (10, 25, 50 ou 100), une pagination et, pour les tableaux commerciaux, un export CSV.
@@ -92,7 +94,7 @@ Sous le client et le contexte, des liens mènent au **parcours**, à la **livrai
 
 Chaque dossier garde aussi une **actualité** : ouverture, objet, devis établi, commande, confirmation des chiffres, pièce rattachée, mise à jour. **Modifications** date à part les changements de la fiche projet : création, correction, suppression. **Modifier ou supprimer** change le nom, le client, le statut, l’objet et la prochaine action, retire un devis du catalogue rattaché au dossier, ou supprime le projet. Les devis retirés du catalogue restent au catalogue. Un devis de catalogue rattaché affiche la devise, les totaux indiqués et la mention de TVA. La conversion en euro et la marge brute de ces pièces restent absentes tant que le taux ou le coût de revient n’est pas indiqué.
 
-La page [Projets](/projets) tient en deux moitiés. En haut, le tableau des dossiers et le bouton **Nouveau dossier**, qui ouvre le formulaire. En bas, les modifications de fiche et les actions du dossier. Chaque ligne nomme l’auteur par l’initiale du prénom et le nom. L’utilisateur en place est Jhon Smith, affiché **J Smith**. Le mot de passe n’est pas demandé.
+La page [Projets](/projets) tient en deux moitiés. En haut, le tableau des dossiers et le bouton **Nouveau dossier**, qui ouvre le formulaire. En bas, les modifications de fiche et les actions du dossier. Chaque ligne nomme l’auteur par l’initiale du prénom et le nom de la personne connectée.
 
 **Nouveau dossier** demande :
 

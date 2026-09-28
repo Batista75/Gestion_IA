@@ -8,7 +8,7 @@ import {
   fieldChangeSummary,
 } from "@/domain/record-journal";
 import { currentChangeSource } from "@/lib/change-source";
-import { currentOperatorMark } from "@/domain/operator";
+import { currentActor } from "@/lib/actor";
 
 const LABELS: Record<string, Record<string, string>> = {
   Client: CLIENT_FIELD_LABELS,
@@ -112,7 +112,7 @@ async function writeEvent(
       action,
       summary,
       source: currentChangeSource(),
-      actor: currentOperatorMark(),
+      actor: await currentActor(),
     },
   });
 }
@@ -125,7 +125,8 @@ function clientKnowsOffers(client: ReturnType<typeof createClient>): boolean {
     typeof client.contact?.findMany === "function" &&
     typeof client.address?.findMany === "function" &&
     typeof client.organization?.findMany === "function" &&
-    typeof client.notedPiece?.findMany === "function"
+    typeof client.notedPiece?.findMany === "function" &&
+    typeof client.account?.findMany === "function"
   );
 }
 

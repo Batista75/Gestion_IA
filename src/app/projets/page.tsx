@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { ProjectForm } from "@/components/project-form";
-import { currentOperatorMark } from "@/domain/operator";
+import { currentActor } from "@/lib/actor";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
-  const who = currentOperatorMark();
+  const who = await currentActor();
   const [projects, clients, changes, actions] = await Promise.all([
     prisma.project.findMany({
       orderBy: { createdAt: "desc" },
@@ -97,7 +97,7 @@ export default async function ProjectsPage() {
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold tracking-tight">Modifications et actions</h2>
           <p className="text-sm text-muted-foreground">
-            L’auteur est l’initiale du prénom suivie du nom. L’utilisateur en place est {who}. Le mot de passe n’est pas demandé.
+            L’auteur est l’initiale du prénom suivie du nom. La personne connectée est {who}.
           </p>
         </div>
         {logs.length === 0 ? (

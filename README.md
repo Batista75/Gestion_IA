@@ -14,7 +14,7 @@ git pull origin main
 bash scripts/setup-ubuntu.sh
 ```
 
-Ouvrez [http://127.0.0.1:3847](http://127.0.0.1:3847).
+Ouvrez [http://127.0.0.1:3847](http://127.0.0.1:3847). La première visite crée l’accès (prénom, nom, e-mail, mot de passe). Les suivantes demandent l’e-mail et le mot de passe.
 
 Sans réinstaller les paquets :
 

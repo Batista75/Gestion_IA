@@ -6,7 +6,7 @@ Chaque création, mise à jour et suppression d’un client, d’un fournisseur,
 
 La source vient du contexte d’appel : `assistant` pour une confirmation, un dossier parlé ou une pièce confirmée ; `formulaire` pour les écrans ; sinon `application`. L’écriture est branchée sur le client Prisma. Clients, Fournisseurs, Produits et Projets affichent les dernières lignes. L’actualité d’un projet reste distincte : elle décrit le dossier, le journal décrit les changements de fiche.
 
-L’auteur est l’initiale du prénom et le nom (`operatorMark` dans `src/domain/operator.ts`). L’utilisateur en place est Jhon Smith, affiché J Smith. `RecordEvent.actor` garde cette marque. Le mot de passe n’est pas demandé.
+L’auteur est l’initiale du prénom et le nom (`operatorMark` dans `src/domain/operator.ts`) de la personne connectée. `RecordEvent.actor` garde cette marque. Sans session, la marque par défaut reste J Smith. Le mot de passe est une empreinte scrypt sur `Account`.
 
 ## Vue projet
 
