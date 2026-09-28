@@ -425,6 +425,8 @@ Ligne d’achat confirmée. Le bon de commande et la facture reçue sont deux mo
 - `designation`, `family`. La sous-traitance est la famille `sous-traitance`.
 - `orderedOn` : date `YYYY-MM-DD`.
 - `orderCents` : montant écrit du bon de commande. `invoiceCents` : montant écrit de la facture reçue, vide si elle n’est pas écrite.
+- `invoiceReference` : référence déjà écrite sur la facture reçue. Vide si elle n’est pas écrite. Ce n’est pas un numéro attribué par l’application.
+- `invoiceOn` : date `YYYY-MM-DD` déjà écrite pour cette facture. Vide si elle n’est pas écrite.
 - `remainder` : `ouvert`, `partiel` ou `clos`.
 - `shipsOn` : date d’expédition annoncée, vide si elle n’est pas écrite.
 - `tracking` : numéro de suivi recopié. Vide s’il n’y en a pas.
@@ -598,5 +600,6 @@ Priorité haute, pas encore faites :
 - L’écart d’un achat est calculé par `src/domain/purchases.ts` : facture reçue moins bon de commande, deux centimes déjà stockés. Le volume et le montant de sous-traitance additionnent des `orderCents` déjà enregistrés. Le retard d’expédition compare `shipsOn` à la date du jour. Aucun de ces résultats n’est stocké.
 - Le nombre de réclamations du mois et le nombre de retours en cours sont des filtres de `src/domain/claims.ts` sur les fiches déjà confirmées. Ils ne sont pas stockés. Le texte affiché est `Claim.note` ou `ReturnRequest.note`, recopié, pas réécrit.
 - La rentabilité d’un dossier, la valeur du stock, la part réservée, les réceptions sans intervention et les achats non repris sont calculés par `src/domain/dossier.ts`. Les quatre nombres de rentabilité additionnent des centimes déjà stockés. La valeur du stock multiplie `Product.stockQty` par le coût déjà écrit. La part réservée additionne les quantités des dossiers ouverts. Aucun de ces résultats n’est stocké. Aucune facture n’est créée.
+- Un brouillon de relance ou de cotation est calculé par `src/domain/drafts.ts`. Le texte recopie des noms, références, montants et dates déjà stockés. Il n’est pas enregistré. Rien n’est envoyé. Aucun numéro de facture n’est attribué.
 - L’application n’attribue pas de numéro de facture ni d’avoir. Une `NotedPiece` recopie la référence déjà écrite. Elle n’enregistre pas de relevé bancaire.
 - La validité de trente jours d’une offre fournisseur, les rôles et les notifications ne sont pas des tables. L’historique de prix est la suite des `SupplierOffer`. `Quote.versionLabel` et `Quote.fingerprint` identifient une offre reçue, sans durée de validité en colonne.

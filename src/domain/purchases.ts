@@ -81,6 +81,8 @@ export type PurchasePayload = StoredPurchase & {
   supplierId: string;
   projectId: string;
   projectName: string;
+  invoiceReference: string;
+  invoiceOn: string;
 };
 
 export type SupplierTerms = {
@@ -98,6 +100,8 @@ export type PurchaseSketch = {
   orderCents: number | null;
   invoiceCents: number | null;
   invoiceAsked: boolean;
+  invoiceReference: string;
+  invoiceOn: string;
   remainder: Remainder | "";
   shipsOn: string;
   tracking: string;
@@ -183,6 +187,8 @@ export function readPurchaseEntry(text: string): PurchaseSketch | null {
     orderCents: amountAfter(text, /\bbon de commande\s+/i),
     invoiceCents: invoiceWord ? amountAfter(text, /\bfacture\s+/i) : null,
     invoiceAsked: invoiceWord && amountAfter(text, /\bfacture\s+/i) === null,
+    invoiceReference: invoiceReferenceOf(text),
+    invoiceOn: dateAfter(text, /\bfacture le\s+/i),
     remainder: remainders.length === 1 ? remainders[0] ?? "" : "",
     shipsOn: dateAfter(text, /\bexp[ée]dition(?:\s+le)?\s+/i),
     tracking: trackingOf(text),
@@ -239,7 +245,9 @@ export function purchasePayload(value: unknown): PurchasePayload | null {
   if (!isFamily(raw.family) || !isRemainder(raw.remainder) || !isDelivery(raw.delivery)) return null;
   if (!isIsoDate(raw.orderedOn) || !optionalDate(raw.shipsOn)) return null;
   if (!wholeCents(raw.orderCents) || !optionalCents(raw.invoiceCents)) return null;
-  if (!optionalText(raw.tracking)) return null;
+  const invoiceReference = typeof raw.invoiceReference === "string" ? raw.invoiceReference : "";
+  const invoiceOn = typeof raw.invoiceOn === "string" ? raw.invoiceOn : "";
+  if (!optionalText(raw.tracking) || !optionalText(invoiceReference) || !optionalDate(invoiceOn)) return null;
   return {
     supplierId: raw.supplierId,
     supplierName: raw.supplierName.trim(),
@@ -254,6 +262,8 @@ export function purchasePayload(value: unknown): PurchasePayload | null {
     delivery: raw.delivery,
     projectId: typeof raw.projectId === "string" ? raw.projectId.trim() : "",
     projectName: typeof raw.projectName === "string" ? raw.projectName.trim() : "",
+    invoiceReference: invoiceReference.trim(),
+    invoiceOn: invoiceOn.trim(),
   };
 }
 
@@ -438,6 +448,8 @@ export function purchaseProposalPacket(draft: Omit<PurchasePayload, "supplierId"
       ...(draft.shipsOn ? [{ label: "Expédition", detail: draft.shipsOn }] : []),
       ...(draft.tracking ? [{ label: "Suivi", detail: draft.tracking }] : []),
       ...(draft.projectName ? [{ label: "Dossier", detail: draft.projectName }] : []),
+      ...(draft.invoiceReference ? [{ label: "Référence facture", detail: draft.invoiceReference }] : []),
+      ...(draft.invoiceOn ? [{ label: "Facture le", detail: draft.invoiceOn }] : []),
     ],
     sources: ["Phrase"],
     missing: ["Rien n’est enregistré avant confirmation."],
@@ -474,6 +486,8 @@ export function purchaseFields(draft: Omit<PurchasePayload, "supplierId">): Arra
     ...(draft.shipsOn ? [{ label: "Expédition", value: draft.shipsOn }] : []),
     ...(draft.tracking ? [{ label: "Suivi", value: draft.tracking }] : []),
     ...(draft.projectName ? [{ label: "Dossier", value: draft.projectName }] : []),
+    ...(draft.invoiceReference ? [{ label: "Référence facture", value: draft.invoiceReference }] : []),
+    ...(draft.invoiceOn ? [{ label: "Facture le", value: draft.invoiceOn }] : []),
   ];
 }
 
@@ -565,6 +579,10 @@ function designationOf(text: string): string {
 
 function trackingOf(text: string): string {
   return text.match(/\bsuivi\s+([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)/i)?.[1] ?? "";
+}
+
+function invoiceReferenceOf(text: string): string {
+  return text.match(/\br[ée]f[ée]rence(?:\s+facture)?\s+([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)/i)?.[1] ?? "";
 }
 
 function amountAfter(text: string, pattern: RegExp): number | null {

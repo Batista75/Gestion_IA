@@ -33,6 +33,7 @@ Une seule bibliothèque calcule : `src/domain/pricing.ts`.
 - Un achat confirmé porte le fournisseur, le montant du bon de commande et, s’il est écrit, le montant de la facture reçue. L’écart est la différence de ces deux centimes. L’encours et le délai de paiement sont confirmés sur la fiche fournisseur.
 - Une réclamation confirmée et un retour confirmé portent un type fermé, une date, un client et un état. Le nombre du paquet filtre ces fiches. Le texte affiché est la note déjà enregistrée.
 - La rentabilité d’un dossier sépare quatre nombres : ventes de matériel confirmées, prestations vendues, coûts d’achat du dossier et heures déjà enregistrées. Le stock lit la quantité et le coût déjà écrits. Une réception close sans intervention à venir, et une désignation achetée absente du devis et des pièces constatées, sont des listes. Aucune facture n’est créée.
+- Un brouillon de relance ou de cotation recopie les noms, références, montants et dates déjà enregistrés. Sans référence et sans date de facture, la relance n’est pas rédigée. Rien n’est envoyé.
 
 Le modèle de langage ne reçoit pas ces formules à exécuter.
 

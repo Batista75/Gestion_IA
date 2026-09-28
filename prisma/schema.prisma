@@ -366,6 +366,8 @@ model PurchaseFollowUp {
   orderedOn     String
   orderCents    Int
   invoiceCents  Int?
+  invoiceReference String @default("")
+  invoiceOn        String @default("")
   remainder     String
   shipsOn       String   @default("")
   tracking      String   @default("")

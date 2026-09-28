@@ -1,0 +1,42 @@
+Contrôle 26 — brouillons
+======================
+
+Aucune pièce à déposer. Tout se fait dans l’assistant, après connexion.
+Le fournisseur Quincaillerie Durand et l’article Latitude 5440 sont déjà au répertoire.
+Les dates d’exemple supposent le 28 septembre 2026.
+Une facture est en retard de 15 jours si sa date écrite a au moins 15 jours.
+Le 2026-08-01 l’est. Le 2026-09-20 ne l’est pas.
+Si le jour a changé, une facture du jour n’est pas en retard de 15 jours.
+Rien n’est envoyé : aucun e-mail ne part.
+
+1. Envoyer : Prépare une relance de facture.
+   La carte « Relance de facture » demande le retard en jours.
+   Aucun brouillon, aucun numéro.
+
+2. Envoyer : Prépare une relance pour une facture en retard de 15 jours.
+   Tant qu’aucune facture n’a de référence et de date, la carte le dit.
+   Aucun numéro n’est attribué. Rien n’est envoyé.
+
+3. Envoyer : Enregistre un achat pour Quincaillerie Durand, désignation Relance baie, famille serveur, commandé le 2026-08-01, bon de commande 400,00 €, facture 400,00 €, référence FAC-88, facture le 2026-08-01, reliquat clos, chez nous.
+   Carte « Achat à confirmer ». Référence FAC-88. Facture le 2026-08-01. Montant 400,00 €.
+   Cliquer Confirmer.
+   La réponse se termine par « Validation enregistrée. »
+
+4. Envoyer : Enregistre un achat pour Quincaillerie Durand, désignation Relance recente, famille serveur, commandé le 2026-09-20, bon de commande 50,00 €, facture 50,00 €, référence FAC-90, facture le 2026-09-20, reliquat clos, chez nous.
+   Référence FAC-90. Confirmer.
+
+5. Envoyer : Prépare une relance pour une facture en retard de 15 jours.
+   Carte « Relance de facture ». Brouillons 1.
+   FAC-88 y est, avec le 2026-08-01 et 400,00 €.
+   FAC-90 n’y est pas.
+   La carte dit qu’aucun numéro de facture n’est attribué, et que rien n’est envoyé.
+
+6. Envoyer : Prépare une relance de tracking pour Quincaillerie Durand.
+   Carte « Relance de suivi ». Suivi COLIS-88, si la consigne 23 a confirmé Baie commande.
+   La carte dit que rien n’est envoyé.
+   Les achats sans numéro de suivi ne sont pas cités dans le texte.
+
+7. Envoyer : Prépare une demande de cotation spéciale pour Latitude 5440 auprès de Quincaillerie Durand.
+   Carte « Demande de cotation ». Référence LAT-5440.
+   Le prix catalogue 1 000,00 € n’apparaît pas : aucun coût n’est écrit sur cette fiche.
+   Rien n’est envoyé.

@@ -86,6 +86,8 @@ export async function resolvePurchase(text: string, now = new Date()): Promise<P
     shipsOn: sketch.shipsOn,
     tracking: sketch.tracking,
     delivery: sketch.delivery,
+    invoiceReference: sketch.invoiceReference,
+    invoiceOn: sketch.invoiceOn,
   };
   const packet = purchaseProposalPacket(draft);
   const fields = purchaseFields(draft);
@@ -159,6 +161,8 @@ export async function confirmPurchaseProposal(): Promise<{ ok: boolean; summary:
         tracking: draft.tracking,
         delivery: draft.delivery,
         projectId: draft.projectId || null,
+        invoiceReference: draft.invoiceReference,
+        invoiceOn: draft.invoiceOn,
         confirmedAt: new Date(),
       },
     }),

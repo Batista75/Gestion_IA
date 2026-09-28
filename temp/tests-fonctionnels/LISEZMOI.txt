@@ -41,5 +41,6 @@ Contrôles
 23-achats — écart de facture, reliquat, suivi, encours, sous-traitance, volume.
 24-reclamations — résumé du mois, retours sous garantie encore en cours.
 25-dossier — rentabilité, stock, réception sans intervention, achat non repris.
+26-brouillons — relance de facture, relance de suivi, demande de cotation. Rien n’est envoyé.
 
 Le jeu de projets déjà présent dans temp/ reste à part. Il ne remplace pas ces consignes.

@@ -213,6 +213,8 @@ test("la carte d’achat n’écrit rien avant confirmation", () => {
     delivery: sketch.delivery,
     projectId: "",
     projectName: "",
+    invoiceReference: "",
+    invoiceOn: "",
   });
   assert.match(packet.missing.join(" "), /Rien n’est enregistré avant confirmation/);
   assert.equal(narrativeFits(packet, renderPacket(packet)), true);
