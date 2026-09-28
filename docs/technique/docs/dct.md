@@ -67,6 +67,30 @@ Deux tables, une liste.
 
 Les règles du catalogue s’exécutent avant le modèle. L’ordre est dans l’[orchestration](orchestration.md). Le modèle ne dispose que d’outils de lecture, au plus trois pas. Une écriture de fiche attend une confirmation. `DocumentMemory` retient une correction de projet, de type ou de fournisseur pour le nom d’une pièce. Elle ne modifie pas le répertoire. Les faits de page et de zone sont calculés à la lecture. Aucune table ne les conserve : la formulation est dans la [modélisation](modelisation.md).
 
+## Interface
+
+Les jetons visuels sont dans `src/app/globals.css`. On y trouve :
+
+- le fond, deux surfaces, la bordure, le texte principal et secondaire ;
+- l’accent `primary`, avec sa teinte douce ;
+- les états succès, avertissement, information, erreur et proposition, chacun avec sa teinte douce ;
+- le rayon ;
+- la largeur du menu, la largeur de l’assistant et la hauteur de la barre.
+
+Tailwind les expose en classes : `bg-surface`, `bg-surface-2`, `text-success`, `bg-proposal-soft`, `w-sidebar`, `h-topbar`. Un composant ne porte pas de couleur arbitraire.
+
+Les primitives sont celles de shadcn sur Base UI, dans `src/components/ui`. Trois s’y ajoutent pour l’écran de référence :
+
+- `StatusBadge` associe une situation à une teinte ;
+- `StatCard` montre un repère chiffré ;
+- `EmptyState` annonce une liste vide.
+
+Le menu `…` d’une ligne est `RowMenu`. L’écran de référence est le dossier. Son en-tête et ses onglets sont `ProjectHeader` et `ProjectTabs`. La synthèse est `ProjectOverview`, qui lit `projectDocumentRows` et les totaux de `pricing.ts`, sans recalculer.
+
+Dans l’assistant, une proposition s’affiche dans `AssistantProposalCard`, avec l’état à confirmer, confirmée ou sans suite. Une réponse d’action enregistrée garde sa propre marque. L’état confirmée se lit dans le fil : une confirmation, puis une réponse d’action.
+
+La fenêtre ne défile pas. `AppShell` fixe le menu et la barre. Dans un dossier, le layout ouvre trois zones : le menu, le cadre métier et l’assistant. Le cadre métier ne défile que dans son volet. Les volets s’adaptent à la largeur de leur cadre par requêtes de conteneur, pas à celle de la fenêtre.
+
 ## Recherche et lecture
 
 L’index est `KnowledgeChunk`, dans PostgreSQL. La recherche mélange les mots, les vecteurs et, s’il répond, le reranker. Un PDF qui a déjà une couche de texte est lu sans modèle de mise en page. Docling ne sert que si cette couche manque, ou pour un document Word, un tableur, une présentation ou une image. Le budget GPU, la file et les trois rôles de modèle sont dans [Recherche et modèles](recherche.md).
