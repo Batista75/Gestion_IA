@@ -17,5 +17,6 @@ Les demandes sont dans `docs/fonctionnel`. Le manuel décrit l’usage. Le PDF d
 - [Modélisation des données](modelisation.md) : tables, champs, liens, valeurs non stockées.
 - [Écrans](ecrans.md) : routes et contrôles.
 - [Écart](ecart.md) : demandes encore absentes du chemin livré.
+- [Plan du chat](plan-chat.md) : familles de questions et lots pour y répondre.
 - [Réalisations](realisations.md) : état fait ou pas fait.
 - [Données et projet](donnees.md) : renvois vers le DCT et la modélisation.

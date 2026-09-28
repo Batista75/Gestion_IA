@@ -68,5 +68,6 @@ Chaque fait a une seule page. Les autres renvoient.
 - **[Modélisation](modelisation.md)** : chaque table, ses champs, ses liens, ce qui n’est pas stocké.
 - **[Écrans](ecrans.md)** : routes et contrôles.
 - **[Écart](ecart.md)** : demandes encore absentes du chemin livré.
+- **[Plan du chat](plan-chat.md)** : familles de questions et ordre des lots.
 - **[Réalisations](realisations.md)** : état fait ou pas fait, le même tableau que Plus.
 - **[Données](donnees.md)** : renvois, pour les liens déjà publiés.

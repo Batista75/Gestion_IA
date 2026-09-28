@@ -43,3 +43,5 @@ La réponse est un flux. L’étape visible précède le texte. Le navigateur li
 Une seule écriture de fiche attendue à la fois : la plus récente entre la proposition de client et la proposition de catalogue. **Confirmer** ou `Je confirme.` l’applique. `non` n’écrit pas. La phrase parlée de projet, le tableau collé et le brouillon de devis hybride ne passent pas par cette attente. Le brouillon n’est pas envoyé.
 
 Si le message ne contient qu’un nom déjà enregistré, sans verbe, la réponse demande s’il faut consulter la fiche ou la modifier. Deux homonymes ne déclenchent pas cette question.
+
+Les questions d’analyse, de recherche de preuve et de brouillon prévues ensuite sont dans le [plan du chat](plan-chat.md). Elles ne sont pas encore des règles de cette page.

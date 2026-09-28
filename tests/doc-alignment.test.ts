@@ -91,6 +91,15 @@ test("le DAT et le DCT sont les deux entrées, sans recopier le lot", () => {
   assert.ok(donnees.length < 700);
 });
 
+test("le plan du chat est une page à part, sans recopier le lot", () => {
+  const plan = readFileSync("docs/technique/docs/plan-chat.md", "utf8");
+  assert.match(readFileSync("src/lib/spec-books.ts", "utf8"), /"plan-chat"/);
+  assert.match(readFileSync("docs/technique/mkdocs.yml", "utf8"), /plan-chat\.md/);
+  assert.match(readFileSync("docs/technique/docs/dat.md", "utf8"), /plan-chat\.md/);
+  assert.equal(plan.includes("## Avancement du lot"), false);
+  assert.match(plan, /paquet/);
+});
+
 test("le fonctionnel et la technique disent la même chose de la mémoire de pièce", () => {
   const chaine = readFileSync("docs/fonctionnel/docs/chaine.md", "utf8");
   const ecart = readFileSync("docs/technique/docs/ecart.md", "utf8");

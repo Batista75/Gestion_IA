@@ -17,4 +17,4 @@ Le devis préparé hors du modèle est dans [Devis hybride](devis-hybride.md).
 
 ## Hors de ce socle
 
-L’avoir émis, l’encaissement, le rapprochement bancaire, la date d’échéance, le pack d’articles et le connecteur agréé ne sont pas implémentés. Ils restent des demandes. La facture affichée ne crée pas de titre de paiement. Le mécanisme de réimpression est dans le [DCT](dct.md).
+L’avoir émis, l’encaissement, le rapprochement bancaire, la date d’échéance, le pack d’articles et le connecteur agréé ne sont pas implémentés. Ils restent des demandes. La facture affichée ne crée pas de titre de paiement. Le mécanisme de réimpression est dans le [DCT](dct.md). Les questions d’analyse qui s’en approchent sont ordonnées dans le [plan du chat](plan-chat.md).
