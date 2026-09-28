@@ -1,0 +1,7 @@
+Dossier projet
+Nom : Kits de développement Atlas
+Stade : chiffrage reçu, rien n’est encore engagé
+Client : Helios Onduleurs SAS, Marseille, France
+Fournisseur : Nordlicht Komponenten GmbH, Hambourg, Allemagne
+Prochaine action : comparer le chiffrage et le barème
+Les fichiers numérotés portent les pièces de ce dossier.

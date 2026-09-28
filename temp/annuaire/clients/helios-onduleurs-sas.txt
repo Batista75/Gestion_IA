@@ -1,0 +1,17 @@
+Fiche client
+Type : entreprise
+Pays : France
+Raison sociale : Helios Onduleurs SAS
+Forme : SAS
+SIREN : 812660441
+SIRET : 81266044100031
+TVA : FR32812660441
+Adresse : 6 quai du Port
+Code postal : 13002
+Ville : Marseille
+Pays : France
+E-mail : contact@helios-onduleurs.example
+Téléphone : 04 91 00 22 10
+Contact : Marc Vidal
+Fonction : directeur technique
+Notes : Assemble des onduleurs. Devise euro.

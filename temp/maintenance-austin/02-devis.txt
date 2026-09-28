@@ -1,0 +1,14 @@
+Devis
+N° offre : DEV-THAMES-3
+Date : 20/08/2025
+Fournisseur : Thames Instruments Ltd
+Client : Apex Cloud Solutions LLC
+Devise : USD
+Offre valable jusqu’au 20/11/2025
+
+Supervision annuelle | réf SUP-AN | 12 400,00 USD | quantité 1
+
+Total HT : 12 400,00 USD
+TVA : 0,00 USD
+Total TTC : 12 400,00 USD
+Mention : hors taxes américaines, prestation export

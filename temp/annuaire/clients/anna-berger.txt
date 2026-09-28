@@ -1,0 +1,12 @@
+Fiche client
+Type : particulier
+Pays : international
+Civilité : Mme
+Nom : Anna Berger
+Adresse : Spiegelgasse 8
+Code postal : 8001
+Ville : Zurich
+Pays : Suisse
+E-mail : anna.berger@mail.example
+Téléphone : +41 44 000 19 20
+Notes : Particulier hors France. Pas de SIREN.

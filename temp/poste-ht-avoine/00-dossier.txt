@@ -1,0 +1,7 @@
+Dossier projet
+Nom : Modernisation poste HT Avoine
+Stade : besoin reçu, pas encore chiffré
+Client : GridGrid Energy SAS, Lyon, France
+Fournisseur consulté : Câbles du Rhône SARL, Vaulx-en-Velin, France
+Prochaine action : qualifier le besoin avant tout chiffrage
+Les fichiers numérotés de ce dossier portent les pièces. Le fichier vide sert d’exemple sans contenu.

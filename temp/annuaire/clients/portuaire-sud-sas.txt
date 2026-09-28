@@ -1,0 +1,17 @@
+Fiche client
+Type : entreprise
+Pays : France
+Raison sociale : Portuaire Sud SAS
+Forme : SAS
+SIREN : 903114228
+SIRET : 90311422800017
+TVA : FR11903114228
+Adresse : 2 avenue de la Joliette
+Code postal : 13002
+Ville : Marseille
+Pays : France
+E-mail : exploitation@portuaire-sud.example
+Téléphone : 04 91 14 60 20
+Contact : Sofia Renard
+Fonction : responsable exploitation
+Notes : Site portuaire. Livraison sur quai, créneau matin.

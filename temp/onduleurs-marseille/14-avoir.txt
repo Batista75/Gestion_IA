@@ -1,0 +1,13 @@
+Avoir
+Référence déjà portée : AV-JOL-9
+Date : 15/10/2025
+Fournisseur : Apex Components LLC
+Client : Portuaire Sud SAS
+Pièce d’origine : FAC-JOL-9
+Motif : remise de quai accordée après réception
+
+Avoir commercial | réf REM-QUAI | 300,00 USD
+
+Total HT : 300,00 USD
+TVA : 0,00 USD
+Total TTC : 300,00 USD

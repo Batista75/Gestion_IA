@@ -1,0 +1,7 @@
+Dossier projet
+Nom : Durcissement du poste de Lyon
+Stade : engagement client et achat fournisseur déjà écrits
+Client : GridGrid Energy SAS, Lyon, France
+Fournisseur : Atelier Volta SAS, Toulouse, France
+Prochaine action : confirmer le planning d’intervention
+Les fichiers numérotés portent les pièces de ce dossier.

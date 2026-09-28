@@ -1,0 +1,11 @@
+Demande de prix
+Référence : RFQ-ZUR-4
+Date : 18/03/2026
+Client : Anna Berger
+Fournisseur : Câbles du Rhône SARL
+Objet : un petit lot de câble souple pour un atelier
+
+Ligne : Câble souple 3G2,5 | réf CAB-SOU-25 | 1,85 € HT | quantité 100 m
+
+Délai souhaité : 3 semaines
+Livraison : Spiegelgasse 8, 8001 Zurich, Suisse

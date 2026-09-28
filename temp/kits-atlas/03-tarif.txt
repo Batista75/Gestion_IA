@@ -1,0 +1,12 @@
+Tarif
+Fournisseur : Nordlicht Komponenten GmbH
+Date : 01/01/2026
+Client : Helios Onduleurs SAS
+Devise : EUR
+
+Kit carte contrôle NL-440 | réf NL-440 | 690,00 € HT
+Sonde de courant isolée | réf SC-12 | 52,00 € HT
+
+Total HT : 742,00 €
+Mention : prix catalogue unitaire, hors remises de volume
+Offre valable jusqu’au 31/12/2026

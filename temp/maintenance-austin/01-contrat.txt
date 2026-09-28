@@ -1,0 +1,9 @@
+Contrat
+Référence : CTR-APEX-3
+Date : 01/09/2025
+Client : Apex Cloud Solutions LLC
+Fournisseur : Thames Instruments Ltd
+
+Supervision à distance, 12 mois, un point de présence.
+Conditions générales : préavis 30 jours, heures ouvrées du centre de Reading.
+Honoraires indiqués sur la pièce DEV-THAMES-3, en dollars.

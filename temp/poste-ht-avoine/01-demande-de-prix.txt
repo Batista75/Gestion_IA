@@ -1,0 +1,12 @@
+Demande de prix
+Référence : RFQ-AVOINE-26
+Date : 12/03/2026
+Client : GridGrid Energy SAS
+Fournisseur : Câbles du Rhône SARL
+Objet : câbles HTA et extrémités pour le poste d’Avoine
+
+Ligne : Câble HTA 12/20 kV | réf CAB-HTA-240 | 18,40 € HT | quantité 400 m
+Ligne : Extrémité intérieure | réf EXT-INT-20 | 86,00 € HT | quantité 6
+
+Délai souhaité : 6 semaines
+Livraison : poste source d’Avoine, 37420 Avoine, France

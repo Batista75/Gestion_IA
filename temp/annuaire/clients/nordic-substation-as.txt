@@ -1,0 +1,17 @@
+Fiche client
+Type : entreprise
+Pays : international
+Raison sociale : Nordic Substation Systems AS
+Forme : AS
+Identifiant : 924 118 330
+TVA : NO924118330MVA
+Adresse : Schweigaards gate 14
+Code postal : 0191
+Ville : Oslo
+Pays : Norvège
+E-mail : procurement@nordic-substation.example
+Téléphone : +47 21 00 44 18
+Contact : Ingrid Solberg
+Fonction : acheteur
+Devise : EUR
+Notes : Client export. Livraison Oslo, incoterm DAP.

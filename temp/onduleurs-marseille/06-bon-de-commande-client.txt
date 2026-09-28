@@ -1,0 +1,12 @@
+Bon de commande
+Référence : BC-PORT-9
+Date : 08/07/2025
+Client : Portuaire Sud SAS
+Fournisseur : Apex Components LLC
+Devis repris : DEV-APEX-9
+
+Onduleur de quai 30 kVA | réf OND-30K | 4 250,00 USD | quantité 2
+Mise en service | réf MES-1 | 800,00 USD | quantité 1
+
+Total HT : 9 300,00 USD
+Livraison : 2 avenue de la Joliette, 13002 Marseille, France

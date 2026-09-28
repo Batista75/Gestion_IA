@@ -1,0 +1,7 @@
+Bordereau de transport
+Référence : TRP-JOL-9
+Date : 12/09/2025
+Expéditeur : Apex Components LLC, Dallas
+Destinataire : Portuaire Sud SAS, Marseille
+Colis : 2 caisses, 420 kg
+Incoterm écrit sur la pièce : DAP Marseille

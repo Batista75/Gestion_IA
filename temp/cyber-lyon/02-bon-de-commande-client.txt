@@ -1,0 +1,14 @@
+Bon de commande
+Référence : BC-GG-2026-014
+Date : 28/01/2026
+Client : GridGrid Energy SAS
+Fournisseur : Atelier Volta SAS
+Objet : reprise du devis DEV-VOLTA-88
+
+Prestation d’audit sur site | réf AUD-SITE | 2 400,00 € HT | quantité 1
+Coffret de filtrage | réf COF-FLT-16 | 1 180,00 € HT | quantité 2
+
+Total HT : 4 760,00 €
+TVA : 952,00 €
+Total TTC : 5 712,00 €
+Livraison : 18 rue de la Part-Dieu, 69003 Lyon

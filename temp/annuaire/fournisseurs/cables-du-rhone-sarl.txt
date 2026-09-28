@@ -1,0 +1,16 @@
+Fiche fournisseur
+Pays : France
+Raison sociale : Câbles du Rhône SARL
+Forme : SARL
+SIREN : 790441228
+SIRET : 79044122800028
+TVA : FR21790441228
+Adresse : 40 chemin de l’Industrie
+Code postal : 69120
+Ville : Vaulx-en-Velin
+Pays : France
+E-mail : ventes@cables-rhone.example
+Téléphone : 04 72 80 11 60
+Contact : Yves Charvet
+Fonction : commercial
+Notes : Câbles HTA et accessoires. Franco à partir de 1 500 € HT.

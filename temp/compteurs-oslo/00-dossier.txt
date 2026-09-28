@@ -1,0 +1,7 @@
+Dossier projet
+Nom : Compteurs pour Oslo
+Stade : marchandises remises à Oslo, pièce de vente pas encore reçue
+Client : Nordic Substation Systems AS, Oslo, Norvège
+Fournisseur : Baltic Sensors OÜ, Tallinn, Estonie
+Prochaine action : attendre la pièce de vente du fournisseur
+Les fichiers numérotés portent les pièces de ce dossier.

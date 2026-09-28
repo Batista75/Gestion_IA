@@ -1,0 +1,16 @@
+Devis
+N° offre : DEV-VOLTA-12
+Date : 04/04/2026
+Fournisseur : Atelier Volta SAS
+Client : Marie Laurent
+Devise : EUR
+Offre valable jusqu’au 04/07/2026
+
+Luminaire d’atelier | réf LUM-AT-2 | 186,00 € HT | quantité 4
+Pose sur site | réf POS-1 | 320,00 € HT | quantité 1
+
+Total HT : 1 064,00 €
+TVA : 212,80 €
+Total TTC : 1 276,80 €
+TVA 20 %
+Adresse de pose : 14 rue des Lilas, 44000 Nantes

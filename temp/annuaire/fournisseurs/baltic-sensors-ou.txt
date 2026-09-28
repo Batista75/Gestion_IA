@@ -1,0 +1,16 @@
+Fiche fournisseur
+Pays : international
+Raison sociale : Baltic Sensors OÜ
+Forme : OÜ
+Identifiant : 14932281
+TVA : EE102244331
+Adresse : Telliskivi 60a
+Code postal : 10412
+Ville : Tallinn
+Pays : Estonie
+E-mail : sales@baltic-sensors.example
+Téléphone : +372 600 1140
+Contact : Mart Kask
+Fonction : sales
+Devise : EUR
+Notes : Compteurs et sondes. Délai annoncé 4 semaines.

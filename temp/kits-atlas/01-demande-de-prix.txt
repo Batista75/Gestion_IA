@@ -1,0 +1,9 @@
+RFQ
+Référence : RFQ-ATLAS-14
+Date : 02/02/2026
+Client : Helios Onduleurs SAS
+Fournisseur : Nordlicht Komponenten GmbH
+Objet : kits de cartes pour un banc de développement
+
+Quantité envisagée : 12 kits
+Usage : banc interne, pas de revente immédiate

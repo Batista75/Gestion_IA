@@ -1,0 +1,8 @@
+Fiche technique
+Référence : NL-440
+Désignation : Kit carte contrôle NL-440
+Fournisseur : Nordlicht Komponenten GmbH
+Datasheet révision C, 2025
+
+Alimentation 24 V. Entrées isolées. Aucun prix sur cette fiche.
+Famille : produit

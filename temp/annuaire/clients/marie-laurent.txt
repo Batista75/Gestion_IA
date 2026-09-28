@@ -1,0 +1,12 @@
+Fiche client
+Type : particulier
+Pays : France
+Civilité : Mme
+Nom : Marie Laurent
+Adresse : 14 rue des Lilas
+Code postal : 44000
+Ville : Nantes
+Pays : France
+E-mail : marie.laurent@mail.example
+Téléphone : 06 18 42 77 03
+Notes : Particulier. Petit local professionnel à équiper.

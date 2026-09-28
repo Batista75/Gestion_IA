@@ -1,0 +1,7 @@
+Dossier projet
+Nom : Onduleurs quai Joliette
+Stade : chaîne complète, du besoin jusqu’au procès-verbal et à la pièce de vente
+Client : Portuaire Sud SAS, Marseille, France
+Fournisseur : Apex Components LLC, Dallas, États-Unis
+Prochaine action : classer le justificatif et clôturer
+Les fichiers numérotés portent chaque étape. Le dernier fichier est vide.

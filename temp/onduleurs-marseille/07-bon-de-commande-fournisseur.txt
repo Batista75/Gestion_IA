@@ -1,0 +1,10 @@
+Purchase order
+Référence : PO-APEX-9
+Date : 10/07/2025
+Client : Portuaire Sud SAS
+Fournisseur : Apex Components LLC
+
+Onduleur de quai 30 kVA | réf OND-30K | 3 100,00 USD | quantité 2
+
+Total HT : 6 200,00 USD
+Note : coût d’achat, distinct du prix de vente du devis

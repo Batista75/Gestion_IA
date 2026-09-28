@@ -1,0 +1,16 @@
+Fiche client
+Type : entreprise
+Pays : international
+Raison sociale : Apex Cloud Solutions LLC
+Forme : LLC
+Identifiant : EIN 84-2201193
+Adresse : 600 Congress Avenue
+Code postal : 78701
+Ville : Austin
+Pays : États-Unis
+E-mail : ap@apex-cloud.example
+Téléphone : +1 512 555 0144
+Contact : Helen Cho
+Fonction : accounts payable
+Devise : USD
+Notes : Prestations à distance. Facturation en dollars, TVA non applicable.

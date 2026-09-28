@@ -1,0 +1,16 @@
+Devis
+N° offre : DEV-VOLTA-88
+Date : 09/01/2026
+Fournisseur : Atelier Volta SAS
+Client : GridGrid Energy SAS
+Devise : EUR
+Offre valable jusqu’au 09/04/2026
+
+Prestation d’audit sur site | réf AUD-SITE | 2 400,00 € HT | quantité 1
+Coffret de filtrage | réf COF-FLT-16 | 1 180,00 € HT | quantité 2
+
+Total HT : 4 760,00 €
+TVA : 952,00 €
+Total TTC : 5 712,00 €
+TVA 20 %
+Conditions : acompte 30 %, solde à la réception

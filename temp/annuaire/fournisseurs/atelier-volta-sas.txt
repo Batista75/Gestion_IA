@@ -1,0 +1,16 @@
+Fiche fournisseur
+Pays : France
+Raison sociale : Atelier Volta SAS
+Forme : SAS
+SIREN : 831902774
+SIRET : 83190277400012
+TVA : FR54831902774
+Adresse : 9 impasse des Minimes
+Code postal : 31200
+Ville : Toulouse
+Pays : France
+E-mail : affaires@atelier-volta.example
+Téléphone : 05 61 00 33 80
+Contact : Nadia Cohen
+Fonction : chargée d’affaires
+Notes : Prestations de durcissement et d’intégration. Main-d’œuvre et matériel.

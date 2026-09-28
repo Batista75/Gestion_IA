@@ -1,0 +1,16 @@
+Fiche fournisseur
+Pays : international
+Raison sociale : Thames Instruments Ltd
+Forme : Ltd
+Identifiant : 11882044
+TVA : GB220441889
+Adresse : 14 Station Road
+Code postal : RG1 1AA
+Ville : Reading
+Pays : Royaume-Uni
+E-mail : contracts@thames-instruments.example
+Téléphone : +44 118 000 4410
+Contact : Owen Blake
+Fonction : contract manager
+Devise : USD
+Notes : Supervision à distance. Honoraires en dollars.

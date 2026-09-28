@@ -1,0 +1,16 @@
+Fiche fournisseur
+Pays : international
+Raison sociale : Nordlicht Komponenten GmbH
+Forme : GmbH
+Identifiant : HRB 22091
+TVA : DE814220991
+Adresse : Hafenstraße 12
+Code postal : 20457
+Ville : Hambourg
+Pays : Allemagne
+E-mail : angebot@nordlicht-komponenten.example
+Téléphone : +49 40 000 2180
+Contact : Lena Krüger
+Fonction : Vertrieb
+Devise : EUR
+Notes : Cartes et kits. Prix en euro, EXW Hambourg.

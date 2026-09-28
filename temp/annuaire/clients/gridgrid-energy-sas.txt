@@ -1,0 +1,18 @@
+Fiche client
+Type : entreprise
+Pays : France
+Raison sociale : GridGrid Energy SAS
+Enseigne : GridGrid
+Forme : SAS
+SIREN : 849302117
+SIRET : 84930211700024
+TVA : FR44849302117
+Adresse : 18 rue de la Part-Dieu
+Code postal : 69003
+Ville : Lyon
+Pays : France
+E-mail : achats@gridgrid-energy.example
+Téléphone : 04 72 00 18 40
+Contact : Claire Benoit
+Fonction : responsable achats
+Notes : Client réseau électrique. Règlement à 45 jours.

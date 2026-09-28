@@ -1,0 +1,119 @@
+Jeu de pièces pour essais
+========================
+
+Dossier `temp` à la racine du dépôt. Rien n’est chargé dans PostgreSQL : ce sont des fichiers sources. Pour les essayer, ouvrez l’accueil et déposez un fichier dans l’assistant, ou lisez le dossier à la main.
+
+Un dossier = un projet, plus un annuaire des fiches. Les identifiants (SIREN, SIRET, TVA, EIN) sont fictifs. Les e-mails finissent par `.example`. Les références de facture et d’avoir sont déjà écrites sur la pièce : l’application ne les émet pas et ne leur donne pas de numéro.
+
+Les montants en dollars restent en dollars. Le lecteur reconnaît le type de pièce et les noms, et il reprend une ligne de prix lorsqu’elle est écrite en euro. Une pièce seulement en dollars ne produit pas de ligne de prix.
+
+Annuaire
+--------
+
+Clients France
+- GridGrid Energy SAS, Lyon, SAS, SIREN 849302117 — annuaire/clients/gridgrid-energy-sas.txt
+- Helios Onduleurs SAS, Marseille, SAS, SIREN 812660441 — annuaire/clients/helios-onduleurs-sas.txt
+- Portuaire Sud SAS, Marseille, SAS, SIREN 903114228 — annuaire/clients/portuaire-sud-sas.txt
+- Marie Laurent, particulier, Nantes — annuaire/clients/marie-laurent.txt
+
+Clients hors France
+- Nordic Substation Systems AS, Oslo, Norvège, EUR — annuaire/clients/nordic-substation-as.txt
+- Iberia Grid SA, Madrid, Espagne, EUR — annuaire/clients/iberia-grid-sa.txt
+- Apex Cloud Solutions LLC, Austin, États-Unis, USD — annuaire/clients/apex-cloud-llc.txt
+- Anna Berger, particulier, Zurich, Suisse — annuaire/clients/anna-berger.txt
+
+Fournisseurs France
+- Câbles du Rhône SARL, Vaulx-en-Velin — annuaire/fournisseurs/cables-du-rhone-sarl.txt
+- Atelier Volta SAS, Toulouse — annuaire/fournisseurs/atelier-volta-sas.txt
+
+Fournisseurs hors France
+- Nordlicht Komponenten GmbH, Hambourg, Allemagne, EUR — annuaire/fournisseurs/nordlicht-komponenten-gmbh.txt
+- Baltic Sensors OÜ, Tallinn, Estonie, EUR — annuaire/fournisseurs/baltic-sensors-ou.txt
+- Thames Instruments Ltd, Reading, Royaume-Uni, USD — annuaire/fournisseurs/thames-instruments-ltd.txt
+- Apex Components LLC, Dallas, États-Unis, USD — annuaire/fournisseurs/apex-components-llc.txt
+
+Les fiches d’annuaire sont lues comme document.
+
+Projets, du moins avancé au plus avancé
+----------------------------------------
+
+poste-ht-avoine — besoin reçu, pas chiffré
+Client GridGrid Energy SAS (France), fournisseur Câbles du Rhône SARL (France).
+- 00-dossier.txt — document
+- 01-demande-de-prix.txt — demande de prix (rfq). Lignes euro CAB-HTA-240 et EXT-INT-20.
+- 02-cahier-des-charges.txt — document
+- 03-piece-vide.txt — autre (fichier vide)
+
+atelier-zurich — besoin reçu, particulier hors France
+Cliente Anna Berger (Suisse), fournisseur Câbles du Rhône SARL (France).
+- 00-dossier.txt — document
+- 01-demande-de-prix.txt — demande de prix (rfq). Ligne euro CAB-SOU-25.
+
+eclairage-nantes — chiffrage reçu, pas d’engagement
+Cliente Marie Laurent (France, particulier), fournisseur Atelier Volta SAS (France).
+- 00-dossier.txt — document
+- 01-devis.txt — devis DEV-VOLTA-12. Total HT 1 064,00 €, TVA 212,80 €, TTC 1 276,80 €.
+
+kits-atlas — chiffrage reçu, rien d’engagé
+Client Helios Onduleurs SAS (France), fournisseur Nordlicht Komponenten GmbH (Allemagne).
+- 00-dossier.txt — document
+- 01-demande-de-prix.txt — demande de prix (rfq), sans ligne de prix
+- 02-devis.txt — devis DEV-NL-4418. Total HT 8 262,00 €, autoliquidation, EXW Hambourg.
+- 03-tarif.txt — tarif. Prix catalogue unitaire, total HT indiqué 742,00 €.
+- 04-fiche-technique.txt — fiche technique NL-440, sans prix
+
+liaison-madrid — engagement écrit, matériel pas encore parti
+Client Iberia Grid SA (Espagne), fournisseur Nordlicht Komponenten GmbH (Allemagne).
+- 00-dossier.txt — document
+- 01-devis.txt — devis DEV-NL-5502. Total HT 3 280,00 €, autoliquidation.
+- 02-bon-de-commande.txt — commande BC-IB-2026-03, mêmes prix.
+
+cyber-lyon — engagement client et achat fournisseur
+Client GridGrid Energy SAS (France), fournisseur Atelier Volta SAS (France). L’achat matière part vers Câbles du Rhône SARL.
+- 00-dossier.txt — document
+- 01-devis.txt — devis DEV-VOLTA-88. Total HT 4 760,00 €, TVA 20 %, TTC 5 712,00 €.
+- 02-bon-de-commande-client.txt — commande BC-GG-2026-014
+- 03-bon-de-commande-fournisseur.txt — commande BCF-VOLTA-014. Total HT 1 480,00 €. L’acheteur écrit est Atelier Volta SAS.
+- 04-contrat.txt — contrat CTR-VOLTA-014
+
+compteurs-oslo — marchandises remises, pièce de vente pas encore reçue
+Client Nordic Substation Systems AS (Norvège), fournisseur Baltic Sensors OÜ (Estonie).
+- 00-dossier.txt — document
+- 01-devis.txt — devis DEV-BAL-77. Total HT 4 720,00 €, autoliquidation.
+- 02-bon-de-commande.txt — commande PO-NORDIC-77
+- 03-accuse-reception.txt — document (accusé ARC-77)
+- 04-bordereau-transport.txt — document (transport TRP-77)
+- 05-bon-de-livraison.txt — bon de livraison BL-77, quantités sans prix
+
+maintenance-austin — pièce de vente reçue, puis geste commercial, en dollars
+Client Apex Cloud Solutions LLC (États-Unis), fournisseur Thames Instruments Ltd (Royaume-Uni).
+- 00-dossier.txt — document
+- 01-contrat.txt — contrat CTR-APEX-3
+- 02-devis.txt — devis DEV-THAMES-3. Total HT écrit 12 400,00 USD.
+- 03-facture.txt — facture reçue FAC-THAMES-3. Total HT écrit 12 400,00 USD.
+- 04-avoir.txt — avoir reçu AV-THAMES-3, pièce d’origine FAC-THAMES-3. Total HT écrit 1 000,00 USD.
+
+onduleurs-marseille — chaîne complète, client France et fournisseur États-Unis, dollars
+Client Portuaire Sud SAS (France), fournisseur Apex Components LLC (États-Unis).
+- 00-dossier.txt — document
+- 01-demande-de-prix.txt — demande de prix (rfq) RFQ-JOL-9
+- 02-devis.txt — devis DEV-APEX-9. Total HT écrit 9 300,00 USD.
+- 03-tarif.txt — tarif. Total HT écrit 5 500,00 USD.
+- 04-fiche-technique.txt — fiche technique OND-30K, sans prix
+- 05-contrat.txt — contrat CTR-JOL-9
+- 06-bon-de-commande-client.txt — commande BC-PORT-9. Total HT écrit 9 300,00 USD.
+- 07-bon-de-commande-fournisseur.txt — purchase order PO-APEX-9. Coût d’achat, total HT écrit 6 200,00 USD.
+- 08-accuse-reception.txt — document (accusé ARC-JOL-9)
+- 09-ordre-de-preparation.txt — document (ordre de service OS-JOL-9)
+- 10-bordereau-transport.txt — document (transport TRP-JOL-9, DAP Marseille)
+- 11-bon-de-livraison.txt — bon de livraison BL-JOL-9
+- 12-proces-verbal.txt — document (procès-verbal PV-JOL-9, réception sans réserve)
+- 13-facture.txt — facture reçue FAC-JOL-9. Total HT écrit 9 300,00 USD.
+- 14-avoir.txt — avoir reçu AV-JOL-9, pièce d’origine FAC-JOL-9. Total HT écrit 300,00 USD.
+- 15-memo.txt — document (mémo de quai)
+- 16-piece-vide.txt — autre (fichier vide)
+
+Types couverts
+--------------
+
+demande de prix, devis, tarif, fiche technique, contrat, bon de commande client, bon de commande fournisseur, accusé de réception, ordre de service, bordereau de transport, bon de livraison, procès-verbal de réception, facture reçue, avoir reçu, mémo, cahier des charges, fichier vide.

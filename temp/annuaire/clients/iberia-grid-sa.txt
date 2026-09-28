@@ -1,0 +1,17 @@
+Fiche client
+Type : entreprise
+Pays : international
+Raison sociale : Iberia Grid SA
+Forme : SA
+Identifiant : B-86422019
+TVA : ESB86422019
+Adresse : Calle de Alcalá 42
+Code postal : 28014
+Ville : Madrid
+Pays : Espagne
+E-mail : compras@iberia-grid.example
+Téléphone : +34 91 000 22 40
+Contact : Luis Ferrer
+Fonction : jefe de compras
+Devise : EUR
+Notes : Client ibérique. Langue des pièces : français et espagnol.

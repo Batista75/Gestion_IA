@@ -1,0 +1,16 @@
+Facture
+Référence déjà portée : FAC-JOL-9
+Date : 30/09/2025
+Fournisseur : Apex Components LLC
+Client : Portuaire Sud SAS
+Bon de commande : BC-PORT-9
+Bon de livraison : BL-JOL-9
+Procès-verbal : PV-JOL-9
+
+Onduleur de quai 30 kVA | réf OND-30K | 4 250,00 USD | quantité 2
+Mise en service | réf MES-1 | 800,00 USD | quantité 1
+
+Total HT : 9 300,00 USD
+TVA : 0,00 USD
+Total TTC : 9 300,00 USD
+Cette facture est une pièce reçue. L’application ne lui donne pas de numéro.

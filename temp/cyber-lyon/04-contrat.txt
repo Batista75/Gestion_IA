@@ -1,0 +1,9 @@
+Contrat
+Référence : CTR-VOLTA-014
+Date : 28/01/2026
+Client : GridGrid Energy SAS
+Fournisseur : Atelier Volta SAS
+
+Conditions générales : intervention sous 15 jours après confirmation écrite, responsabilité limitée au montant HT de la prestation.
+Le présent contrat reprend les prix de la pièce DEV-VOLTA-88, sans les recalculer.
+Durée : jusqu’à la réception du procès-verbal.

@@ -1,0 +1,7 @@
+Dossier projet
+Nom : Petit atelier de Zurich
+Stade : besoin reçu, particulier hors France, pas encore chiffré
+Client : Anna Berger, Zurich, Suisse
+Fournisseur consulté : Câbles du Rhône SARL, Vaulx-en-Velin, France
+Prochaine action : chiffrer le besoin en euro
+Les fichiers numérotés portent les pièces de ce dossier.

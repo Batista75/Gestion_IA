@@ -1,0 +1,14 @@
+Facture
+Référence déjà portée : FAC-THAMES-3
+Date : 15/09/2025
+Fournisseur : Thames Instruments Ltd
+Client : Apex Cloud Solutions LLC
+Contrat : CTR-APEX-3
+Devis : DEV-THAMES-3
+
+Supervision annuelle | réf SUP-AN | 12 400,00 USD | quantité 1
+
+Total HT : 12 400,00 USD
+TVA : 0,00 USD
+Total TTC : 12 400,00 USD
+Cette pièce est une facture reçue. Aucun numéro n’est attribué par l’application.

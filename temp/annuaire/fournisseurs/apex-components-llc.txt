@@ -1,0 +1,15 @@
+Fiche fournisseur
+Pays : international
+Raison sociale : Apex Components LLC
+Forme : LLC
+Identifiant : EIN 98-4412207
+Adresse : 400 Industrial Blvd
+Code postal : 75207
+Ville : Dallas
+Pays : États-Unis
+E-mail : quotes@apex-components.example
+Téléphone : +1 214 555 0190
+Contact : Rita Alvarez
+Fonction : sales
+Devise : USD
+Notes : Onduleurs et modules. Prix catalogue en dollars.
