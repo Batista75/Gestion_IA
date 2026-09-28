@@ -1,0 +1,42 @@
+Contrôle 21 — interventions
+============================
+
+Aucune pièce à déposer. Tout se fait dans l’assistant, après connexion.
+Le client Atelier Nord et le dossier Lampes Nord sont déjà ouverts.
+Les dates d’exemple sont dans le trimestre et le mois du 28 septembre 2026.
+Si le jour a changé de trimestre ou de mois, une date hors fenêtre ne compte plus.
+
+1. Envoyer : Enregistre un ticket pour Atelier Nord.
+   La carte « Intervention à confirmer » demande le type.
+   Aucun bouton Confirmer.
+
+2. Envoyer : Enregistre une intégration réseau pour Atelier Nord, dossier Lampes Nord, le 2026-09-15, 4 heures, taux horaire 90,00 €.
+   Durée 4 h. Taux horaire 90,00 €. Cliquer Confirmer.
+   La réponse se termine par « Validation enregistrée. »
+
+3. Envoyer : Enregistre une assistance pour Atelier Nord, dossier Lampes Nord, le 2026-09-10, 2 heures, taux horaire 80,00 €.
+   Confirmer.
+
+4. Envoyer : Enregistre une assistance pour Atelier Nord, dossier Lampes Nord, le 2026-09-12, 1 heure, taux horaire 80,00 €, facturée F-77.
+   La carte dit facturée F-77. Confirmer.
+
+5. Envoyer : Enregistre un ticket T-18 d’assistance pour Atelier Nord, dossier Lampes Nord, le 2026-09-20, 3 heures, taux horaire 80,00 €.
+   La carte cite T-18. Confirmer.
+
+6. Envoyer : Enregistre une panne sur site sous contrat pour Atelier Nord, dossier Lampes Nord, le 2026-09-18, 2 heures, taux horaire 95,00 €, demande le 2026-09-16, arrivée le 2026-09-18.
+   La carte cite sur site, sous contrat, la demande et l’arrivée. Confirmer.
+
+7. Envoyer : Quel est le taux horaire moyen facturé pour l’intégration réseau ce trimestre ?
+   Carte « Taux moyen ». Horaire 90,00 €. Une intervention. La méthode dit que la moyenne porte sur les taux déjà enregistrés.
+
+8. Envoyer : Quelles sont les heures d’assistance ou d’intervention du mois pas encore facturées ?
+   Carte « Heures non facturées ». Heures 5 h. Interventions 2.
+   L’assistance facturée F-77 n’y est pas. L’intégration et la panne n’y sont pas.
+
+9. Envoyer : Récapitulatif des tickets et des heures pour recharger le forfait du client Atelier Nord.
+   Carte « Tickets et heures ». Tickets 1. Heures 12 h. Le ticket T-18 est recopié.
+   La méthode dit qu’aucun montant de forfait n’est calculé.
+
+10. Envoyer : Quel est le délai moyen d’intervention sur site pour les pannes sous contrat sur trois mois ?
+    Carte « Délai moyen d’intervention ». Délai 2 jours. Une intervention.
+    La méthode dit que le délai est la différence entre les deux dates enregistrées.

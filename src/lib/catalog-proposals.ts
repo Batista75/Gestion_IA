@@ -3,6 +3,11 @@ import { presentCommand, type CatalogCommand } from "@/domain/catalog";
 import { stampProvenance } from "@/domain/provenance";
 import { proposalFields } from "@/domain/client-file";
 import { confirmContractProposal, pendingContractProposal, rejectContractProposal } from "@/lib/contract-reply";
+import {
+  confirmInterventionProposal,
+  pendingInterventionProposal,
+  rejectInterventionProposal,
+} from "@/lib/intervention-reply";
 import { confirmCurrentProposal, currentProposal, proposeFromParty, type ProposalView } from "@/lib/client-proposals";
 import { applyCatalogCommand } from "@/lib/catalog-store";
 import { withChangeSource } from "@/lib/change-source";
@@ -46,7 +51,7 @@ export async function rejectLatestWrite(): Promise<{
   reply: string;
   proposal?: ProposalView["proposal"];
 } | null> {
-  const [client, catalog, contract] = await Promise.all([
+  const [client, catalog, contract, intervention] = await Promise.all([
     prisma.clientProposal.findFirst({
       where: { status: "en_attente" },
       orderBy: { createdAt: "desc" },
@@ -56,13 +61,19 @@ export async function rejectLatestWrite(): Promise<{
       orderBy: { createdAt: "desc" },
     }),
     pendingContractProposal(),
+    pendingInterventionProposal(),
   ]);
-  if (!client && !catalog && !contract) return null;
+  if (!client && !catalog && !contract && !intervention) return null;
   const newest = latestOf([
     client ? { at: client.createdAt, kind: "client" as const } : null,
     catalog ? { at: catalog.createdAt, kind: "catalog" as const } : null,
     contract ? { at: contract.createdAt, kind: "contract" as const } : null,
+    intervention ? { at: intervention.createdAt, kind: "intervention" as const } : null,
   ]);
+  if (newest?.kind === "intervention") {
+    const rejected = await rejectInterventionProposal();
+    return rejected ? { reply: rejected.reply } : null;
+  }
   if (newest?.kind === "contract") {
     const rejected = await rejectContractProposal();
     return rejected ? { reply: rejected.reply } : null;
@@ -85,7 +96,7 @@ export async function rejectLatestWrite(): Promise<{
 }
 
 export async function confirmLatestWrite(): Promise<{ ok: boolean; summary: string }> {
-  const [client, catalog, contract] = await Promise.all([
+  const [client, catalog, contract, intervention] = await Promise.all([
     prisma.clientProposal.findFirst({
       where: { status: "en_attente" },
       orderBy: { createdAt: "desc" },
@@ -95,16 +106,19 @@ export async function confirmLatestWrite(): Promise<{ ok: boolean; summary: stri
       orderBy: { createdAt: "desc" },
     }),
     pendingContractProposal(),
+    pendingInterventionProposal(),
   ]);
-  if (!client && !catalog && !contract) {
+  if (!client && !catalog && !contract && !intervention) {
     return { ok: false, summary: "Il n’y a pas de fiche en attente." };
   }
   const newest = latestOf([
     client ? { at: client.createdAt, kind: "client" as const } : null,
     catalog ? { at: catalog.createdAt, kind: "catalog" as const } : null,
     contract ? { at: contract.createdAt, kind: "contract" as const } : null,
+    intervention ? { at: intervention.createdAt, kind: "intervention" as const } : null,
   ]);
   return withChangeSource("assistant", () => {
+    if (newest?.kind === "intervention") return confirmInterventionProposal();
     if (newest?.kind === "contract") return confirmContractProposal();
     if (newest?.kind === "catalog") return confirmCatalogProposal();
     return confirmCurrentProposal();
@@ -112,9 +126,9 @@ export async function confirmLatestWrite(): Promise<{ ok: boolean; summary: stri
 }
 
 function latestOf(
-  rows: Array<{ at: Date; kind: "client" | "catalog" | "contract" } | null>,
-): { at: Date; kind: "client" | "catalog" | "contract" } | null {
-  return rows.reduce<{ at: Date; kind: "client" | "catalog" | "contract" } | null>((best, row) => {
+  rows: Array<{ at: Date; kind: "client" | "catalog" | "contract" | "intervention" } | null>,
+): { at: Date; kind: "client" | "catalog" | "contract" | "intervention" } | null {
+  return rows.reduce<{ at: Date; kind: "client" | "catalog" | "contract" | "intervention" } | null>((best, row) => {
     if (!row) return best;
     if (!best || row.at > best.at) return row;
     return best;

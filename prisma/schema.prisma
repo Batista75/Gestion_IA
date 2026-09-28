@@ -76,6 +76,7 @@ model Project {
   sales         SaleDocument[]
   steps         ProjectStep[]
   notedPieces   NotedPiece[]
+  interventions Intervention[]
 
   @@index([clientId])
 }
@@ -143,6 +144,7 @@ model Client {
   contacts       Contact[]
   addresses      Address[]
   contracts      Contract[]
+  interventions  Intervention[]
   organizationId String?       @unique
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
@@ -249,6 +251,45 @@ model Contract {
 
   @@index([clientId])
   @@index([endsOn])
+}
+
+/** Intervention encore à confirmer. La fiche `Intervention` n’existe qu’après validation. */
+model InterventionProposal {
+  id           String    @id @default(cuid())
+  status       String    @default("en_attente")
+  payload      Json
+  modelVersion String    @default("")
+  confidence   Json      @default("[]")
+  validatedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([status])
+}
+
+/** Intervention confirmée. La durée est en minutes, le taux en centimes. Les moyennes ne sont pas stockées. */
+model Intervention {
+  id               String   @id @default(cuid())
+  clientId         String
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind             String
+  occurredOn       String
+  durationMinutes  Int
+  rateUnit         String
+  rateCents        Int
+  ticket           String   @default("")
+  billedReference  String   @default("")
+  onSite           Boolean  @default(false)
+  underContract    Boolean  @default(false)
+  requestedOn      String   @default("")
+  arrivedOn        String   @default("")
+  confirmedAt      DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([clientId])
+  @@index([projectId])
+  @@index([occurredOn])
 }
 
 model RecordEvent {

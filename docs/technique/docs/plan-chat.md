@@ -110,13 +110,13 @@ Ce lot reste le dernier. Il ne crée pas d’encaissement ni de rapprochement ba
 
 Chaque lot se termine par une fonction de domaine testée sans modèle, une question exemple qui affiche le paquet, et une phrase du manuel. Les colonnes nouvelles sont décrites dans la modélisation au moment où le lot les crée. L’état ci-dessous est mis à jour quand le lot est livré. Ce n’est pas le tableau de Réalisations, ni le lot de modélisation déjà clos.
 
-Avancement du chantier : 4 sur 11, soit 36 %. Seul un lot marqué livré compte.
+Avancement du chantier : 5 sur 11, soit 45 %. Seul un lot marqué livré compte.
 
 1. **Paquet et garde-fou.** Type du paquet, affichage, contrôle des chiffres dans une phrase. Aucune moyenne métier. État : livré.
 2. **Mesures sur l’existant.** Famille de produit, lien produit sur la ligne de vente, marge moyenne, classement d’offres, devis en attente face à une offre plus récente, dernière commande, recherche du procès-verbal indexé. État : livré.
 3. **Devis à plusieurs lignes.** Quantités et prestations nommées dans `prépare un devis pour …`, prix par la bibliothèque déjà en place. État : livré.
 4. **Contrats.** Échéance à 30 jours et montant récurrent mensuel. État : livré.
-5. **Temps.** Taux moyen, heures non facturées, récapitulatif de forfait, délai moyen d’intervention. État : pas commencé.
+5. **Temps.** Taux moyen, heures non facturées, récapitulatif de forfait, délai moyen d’intervention. État : livré.
 6. **Parc.** Garanties souscrites et matériel de plus de cinq ans. État : pas commencé.
 7. **Achats.** Écart de centimes, reliquat, suivi, volume par constructeur, encours et délai, sous-traitance. État : pas commencé.
 8. **Réclamations et retours.** Liste filtrée et résumé borné au texte enregistré. État : pas commencé.
@@ -124,4 +124,4 @@ Avancement du chantier : 4 sur 11, soit 36 %. Seul un lot marqué livré compte.
 10. **Brouillons.** Relance, tracking, cotation spéciale. Le contrôle de chiffres du lot 1 est requis. Rien n’est envoyé. État : pas commencé.
 11. **Dates de trésorerie.** Liste de la semaine à partir de dates et de montants déjà écrits. Sans banque et sans pénalité. État : pas commencé.
 
-Les quatre premiers lots répondent dans le chat. Le devis à plusieurs lignes affiche un paquet : le total additionne des montants de ligne déjà calculés, et la phrase le dit. Le contrat se confirme avant d’entrer dans l’échéance ou le montant mensuel.
+Les cinq premiers lots répondent dans le chat. Le devis à plusieurs lignes affiche un paquet : le total additionne des montants de ligne déjà calculés, et la phrase le dit. Le contrat et l’intervention se confirment avant d’entrer dans une mesure. Le taux moyen, les heures et le délai viennent des valeurs déjà enregistrées.

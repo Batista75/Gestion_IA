@@ -9,6 +9,8 @@ Cette page liste chaque modèle, ses champs utiles, ses liens et ce que l’appl
 ```
 Client 1 ── * Project
 Client 1 ── * Contract
+Client 1 ── * Intervention
+Project 1 ── * Intervention
 Organization 1 ── 0..1 Client
 Organization 1 ── 0..1 Supplier
 Client 1 ── * Contact
@@ -33,7 +35,7 @@ StoredFile 1 ── * DocumentProposal
 StoredFile 1 ── * Demand
 
 Sans clé étrangère : Account, AppSetting, CompanyProfile, DocumentMemory,
-CatalogProposal, ClientProposal, ContractProposal, RecordEvent, KnowledgeChunk
+CatalogProposal, ClientProposal, ContractProposal, InterventionProposal, RecordEvent, KnowledgeChunk
 ```
 
 Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, fichier d’une demande. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une boîte retire ses `StoredFile`.
@@ -87,7 +89,7 @@ Tiers unique, identifié par `nameKey`.
 - Interlocuteur : `contactName`, `contactRole`, `email`, `phone`.
 - `notes`, `reference`, `sector`, `currency`.
 - `createdAt`, `updatedAt`.
-- Lien : un client a plusieurs `Project`, plusieurs `Contact`, plusieurs `Address` et plusieurs `Contract`. Retirer le client vide `Project.clientId` et retire ses contacts, ses adresses et ses contrats.
+- Lien : un client a plusieurs `Project`, plusieurs `Contact`, plusieurs `Address`, plusieurs `Contract` et plusieurs `Intervention`. Retirer le client vide `Project.clientId` et retire ses contacts, ses adresses, ses contrats et ses interventions.
 
 ### Supplier
 
@@ -341,6 +343,31 @@ Contrat confirmé. Le montant stocké est celui de la période, en centimes. Le 
 - `confirmedAt` : moment de la validation. Sans cette date, le contrat n’existe pas.
 - `createdAt`.
 
+### InterventionProposal
+
+Intervention encore à confirmer. Confirmer crée l’`Intervention`. Rejeter n’écrit pas d’intervention.
+
+- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `payload` : client, dossier, type fermé (`assistance`, `intervention`, `integration`, `panne`), date, durée en minutes, unité de taux (`horaire` ou `journalier`), `rateCents`, ticket recopié, référence de pièce facturée, sur site, sous contrat, date de demande, date d’arrivée.
+- `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
+- `createdAt`.
+
+### Intervention
+
+Intervention confirmée. La durée et le taux sont stockés. Le taux moyen, le total d’heures et le délai moyen ne sont pas des colonnes.
+
+- `clientId` vers `Client`, `projectId` vers `Project`. Retirer le client ou le dossier retire l’intervention.
+- `kind` : `assistance`, `intervention`, `integration` ou `panne`.
+- `occurredOn` : date `YYYY-MM-DD`.
+- `durationMinutes` : durée entière, en minutes.
+- `rateUnit` : `horaire` ou `journalier`. `rateCents` : taux écrit.
+- `ticket` : numéro déjà écrit, recopié. Vide s’il n’y en a pas.
+- `billedReference` : référence de la pièce qui a facturé l’intervention, recopiée. Vide si elle n’est pas facturée. Ce n’est pas un numéro attribué par l’application.
+- `onSite`, `underContract`.
+- `requestedOn`, `arrivedOn` : dates `YYYY-MM-DD`, vides si elles ne sont pas écrites.
+- `confirmedAt` : moment de la validation.
+- `createdAt`.
+
 ## Assistant
 
 ### Conversation
@@ -459,5 +486,6 @@ Priorité haute, pas encore faites :
 - Les faits de page et de zone (`readDocumentFacts` dans `src/domain/document-facts.ts`) sont produits à la lecture du texte extrait. Aucune table ne les conserve. Le message de l’utilisateur n’est pas un argument de cette lecture.
 - Le prix de vente, la marge et les totaux de dossier sont calculés par `src/domain/pricing.ts` à partir des centimes déjà stockés.
 - Le montant mensuel d’un contrat est calculé par `src/domain/contracts.ts` à partir de `Contract.amountCents` et de la périodicité. Il n’est pas stocké. Le total mensuel additionne ces montants déjà calculés. L’échéance à 30 jours compare `endsOn` à la date du jour.
+- Le taux moyen, le total d’heures et le délai moyen d’une intervention sont calculés par `src/domain/interventions.ts` à partir des taux, des minutes et des dates déjà enregistrés. Ils ne sont pas stockés.
 - L’application n’attribue pas de numéro de facture ni d’avoir. Une `NotedPiece` recopie la référence déjà écrite. Elle n’enregistre pas de relevé bancaire.
 - La validité de trente jours d’une offre fournisseur, les rôles et les notifications ne sont pas des tables. L’historique de prix est la suite des `SupplierOffer`. `Quote.versionLabel` et `Quote.fingerprint` identifient une offre reçue, sans durée de validité en colonne.

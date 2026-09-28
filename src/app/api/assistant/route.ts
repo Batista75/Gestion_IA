@@ -66,6 +66,7 @@ import { asksHybridQuote } from "@/domain/hybrid-quote";
 import type { AnswerPacket } from "@/domain/answer-packet";
 import { resolveMeasure } from "@/lib/measure-reply";
 import { resolveContract } from "@/lib/contract-reply";
+import { resolveIntervention } from "@/lib/intervention-reply";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
 import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
 import { searchKnowledge } from "@/lib/knowledge-store";
@@ -297,6 +298,17 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
       source: contract.source,
       packet: contract.packet,
       proposal: contract.proposal,
+    };
+  }
+
+  const intervention = await resolveIntervention(text);
+  if (intervention) {
+    return {
+      reply: intervention.reply,
+      model: null,
+      source: intervention.source,
+      packet: intervention.packet,
+      proposal: intervention.proposal,
     };
   }
 

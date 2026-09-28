@@ -5,7 +5,7 @@ Ce chapitre fixe l’ordre de traitement. L’architecture est le [DAT](dat.md).
 `POST /api/assistant` reçoit le fil, au plus 40 messages. Le dernier message utilisateur est enregistré, puis traité dans cet ordre.
 
 1. Une phrase parlée du type « Créer le projet : … Le projet consiste à … », ou un tableau collé, est enregistrée tout de suite.
-2. Une question de mesure est lue dans les enregistrements confirmés et rendue en paquet, sans modèle. L’échéance d’un contrat à 30 jours et le montant récurrent mensuel en font partie. Une phrase qui enregistre un contrat ouvre une proposition, sans écrire. Le garde-fou et les familles sont dans le [plan du chat](plan-chat.md).
+2. Une question de mesure est lue dans les enregistrements confirmés et rendue en paquet, sans modèle. L’échéance d’un contrat à 30 jours, le montant récurrent mensuel, le taux moyen, les heures non facturées, le récapitulatif de tickets et le délai d’intervention en font partie. Une phrase qui enregistre un contrat ou une intervention ouvre une proposition, sans écrire. Le garde-fou et les familles sont dans le [plan du chat](plan-chat.md).
 3. Une question de prix de vente reçoit la règle métier, sans modèle.
 4. `Je confirme.` enregistre la proposition la plus récente, fiche client ou autre fiche. `non` n’écrit rien. Un `oui` qui répond à une hypothèse déjà proposée du parcours reprend ce parcours, il ne confirme pas une fiche absente.
 5. `prépare un devis pour …` suit l’[assistant hybride](devis-hybride.md) : plusieurs lignes, matériel ou prestation, prix catalogue ou coût avec le taux de marque, paquet, brouillon. Le modèle ne calcule pas.
@@ -41,7 +41,7 @@ Chaque échange est une conversation dans PostgreSQL. **Nouveau fil** crée une 
 
 La réponse est un flux. L’étape visible précède le texte. Le navigateur lit ce flux avec le SDK `ai` vers l’API compatible OpenAI d’Ollama, sous `/v1`.
 
-Une seule écriture de fiche attendue à la fois : la plus récente entre la proposition de client, la proposition de catalogue et la proposition de contrat. **Confirmer** ou `Je confirme.` l’applique. `non` n’écrit pas. La phrase parlée de projet, le tableau collé et le brouillon de devis hybride ne passent pas par cette attente. Le brouillon n’est pas envoyé. Un contrat n’est compté dans une échéance ou un montant mensuel qu’après cette confirmation.
+Une seule écriture de fiche attendue à la fois : la plus récente entre la proposition de client, la proposition de catalogue, la proposition de contrat et la proposition d’intervention. **Confirmer** ou `Je confirme.` l’applique. `non` n’écrit pas. La phrase parlée de projet, le tableau collé et le brouillon de devis hybride ne passent pas par cette attente. Le brouillon n’est pas envoyé. Un contrat n’est compté dans une échéance ou un montant mensuel qu’après cette confirmation. Une intervention n’entre dans un taux, des heures ou un délai qu’après la sienne.
 
 Si le message ne contient qu’un nom déjà enregistré, sans verbe, la réponse demande s’il faut consulter la fiche ou la modifier. Deux homonymes ne déclenchent pas cette question.
 
