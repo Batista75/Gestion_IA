@@ -3,6 +3,7 @@ import { shownUnitCost, writtenCurrency } from "@/domain/article";
 import { figuresFromSaleUnit, formatCents, saleLineFigures, saleOperationTotals, writtenAmountLabel, type SaleLineFigures } from "@/domain/pricing";
 import { fillMissingQuoteCents } from "@/lib/quote-cents";
 import { saleKindLabel, saleStatusLabel } from "@/domain/sale-line";
+import { notedPieceLabel } from "@/domain/noted-piece";
 import { prisma } from "@/lib/db";
 
 type MoneyLine = {
@@ -39,7 +40,7 @@ export type Listed = {
   rows: Cell[][];
 };
 
-function figuresOf(line: MoneyLine): SaleLineFigures {
+export function figuresOf(line: MoneyLine): SaleLineFigures {
   if (typeof line.saleUnitCents === "number") {
     return figuresFromSaleUnit(line.quantity, line.saleUnitCents, line.costCents);
   }
@@ -80,8 +81,9 @@ function dateLabel(date: Date): string {
   return date.toLocaleDateString("fr-FR");
 }
 
-export async function loadProduced(): Promise<ProducedDocument[]> {
+export async function loadProduced(projectId?: string): Promise<ProducedDocument[]> {
   const documents = await prisma.saleDocument.findMany({
+    where: projectId ? { projectId } : undefined,
     orderBy: { createdAt: "desc" },
     take: 500,
     include: {
@@ -171,6 +173,74 @@ export async function listDocuments(query: string): Promise<Listed> {
     ]);
   }
   return { headers: [...producedHeaders, "Télécharger"], rows };
+}
+
+export type ProjectDocumentRow = {
+  id: string;
+  href: string;
+  source: "produit" | "recu" | "reference";
+  kind: string;
+  type: string;
+  date: Date;
+  reference: string;
+  party: string;
+  amount: string;
+  status: string;
+  statusLabel: string;
+  download: string;
+};
+
+export async function projectDocumentRows(projectId: string): Promise<ProjectDocumentRow[]> {
+  const [produced, received, noted] = await Promise.all([
+    loadProduced(projectId),
+    prisma.quote.findMany({ where: { projectId }, orderBy: { createdAt: "desc" }, take: 100 }),
+    prisma.notedPiece.findMany({ where: { projectId }, orderBy: { createdAt: "desc" }, take: 100 }),
+  ]);
+  const rows: ProjectDocumentRow[] = [
+    ...produced.map((document) => ({
+      id: document.id,
+      href: document.href,
+      source: "produit" as const,
+      kind: document.kind,
+      type: document.type,
+      date: document.date,
+      reference: document.title,
+      party: document.party,
+      amount: formatCents(document.ht),
+      status: document.status,
+      statusLabel: document.statusLabel,
+      download: `/api/ventes/${document.id}`,
+    })),
+    ...received.map((quote) => ({
+      id: quote.id,
+      href: quote.fileId ? `/api/pieces/${quote.fileId}` : `/api/devis-recus/${quote.id}`,
+      source: "recu" as const,
+      kind: "devis_recu",
+      type: "Devis reçu",
+      date: quote.createdAt,
+      reference: blank(quote.versionLabel || quote.title),
+      party: blank(quote.supplierName || quote.clientName),
+      amount: writtenAmountLabel(quote.statedTotalHt, quote.statedTotalHtCents, quote.currency),
+      status: "recu",
+      statusLabel: "Reçu",
+      download: quote.fileId ? `/api/pieces/${quote.fileId}` : `/api/devis-recus/${quote.id}`,
+    })),
+    ...noted.map((piece) => ({
+      id: piece.id,
+      href: `/projets/${projectId}?onglet=pieces`,
+      source: "reference" as const,
+      kind: piece.kind,
+      type: notedPieceLabel(piece.kind),
+      date: piece.createdAt,
+      reference: piece.reference,
+      party: "—",
+      amount: "—",
+      status: "reference",
+      statusLabel: "Référence recopiée",
+      download: "",
+    })),
+  ];
+  return rows.sort((left, right) => right.date.getTime() - left.date.getTime());
 }
 
 export async function listClientQuotes(query: string, situation: string, client: string): Promise<{

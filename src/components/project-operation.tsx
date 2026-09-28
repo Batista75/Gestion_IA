@@ -18,6 +18,7 @@ import {
 } from "@/app/projets/sale-actions";
 import { FormMessage } from "@/components/party-manager";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge, saleStatusTone } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,7 +73,7 @@ const fieldClass =
   "h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm transition-colors duration-150 focus-visible:border-ring focus-visible:outline-none";
 const cellClass = "px-2 py-2 align-middle";
 const numberCell = `${cellClass} text-right tabular-nums whitespace-nowrap`;
-const headClass = "bg-muted px-2 py-2 font-medium";
+const headClass = "bg-surface-2 px-2 py-2 font-medium";
 const detailsClass = "rounded-md border border-border p-3 transition-colors duration-150 hover:bg-muted/30";
 
 export function ProjectLines({
@@ -102,22 +103,22 @@ export function ProjectLines({
         </p>
       ) : (
         <>
-          <div className="relative min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-card">
-            <table className="w-full min-w-[60rem] border-collapse text-sm">
+          <div className="relative min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-surface">
+            <table className="w-full min-w-[46rem] border-collapse text-sm">
               <caption className="sr-only">Lignes du dossier</caption>
               <thead className="sticky top-0 z-10">
                 <tr className="border-b border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
-                  <th className={`${headClass} w-10`}>
+                  <th className={`${headClass} w-8`}>
                     <span className="sr-only">Pour le devis</span>
                   </th>
                   <th className={headClass}>Désignation</th>
-                  <th className={`${headClass} w-20 text-right`}>Qté</th>
-                  <th className={`${headClass} w-28 text-right`}>Coût HT</th>
-                  <th className={`${headClass} w-20 text-right`}>Marque %</th>
-                  <th className={`${headClass} w-20 text-right`}>Remise %</th>
-                  <th className={`${headClass} w-44`}>Fournisseur</th>
-                  <th className={`${headClass} w-32 text-right`}>Vente HT</th>
-                  <th className={`${headClass} w-28 text-right`}>Marge</th>
+                  <th className={`${headClass} w-16 text-right`}>Qté</th>
+                  <th className={`${headClass} w-24 text-right`}>Coût HT</th>
+                  <th className={`${headClass} w-16 text-right`}>Marque %</th>
+                  <th className={`${headClass} w-16 text-right`}>Remise %</th>
+                  <th className={`${headClass} w-36`}>Fournisseur</th>
+                  <th className={`${headClass} w-28 text-right`}>Vente HT</th>
+                  <th className={`${headClass} w-24 text-right`}>Marge</th>
                 </tr>
               </thead>
               <tbody>
@@ -126,7 +127,7 @@ export function ProjectLines({
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t border-border bg-muted/40 font-medium">
+                <tr className="border-t border-border bg-surface-2/60 font-medium">
                   <td className={cellClass} colSpan={3}>
                     Total des lignes chiffrées
                   </td>
@@ -170,15 +171,15 @@ export function ProjectDocuments({
   const supplierOrders = documents.filter((document) => document.kind === "commande_fournisseur");
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="@container flex h-full min-h-0 flex-col gap-3">
       <p className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
         <span>Un devis s’établit depuis Produits. La commande client s’ouvre depuis un devis en cours.</span>
         <Link href={`/projets/${projectId}/facture`} className="font-medium text-foreground underline-offset-4 hover:underline">
           Voir la facture client
         </Link>
       </p>
-      <div className="relative grid min-h-0 flex-1 gap-3 overflow-auto xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)] xl:overflow-hidden">
-        <div className="relative grid min-h-0 content-start gap-4 xl:overflow-auto xl:pr-1">
+      <div className="relative grid min-h-0 flex-1 gap-3 overflow-auto @4xl:grid-cols-2 @4xl:grid-rows-[minmax(0,1fr)] @4xl:overflow-hidden">
+        <div className="relative grid min-h-0 content-start gap-4 @4xl:overflow-auto @4xl:pr-1">
           <DocumentList
             id="devis"
             suppliers={suppliers}
@@ -196,7 +197,7 @@ export function ProjectDocuments({
             </details>
           ) : null}
         </div>
-        <div className="relative grid min-h-0 content-start gap-4 xl:overflow-auto xl:pr-1">
+        <div className="relative grid min-h-0 content-start gap-4 @4xl:overflow-auto @4xl:pr-1">
           <DocumentList
             id="commandes-client"
             suppliers={suppliers}
@@ -281,7 +282,7 @@ function LineRow({
 }) {
   const discounted = figures.unitListCents !== null && figures.unitListCents !== figures.unitNetCents;
   return (
-    <tr className="border-b border-border transition-colors duration-150 last:border-0 hover:bg-muted/30">
+    <tr className="border-b border-border transition-colors duration-150 last:border-0 hover:bg-surface-2/50">
       <td className={cellClass}>
         <input
           form="project-quote"
@@ -292,14 +293,16 @@ function LineRow({
           aria-label={`Mettre ${line.name} dans le devis`}
         />
       </td>
-      <td className={cellClass}>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">{line.name}</span>
-          <Badge variant="secondary">{line.kind === "service" ? "Service" : "Produit"}</Badge>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {line.confirmedLabel ? `Confirmé le ${line.confirmedLabel}` : "Non confirmé"}
-        </p>
+      <td className={`${cellClass} max-w-0`}>
+        <span className="block truncate font-medium" title={line.name}>
+          {line.name}
+        </span>
+        <span
+          className="block truncate text-xs text-muted-foreground"
+          title={line.confirmedLabel ? `Confirmé le ${line.confirmedLabel}` : "Non confirmé"}
+        >
+          {line.kind === "service" ? "Service" : "Produit"} · {line.confirmedLabel ? `confirmé le ${line.confirmedLabel.split(" ")[0]}` : "non confirmé"}
+        </span>
       </td>
       <td className={cellClass}>
         <CellInput label={`Quantité de ${line.name}`} name={`qty_${line.id}`} form="project-lines" defaultValue={String(line.quantity)} />
@@ -478,11 +481,11 @@ function DocumentCard({
   const totals = saleOperationTotals(figures);
   const editable = (document.status === "en_cours" || document.status === "brouillon") && !document.confirmedLabel;
   return (
-    <li className="grid gap-2 rounded-lg border border-border bg-card p-3 shadow-sm">
+    <li className="grid gap-2 rounded-lg border border-border bg-surface p-3">
       <div className="flex flex-wrap items-center gap-2">
         <p className="font-medium">{document.title}</p>
         <Badge variant="secondary">{saleKindLabel(document.kind)}</Badge>
-        <Badge variant="outline">{saleStatusLabel(document.status)}</Badge>
+        <StatusBadge tone={saleStatusTone(document.status)}>{saleStatusLabel(document.status)}</StatusBadge>
         <span className="text-xs text-muted-foreground">{document.createdLabel}</span>
         <Link
           href={`/projets/${projectId}/documents/${document.id}`}
@@ -562,7 +565,7 @@ function DocumentCard({
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t border-border bg-muted/40 font-medium">
+            <tr className="border-t border-border bg-surface-2/60 font-medium">
               <td className={cellClass} colSpan={2}>
                 Total
               </td>

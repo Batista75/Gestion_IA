@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 const initial: ClientPickState = { message: null, ok: false };
-const fieldClass = "h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm";
+const fieldClass = "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm";
 
 export function ClientPicker({
   projectId,
@@ -21,9 +21,9 @@ export function ClientPicker({
 }) {
   const [state, action, pending] = useActionState(assignClientAction, initial);
   return (
-    <form action={action} className="grid gap-3">
+    <form action={action} className="grid gap-2">
       <input type="hidden" name="projectId" value={projectId} />
-      <div className="grid gap-2">
+      <div className="space-y-1.5">
         <Label htmlFor="project-client">Client du répertoire</Label>
         <select id="project-client" name="clientId" defaultValue={clientId} className={fieldClass} required>
           <option value="">Choisir un client</option>
@@ -44,7 +44,7 @@ export function ClientPicker({
         </p>
       ) : null}
       <FormMessage state={state} />
-      <Button type="submit" disabled={pending || clients.length === 0} className="min-h-11 w-fit px-4">
+      <Button type="submit" variant="outline" disabled={pending || clients.length === 0} className="w-fit">
         {pending ? "Enregistrement…" : "Retenir ce client"}
       </Button>
     </form>
