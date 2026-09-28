@@ -1,0 +1,55 @@
+Contrôle 23 — achats
+====================
+
+Aucune pièce à déposer. Tout se fait dans l’assistant, après connexion.
+Les fournisseurs Quincaillerie Durand et Fournitures Helios sont déjà au répertoire.
+Les dates d’exemple supposent le 28 septembre 2026.
+« Depuis le début de l’année » est l’année civile 2026. Une expédition est dépassée si sa date est avant ce jour.
+Si le jour a changé, la limite de retard change avec lui. L’année civile change au 1er janvier.
+
+1. Envoyer : Enregistre un achat pour Quincaillerie Durand.
+   La carte « Achat à confirmer » demande la famille.
+   Aucun bouton Confirmer.
+
+2. Envoyer : Enregistre un achat pour Quincaillerie Durand, désignation Baie commande, famille serveur, commandé le 2026-02-01, bon de commande 1 200,00 €, facture 1 250,00 €, reliquat ouvert, expédition le 2026-09-01, suivi COLIS-88, livraison directe.
+   Commande 1 200,00 €. Facture 1 250,00 €. Suivi COLIS-88. Cliquer Confirmer.
+   La réponse se termine par « Validation enregistrée. »
+
+3. Envoyer : Enregistre un achat pour Quincaillerie Durand, désignation Câblage, famille sous-traitance, commandé le 2026-03-15, bon de commande 800,00 €, facture 800,00 €, reliquat clos, expédition le 2026-04-01, chez nous.
+   Famille Sous-traitance. Reliquat Clos. Confirmer.
+
+4. Envoyer : Enregistre un achat pour Quincaillerie Durand, désignation Pose site, famille sous-traitance, commandé le 2025-11-01, bon de commande 500,00 €, reliquat ouvert, expédition le 2026-08-01, livraison directe.
+   Facture non indiquée. Confirmer.
+
+5. Envoyer : Enregistre un encours de 4 000,00 € et un paiement à 60 jours pour Quincaillerie Durand.
+   Carte « Encours à confirmer ». Encours 4 000,00 €. Délai 60 jours. Confirmer.
+
+6. Envoyer : Enregistre un encours de 1 000,00 € et un paiement à 30 jours pour Fournitures Helios.
+   Délai 30 jours. Confirmer.
+
+7. Envoyer : Quel est l’écart entre le bon de commande et la facture du grossiste Quincaillerie Durand ?
+   Carte « Écart de facture ». Lignes 2. Écart 50,00 €.
+   Baie commande y est, avec un écart de 50,00 €. Câblage y est, écart égal 0,00 €.
+   Pose site n’est pas comparée : la carte dit qu’une ligne sans facture écrite n’est pas comparée.
+   La méthode dit que l’écart est la facture moins le bon de commande.
+
+8. Envoyer : Quels reliquats ont une date d’expédition dépassée ?
+   Carte « Reliquats en retard ». Reliquats 2.
+   Baie commande et Pose site y sont. Câblage n’y est pas.
+   La période dit expédition avant 2026-09-28.
+
+9. Envoyer : Quels numéros de suivi pour une livraison directe ?
+   Carte « Livraisons directes ». Suivi COLIS-88.
+   La carte dit qu’une livraison directe est sans numéro de suivi.
+   La méthode dit qu’aucun message n’est envoyé.
+
+10. Envoyer : Quels grossistes ont un encours et un paiement à 60 jours ?
+    Carte « Encours fournisseurs ». Quincaillerie Durand, 4 000,00 €, 60 jours.
+    Fournitures Helios n’y est pas.
+
+11. Envoyer : Quel est le montant de sous-traitance depuis le début de l’année ?
+    Carte « Sous-traitance ». Montant 800,00 €. Lignes 1. Câblage y est. Pose site n’y est pas.
+
+12. Envoyer : Quel est le volume d’achat par constructeur depuis le début de l’année ?
+    Carte « Volume d’achat ». Volume 2 000,00 €. Quincaillerie Durand y est.
+    La méthode dit que le volume additionne les montants de commande déjà enregistrés.

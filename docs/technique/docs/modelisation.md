@@ -20,6 +20,7 @@ Client 1 ── * Address
 Supplier 1 ── * Contact
 Supplier 1 ── * Address
 Supplier 1 ── * Product
+Supplier 1 ── * PurchaseFollowUp
 Product 1 ── * QuoteLine
 Product 1 ── * ProjectLine
 Product 1 ── * SupplierOffer * ── 0..1 Supplier
@@ -37,7 +38,7 @@ StoredFile 1 ── * DocumentProposal
 StoredFile 1 ── * Demand
 
 Sans clé étrangère : Account, AppSetting, CompanyProfile, DocumentMemory,
-CatalogProposal, ClientProposal, ContractProposal, InterventionProposal, InstalledEquipmentProposal, RecordEvent, KnowledgeChunk
+CatalogProposal, ClientProposal, ContractProposal, InterventionProposal, InstalledEquipmentProposal, PurchaseFollowUpProposal, SupplierTermsProposal, RecordEvent, KnowledgeChunk
 ```
 
 Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, produit d’un équipement installé, fichier d’une demande. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une boîte retire ses `StoredFile`.
@@ -98,8 +99,10 @@ Tiers unique, identifié par `nameKey`.
 `nameKey` est unique.
 
 - `name`, `siren`, `siret`, `vatNumber`, `legalForm`, `country`, `postalCode`, `city`, `email`, `phone`, `address`, `notes`.
+- `outstandingCents` : encours confirmé, en centimes. Vide tant qu’il n’est pas confirmé.
+- `paymentDays` : délai de paiement confirmé, en jours. Vide tant qu’il n’est pas confirmé.
 - `createdAt`, `updatedAt`.
-- Lien : un fournisseur a plusieurs `Product`, plusieurs `Contact` et plusieurs `Address`. Retirer le fournisseur vide `Product.supplierId` et retire ses contacts et ses adresses.
+- Lien : un fournisseur a plusieurs `Product`, plusieurs `Contact`, plusieurs `Address` et plusieurs `PurchaseFollowUp`. Retirer le fournisseur vide `Product.supplierId` et retire ses contacts, ses adresses et ses achats.
 
 ### Contact
 
@@ -392,6 +395,39 @@ Intervention confirmée. La durée et le taux sont stockés. Le taux moyen, le t
 - `confirmedAt` : moment de la validation. Sans cette date, l’équipement n’existe pas.
 - `createdAt`.
 
+### PurchaseFollowUpProposal
+
+Achat encore à confirmer. Confirmer crée le `PurchaseFollowUp`. Rejeter n’écrit pas d’achat.
+
+- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `payload` : fournisseur, désignation, famille (`serveur`, `poste`, `portable`, `reseau`, `prestation`, `autre`, `sous-traitance`), date de commande, `orderCents` du bon de commande, `invoiceCents` de la facture reçue ou vide, reliquat (`ouvert`, `partiel`, `clos`), date d’expédition, suivi recopié, livraison (`chez_nous` ou `chez_client`).
+- `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
+- `createdAt`.
+
+### SupplierTermsProposal
+
+Encours et délai encore à confirmer. Confirmer écrit `Supplier.outstandingCents` et `Supplier.paymentDays`. Rejeter ne change pas la fiche.
+
+- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `payload` : fournisseur, encours en centimes, délai en jours.
+- `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
+- `createdAt`.
+
+### PurchaseFollowUp
+
+Ligne d’achat confirmée. Le bon de commande et la facture reçue sont deux montants recopiés. L’écart, le volume et le total de sous-traitance ne sont pas des colonnes. Ce n’est pas un numéro de facture.
+
+- `supplierId` vers `Supplier`. Retirer le fournisseur retire l’achat.
+- `designation`, `family`. La sous-traitance est la famille `sous-traitance`.
+- `orderedOn` : date `YYYY-MM-DD`.
+- `orderCents` : montant écrit du bon de commande. `invoiceCents` : montant écrit de la facture reçue, vide si elle n’est pas écrite.
+- `remainder` : `ouvert`, `partiel` ou `clos`.
+- `shipsOn` : date d’expédition annoncée, vide si elle n’est pas écrite.
+- `tracking` : numéro de suivi recopié. Vide s’il n’y en a pas.
+- `delivery` : `chez_nous` ou `chez_client`.
+- `confirmedAt` : moment de la validation.
+- `createdAt`.
+
 ## Assistant
 
 ### Conversation
@@ -512,5 +548,6 @@ Priorité haute, pas encore faites :
 - Le montant mensuel d’un contrat est calculé par `src/domain/contracts.ts` à partir de `Contract.amountCents` et de la périodicité. Il n’est pas stocké. Le total mensuel additionne ces montants déjà calculés. L’échéance à 30 jours compare `endsOn` à la date du jour.
 - Le taux moyen, le total d’heures et le délai moyen d’une intervention sont calculés par `src/domain/interventions.ts` à partir des taux, des minutes et des dates déjà enregistrés. Ils ne sont pas stockés.
 - L’âge d’un équipement et le filtre « acheté l’an dernier » sont calculés par `src/domain/equipment.ts` en comparant `InstalledEquipment.installedOn` à une date. Ils ne sont pas stockés. Le niveau de garantie est la valeur déjà enregistrée.
+- L’écart d’un achat est calculé par `src/domain/purchases.ts` : facture reçue moins bon de commande, deux centimes déjà stockés. Le volume et le montant de sous-traitance additionnent des `orderCents` déjà enregistrés. Le retard d’expédition compare `shipsOn` à la date du jour. Aucun de ces résultats n’est stocké.
 - L’application n’attribue pas de numéro de facture ni d’avoir. Une `NotedPiece` recopie la référence déjà écrite. Elle n’enregistre pas de relevé bancaire.
 - La validité de trente jours d’une offre fournisseur, les rôles et les notifications ne sont pas des tables. L’historique de prix est la suite des `SupplierOffer`. `Quote.versionLabel` et `Quote.fingerprint` identifient une offre reçue, sans durée de validité en colonne.

@@ -325,6 +325,53 @@ model InstalledEquipment {
   @@index([installedOn])
 }
 
+/** Achat encore à confirmer. La fiche `PurchaseFollowUp` n’existe qu’après validation. */
+model PurchaseFollowUpProposal {
+  id           String    @id @default(cuid())
+  status       String    @default("en_attente")
+  payload      Json
+  modelVersion String    @default("")
+  confidence   Json      @default("[]")
+  validatedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([status])
+}
+
+/** Encours et délai encore à confirmer. Les colonnes du fournisseur ne changent qu’après validation. */
+model SupplierTermsProposal {
+  id           String    @id @default(cuid())
+  status       String    @default("en_attente")
+  payload      Json
+  modelVersion String    @default("")
+  confidence   Json      @default("[]")
+  validatedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([status])
+}
+
+/** Ligne d’achat confirmée. L’écart, le volume et le total de sous-traitance ne sont pas des colonnes. */
+model PurchaseFollowUp {
+  id            String   @id @default(cuid())
+  supplierId    String
+  supplier      Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  designation   String
+  family        String
+  orderedOn     String
+  orderCents    Int
+  invoiceCents  Int?
+  remainder     String
+  shipsOn       String   @default("")
+  tracking      String   @default("")
+  delivery      String
+  confirmedAt   DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([supplierId])
+  @@index([orderedOn])
+}
+
 model RecordEvent {
   id         String   @id @default(cuid())
   entityType String
@@ -355,10 +402,13 @@ model Supplier {
   phone      String    @default("")
   address    String    @default("")
   notes      String    @default("")
+  outstandingCents Int?
+  paymentDays      Int?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   products   Product[]
   offers     SupplierOffer[]
+  purchases  PurchaseFollowUp[]
   contacts       Contact[]
   addresses      Address[]
   organizationId String?       @unique

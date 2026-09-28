@@ -9,6 +9,14 @@ import {
   rejectInterventionProposal,
 } from "@/lib/intervention-reply";
 import { confirmEquipmentProposal, pendingEquipmentProposal, rejectEquipmentProposal } from "@/lib/equipment-reply";
+import {
+  confirmPurchaseProposal,
+  confirmSupplierTermsProposal,
+  pendingPurchaseProposal,
+  pendingSupplierTermsProposal,
+  rejectPurchaseProposal,
+  rejectSupplierTermsProposal,
+} from "@/lib/purchase-reply";
 import { confirmCurrentProposal, currentProposal, proposeFromParty, type ProposalView } from "@/lib/client-proposals";
 import { applyCatalogCommand } from "@/lib/catalog-store";
 import { withChangeSource } from "@/lib/change-source";
@@ -52,7 +60,7 @@ export async function rejectLatestWrite(): Promise<{
   reply: string;
   proposal?: ProposalView["proposal"];
 } | null> {
-  const [client, catalog, contract, intervention, equipment] = await Promise.all([
+  const [client, catalog, contract, intervention, equipment, purchase, terms] = await Promise.all([
     prisma.clientProposal.findFirst({
       where: { status: "en_attente" },
       orderBy: { createdAt: "desc" },
@@ -64,15 +72,27 @@ export async function rejectLatestWrite(): Promise<{
     pendingContractProposal(),
     pendingInterventionProposal(),
     pendingEquipmentProposal(),
+    pendingPurchaseProposal(),
+    pendingSupplierTermsProposal(),
   ]);
-  if (!client && !catalog && !contract && !intervention && !equipment) return null;
+  if (!client && !catalog && !contract && !intervention && !equipment && !purchase && !terms) return null;
   const newest = latestOf([
     client ? { at: client.createdAt, kind: "client" as const } : null,
     catalog ? { at: catalog.createdAt, kind: "catalog" as const } : null,
     contract ? { at: contract.createdAt, kind: "contract" as const } : null,
     intervention ? { at: intervention.createdAt, kind: "intervention" as const } : null,
     equipment ? { at: equipment.createdAt, kind: "equipment" as const } : null,
+    purchase ? { at: purchase.createdAt, kind: "purchase" as const } : null,
+    terms ? { at: terms.createdAt, kind: "supplierTerms" as const } : null,
   ]);
+  if (newest?.kind === "supplierTerms") {
+    const rejected = await rejectSupplierTermsProposal();
+    return rejected ? { reply: rejected.reply } : null;
+  }
+  if (newest?.kind === "purchase") {
+    const rejected = await rejectPurchaseProposal();
+    return rejected ? { reply: rejected.reply } : null;
+  }
   if (newest?.kind === "equipment") {
     const rejected = await rejectEquipmentProposal();
     return rejected ? { reply: rejected.reply } : null;
@@ -103,7 +123,7 @@ export async function rejectLatestWrite(): Promise<{
 }
 
 export async function confirmLatestWrite(): Promise<{ ok: boolean; summary: string }> {
-  const [client, catalog, contract, intervention, equipment] = await Promise.all([
+  const [client, catalog, contract, intervention, equipment, purchase, terms] = await Promise.all([
     prisma.clientProposal.findFirst({
       where: { status: "en_attente" },
       orderBy: { createdAt: "desc" },
@@ -115,8 +135,10 @@ export async function confirmLatestWrite(): Promise<{ ok: boolean; summary: stri
     pendingContractProposal(),
     pendingInterventionProposal(),
     pendingEquipmentProposal(),
+    pendingPurchaseProposal(),
+    pendingSupplierTermsProposal(),
   ]);
-  if (!client && !catalog && !contract && !intervention && !equipment) {
+  if (!client && !catalog && !contract && !intervention && !equipment && !purchase && !terms) {
     return { ok: false, summary: "Il n’y a pas de fiche en attente." };
   }
   const newest = latestOf([
@@ -125,8 +147,12 @@ export async function confirmLatestWrite(): Promise<{ ok: boolean; summary: stri
     contract ? { at: contract.createdAt, kind: "contract" as const } : null,
     intervention ? { at: intervention.createdAt, kind: "intervention" as const } : null,
     equipment ? { at: equipment.createdAt, kind: "equipment" as const } : null,
+    purchase ? { at: purchase.createdAt, kind: "purchase" as const } : null,
+    terms ? { at: terms.createdAt, kind: "supplierTerms" as const } : null,
   ]);
   return withChangeSource("assistant", () => {
+    if (newest?.kind === "supplierTerms") return confirmSupplierTermsProposal();
+    if (newest?.kind === "purchase") return confirmPurchaseProposal();
     if (newest?.kind === "equipment") return confirmEquipmentProposal();
     if (newest?.kind === "intervention") return confirmInterventionProposal();
     if (newest?.kind === "contract") return confirmContractProposal();
@@ -136,9 +162,10 @@ export async function confirmLatestWrite(): Promise<{ ok: boolean; summary: stri
 }
 
 function latestOf(
-  rows: Array<{ at: Date; kind: "client" | "catalog" | "contract" | "intervention" | "equipment" } | null>,
-): { at: Date; kind: "client" | "catalog" | "contract" | "intervention" | "equipment" } | null {
-  return rows.reduce<{ at: Date; kind: "client" | "catalog" | "contract" | "intervention" | "equipment" } | null>((best, row) => {
+  rows: Array<{ at: Date; kind: "client" | "catalog" | "contract" | "intervention" | "equipment" | "purchase" | "supplierTerms" } | null>,
+): { at: Date; kind: "client" | "catalog" | "contract" | "intervention" | "equipment" | "purchase" | "supplierTerms" } | null {
+  return rows.reduce<{ at: Date; kind: "client" | "catalog" | "contract" | "intervention" | "equipment" | "purchase" | "supplierTerms" } | null>(
+    (best, row) => {
     if (!row) return best;
     if (!best || row.at > best.at) return row;
     return best;
