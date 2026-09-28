@@ -27,6 +27,7 @@ Une seule bibliothèque calcule : `src/domain/pricing.ts`.
 - Sur un dossier, `quoteFromTargetMarkup` produit le prix de vente et la marge à partir du coût en centimes, du taux de marque et de la remise. Un coût absent laisse le prix non indiqué. Le total n’additionne que les lignes déjà chiffrées.
 - Sur une offre ou un devis reçu, le premier montant lisible du texte devient des centimes. Les lignes ne sont pas additionnées. La formulation de cette règle et les colonnes sont dans la [modélisation](modelisation.md), sur `Quote`, `QuoteLine` et `SupplierOffer`.
 - `prépare un devis pour …` suit le chapitre [Devis hybride](devis-hybride.md). Le total de ce brouillon additionne les prix unitaires déjà calculés.
+- Un contrat confirmé porte un type fermé, un début, une fin, une périodicité et le montant de la période en centimes. L’échéance à 30 jours compare ces dates. Le montant mensuel divise le montant déjà enregistré. Les deux s’affichent en paquet.
 
 Le modèle de langage ne reçoit pas ces formules à exécuter.
 

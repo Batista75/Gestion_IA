@@ -8,6 +8,7 @@ Cette page liste chaque modèle, ses champs utiles, ses liens et ce que l’appl
 
 ```
 Client 1 ── * Project
+Client 1 ── * Contract
 Organization 1 ── 0..1 Client
 Organization 1 ── 0..1 Supplier
 Client 1 ── * Contact
@@ -32,7 +33,7 @@ StoredFile 1 ── * DocumentProposal
 StoredFile 1 ── * Demand
 
 Sans clé étrangère : Account, AppSetting, CompanyProfile, DocumentMemory,
-CatalogProposal, ClientProposal, RecordEvent, KnowledgeChunk
+CatalogProposal, ClientProposal, ContractProposal, RecordEvent, KnowledgeChunk
 ```
 
 Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, fichier d’une demande. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une boîte retire ses `StoredFile`.
@@ -86,7 +87,7 @@ Tiers unique, identifié par `nameKey`.
 - Interlocuteur : `contactName`, `contactRole`, `email`, `phone`.
 - `notes`, `reference`, `sector`, `currency`.
 - `createdAt`, `updatedAt`.
-- Lien : un client a plusieurs `Project`, plusieurs `Contact` et plusieurs `Address`. Retirer le client vide `Project.clientId` et retire ses contacts et ses adresses.
+- Lien : un client a plusieurs `Project`, plusieurs `Contact`, plusieurs `Address` et plusieurs `Contract`. Retirer le client vide `Project.clientId` et retire ses contacts, ses adresses et ses contrats.
 
 ### Supplier
 
@@ -319,6 +320,27 @@ Fiche client encore à confirmer.
 - `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.
 
+### ContractProposal
+
+Contrat encore à confirmer. Confirmer crée le `Contract`. Rejeter n’écrit pas de contrat.
+
+- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `payload` : client, type fermé (`maintenance`, `infogerance`, `location`), début, fin, périodicité (`mensuel`, `trimestriel`, `semestriel`, `annuel`) et `amountCents` de la période.
+- `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
+- `createdAt`.
+
+### Contract
+
+Contrat confirmé. Le montant stocké est celui de la période, en centimes. Le montant mensuel n’est pas une colonne.
+
+- `clientId` vers `Client`. Retirer le client retire ses contrats.
+- `kind` : `maintenance`, `infogerance` ou `location`. L’entretien est enregistré comme `maintenance`.
+- `startsOn`, `endsOn` : dates `YYYY-MM-DD`.
+- `periodicity` : `mensuel`, `trimestriel`, `semestriel` ou `annuel`.
+- `amountCents` : montant écrit de la période.
+- `confirmedAt` : moment de la validation. Sans cette date, le contrat n’existe pas.
+- `createdAt`.
+
 ## Assistant
 
 ### Conversation
@@ -436,5 +458,6 @@ Priorité haute, pas encore faites :
 
 - Les faits de page et de zone (`readDocumentFacts` dans `src/domain/document-facts.ts`) sont produits à la lecture du texte extrait. Aucune table ne les conserve. Le message de l’utilisateur n’est pas un argument de cette lecture.
 - Le prix de vente, la marge et les totaux de dossier sont calculés par `src/domain/pricing.ts` à partir des centimes déjà stockés.
+- Le montant mensuel d’un contrat est calculé par `src/domain/contracts.ts` à partir de `Contract.amountCents` et de la périodicité. Il n’est pas stocké. Le total mensuel additionne ces montants déjà calculés. L’échéance à 30 jours compare `endsOn` à la date du jour.
 - L’application n’attribue pas de numéro de facture ni d’avoir. Une `NotedPiece` recopie la référence déjà écrite. Elle n’enregistre pas de relevé bancaire.
 - La validité de trente jours d’une offre fournisseur, les rôles et les notifications ne sont pas des tables. L’historique de prix est la suite des `SupplierOffer`. `Quote.versionLabel` et `Quote.fingerprint` identifient une offre reçue, sans durée de validité en colonne.

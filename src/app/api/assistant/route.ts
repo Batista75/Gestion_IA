@@ -65,6 +65,7 @@ import { attachConversationProject, resolveContext } from "@/lib/context-envelop
 import { asksHybridQuote } from "@/domain/hybrid-quote";
 import type { AnswerPacket } from "@/domain/answer-packet";
 import { resolveMeasure } from "@/lib/measure-reply";
+import { resolveContract } from "@/lib/contract-reply";
 import { prepareHybridQuote } from "@/lib/hybrid-quote";
 import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
 import { searchKnowledge } from "@/lib/knowledge-store";
@@ -286,6 +287,17 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
   const measured = await resolveMeasure(text);
   if (measured) {
     return { reply: measured.reply, model: null, source: "regle-metier" as const, packet: measured.packet };
+  }
+
+  const contract = await resolveContract(text);
+  if (contract) {
+    return {
+      reply: contract.reply,
+      model: null,
+      source: contract.source,
+      packet: contract.packet,
+      proposal: contract.proposal,
+    };
   }
 
   const brief = isNewClientBrief(text) || Boolean(identifyClient(text));

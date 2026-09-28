@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { presentCommand, type CatalogCommand } from "@/domain/catalog";
 import { stampProvenance } from "@/domain/provenance";
 import { proposalFields } from "@/domain/client-file";
+import { confirmContractProposal, pendingContractProposal, rejectContractProposal } from "@/lib/contract-reply";
 import { confirmCurrentProposal, currentProposal, proposeFromParty, type ProposalView } from "@/lib/client-proposals";
 import { applyCatalogCommand } from "@/lib/catalog-store";
 import { withChangeSource } from "@/lib/change-source";
@@ -45,7 +46,7 @@ export async function rejectLatestWrite(): Promise<{
   reply: string;
   proposal?: ProposalView["proposal"];
 } | null> {
-  const [client, catalog] = await Promise.all([
+  const [client, catalog, contract] = await Promise.all([
     prisma.clientProposal.findFirst({
       where: { status: "en_attente" },
       orderBy: { createdAt: "desc" },
@@ -54,9 +55,19 @@ export async function rejectLatestWrite(): Promise<{
       where: { status: "en_attente" },
       orderBy: { createdAt: "desc" },
     }),
+    pendingContractProposal(),
   ]);
-  if (!client && !catalog) return null;
-  const catalogFirst = Boolean(catalog && (!client || catalog.createdAt > client.createdAt));
+  if (!client && !catalog && !contract) return null;
+  const newest = latestOf([
+    client ? { at: client.createdAt, kind: "client" as const } : null,
+    catalog ? { at: catalog.createdAt, kind: "catalog" as const } : null,
+    contract ? { at: contract.createdAt, kind: "contract" as const } : null,
+  ]);
+  if (newest?.kind === "contract") {
+    const rejected = await rejectContractProposal();
+    return rejected ? { reply: rejected.reply } : null;
+  }
+  const catalogFirst = newest?.kind === "catalog";
   if (catalogFirst && catalog) {
     await prisma.catalogProposal.update({
       where: { id: catalog.id },
@@ -74,7 +85,7 @@ export async function rejectLatestWrite(): Promise<{
 }
 
 export async function confirmLatestWrite(): Promise<{ ok: boolean; summary: string }> {
-  const [client, catalog] = await Promise.all([
+  const [client, catalog, contract] = await Promise.all([
     prisma.clientProposal.findFirst({
       where: { status: "en_attente" },
       orderBy: { createdAt: "desc" },
@@ -83,12 +94,29 @@ export async function confirmLatestWrite(): Promise<{ ok: boolean; summary: stri
       where: { status: "en_attente" },
       orderBy: { createdAt: "desc" },
     }),
+    pendingContractProposal(),
   ]);
-  if (!client && !catalog) {
+  if (!client && !catalog && !contract) {
     return { ok: false, summary: "Il n’y a pas de fiche en attente." };
   }
-  const catalogFirst = Boolean(catalog && (!client || catalog.createdAt > client.createdAt));
-  return withChangeSource("assistant", () =>
-    catalogFirst ? confirmCatalogProposal() : confirmCurrentProposal(),
-  );
+  const newest = latestOf([
+    client ? { at: client.createdAt, kind: "client" as const } : null,
+    catalog ? { at: catalog.createdAt, kind: "catalog" as const } : null,
+    contract ? { at: contract.createdAt, kind: "contract" as const } : null,
+  ]);
+  return withChangeSource("assistant", () => {
+    if (newest?.kind === "contract") return confirmContractProposal();
+    if (newest?.kind === "catalog") return confirmCatalogProposal();
+    return confirmCurrentProposal();
+  });
+}
+
+function latestOf(
+  rows: Array<{ at: Date; kind: "client" | "catalog" | "contract" } | null>,
+): { at: Date; kind: "client" | "catalog" | "contract" } | null {
+  return rows.reduce<{ at: Date; kind: "client" | "catalog" | "contract" } | null>((best, row) => {
+    if (!row) return best;
+    if (!best || row.at > best.at) return row;
+    return best;
+  }, null);
 }

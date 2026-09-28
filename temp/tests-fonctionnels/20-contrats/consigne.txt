@@ -1,0 +1,28 @@
+Contrôle 20 — contrats
+======================
+
+Aucune pièce à déposer. Tout se fait dans l’assistant, après connexion.
+
+1. Envoyer : Enregistre un contrat pour Atelier Nord.
+   La carte « Contrat à confirmer » demande le type : maintenance, infogérance ou location.
+   Aucun bouton Confirmer.
+
+2. Envoyer : Enregistre un contrat de maintenance pour Atelier Nord, du 2026-01-01 au 2026-10-20, annuel, 1 200,00 €.
+   Carte « Contrat à confirmer ». Filtres Atelier Nord, Maintenance, annuel.
+   Montant 1 200,00 €. Mensuel 100,00 €.
+   La phrase dit que rien n’est enregistré avant confirmation.
+   Cliquer Confirmer. La réponse se termine par « Validation enregistrée. »
+
+3. Envoyer : Enregistre un contrat d’infogérance pour Atelier Nord, du 2026-01-01 au 2027-06-01, mensuel, 300,00 €.
+   Mensuel 300,00 €. Cliquer Confirmer. « Validation enregistrée. »
+
+4. Envoyer : Quels contrats arrivent à échéance dans 30 jours ?
+   Carte « Contrats à échéance ». La maintenance du 2026-10-20 est listée.
+   L’infogérance du 2027-06-01 ne l’est pas, tant que cette fin est à plus de 30 jours.
+   La méthode cite les 30 jours et les dates UTC.
+
+5. Envoyer : Quel est le montant récurrent mensuel de l’infogérance et de l’entretien ?
+   Carte « Montant récurrent mensuel ». Mensuel 400,00 €. Contrats 2.
+   La méthode dit que le total additionne des montants mensuels déjà calculés.
+
+Si la date du jour a dépassé le 20 octobre 2026, la maintenance n’est plus dans l’échéance. Le montant mensuel, lui, ne dépend pas de cette date.

@@ -142,6 +142,7 @@ model Client {
   projects       Project[]
   contacts       Contact[]
   addresses      Address[]
+  contracts      Contract[]
   organizationId String?       @unique
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
@@ -218,6 +219,36 @@ model ClientProposal {
   createdAt    DateTime  @default(now())
 
   @@index([status])
+}
+
+/** Contrat encore à confirmer. La fiche `Contract` n’existe qu’après validation. */
+model ContractProposal {
+  id           String    @id @default(cuid())
+  status       String    @default("en_attente")
+  payload      Json
+  modelVersion String    @default("")
+  confidence   Json      @default("[]")
+  validatedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([status])
+}
+
+/** Contrat confirmé. Le montant est celui de la période, en centimes. Le mensuel n’est pas stocké. */
+model Contract {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  kind         String
+  startsOn     String
+  endsOn       String
+  periodicity  String
+  amountCents  Int
+  confirmedAt  DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([clientId])
+  @@index([endsOn])
 }
 
 model RecordEvent {
