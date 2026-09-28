@@ -1,75 +1,460 @@
-# Gestion IA
+# Gestion IA — Règles de développement
 
-Application locale de gestion pour une TPE. Next.js (App Router), React, TypeScript, Tailwind, Prisma, PostgreSQL sur la machine. L’interface sert sur le port 3847.
+Application locale de gestion destinée à une TPE.
 
-Avant d’écrire du code Next.js, lire le guide dans `node_modules/next/dist/docs/`. Cette version s’écarte de l’usage courant.
+Stack principale :
+- Next.js avec App Router
+- React
+- TypeScript
+- Tailwind CSS
+- Prisma
+- PostgreSQL local
+- Ollama pour les fonctions IA locales
 
-## Montants et assistant
+L'application est servie localement sur le port `3847`.
 
-- Les montants, la TVA et les numéros de pièce viennent de `src/domain/pricing.ts` et des règles du domaine. Un modèle de langage ne les calcule pas.
-- L’assistant appelle Ollama sur le réseau local (`OLLAMA_BASE_URL`, par défaut `http://192.168.1.5:11434`). Aucun texte n’est envoyé vers un service d’IA public.
-- Rien n’est classé dans un projet, ni créé comme client, fournisseur, produit ou dossier, sans une action explicite de l’utilisateur.
+---
 
-## Pièces déposées
+# 1. Principes impératifs
 
-- Ne pas envoyer le PDF au modèle. La lecture recopie la devise, les totaux, les mentions de taxe et la validité écrits sur la pièce.
-- Ne pas additionner les lignes. Ne pas convertir GBP, CHF, CAD ou USD en euros. `convertToEur` sert au prix de vente, pas à l’ingestion.
-- Ne pas stocker IBAN, RIB, BIC, SWIFT, transit, institution ou numéro de compte. Les masquer dans les extraits d’enrichissement.
-- Une facture d’acompte reste une facture. Un relevé n’écrit qu’un fichier. La classification d’un relevé n’est pas un rapprochement bancaire.
+Ces règles sont prioritaires sur toute optimisation, refactorisation ou proposition de l'assistant.
 
-## Écran
+## 1.1 Ne pas inventer de règles métier
 
-- La fenêtre d’un écran d’ordinateur ne défile pas. Le menu et la barre restent visibles. Seul le cadre actif défile.
-- Un dossier n’affiche qu’un volet à la fois. Dans un dossier, l’assistant reste calé en bas.
-- Tout changement d’écran ou de règle visible met à jour `docs/manuel-utilisateur.md`. La spécification d’usage reste `docs/specifications-gestion-ia.pdf`.
+Ne jamais déduire une règle métier uniquement à partir de l'interface ou du code existant.
 
-## Documentation
+Avant de modifier un comportement métier :
+1. identifier la règle existante ;
+2. identifier sa source ;
+3. vérifier les tests associés ;
+4. conserver le comportement existant sauf demande explicite.
 
-- Le DAT (`docs/technique/docs/dat.md`) tient l’architecture, le DCT (`docs/technique/docs/dct.md`) la conception, `modelisation.md` les tables. Un fait n’est écrit que dans la page qui en est responsable. Les autres pages renvoient.
+En cas d'ambiguïté métier, ne pas choisir arbitrairement une interprétation.
 
-## Fin de cycle
+## 1.2 Validation humaine
 
-- Proposer un seul objectif suivant, choisi dans ce qui vient d’être livré. Dire pourquoi maintenant, ce qui est tenu pour fini, et ce qui attend le cycle d’après.
-- Donner l’état des deux chantiers. Le chat est la liste de lots de `docs/technique/docs/plan-chat.md` : « N sur 11, soit P % ». L’ingestion est celle de `docs/technique/docs/plan-ingestion.md` : « N sur 8, soit P % ». Mettre à jour la phrase dans la même cycle que l’état d’un lot. Ne pas ajouter de lot pour faire monter le compte.
+L'IA peut :
+- analyser ;
+- extraire ;
+- proposer ;
+- suggérer une classification ;
+- préparer une action.
 
-## Code
+L'IA ne doit pas transformer une suggestion en décision métier sans validation explicite de l'utilisateur.
 
-- Les fichiers de `src/domain` importés par les tests Node s’importent entre eux avec l’extension `.ts`, sans alias `@/`.
-- La cible TypeScript est ES2017 : pas de groupes nommés dans les expressions régulières.
-- Les tests passent par `npm test`. Le contrôle de types est `./node_modules/.bin/tsc --noEmit`.
+En particulier, rien ne doit être :
+- affecté automatiquement à un projet ;
+- créé comme client ;
+- créé comme fournisseur ;
+- créé comme produit ;
+- créé comme service ;
+- créé comme dossier ;
 
-# Directives d'architecture UI & Ergonomie (Style Base-Nova / Neutral)
+sans action explicite de l'utilisateur.
 
-## 1. Principes Généraux de Design
-- **Sobriété et Densité** : L'interface doit être épurée, compacte et lisible. Ne pas surcharger l'écran avec des marges ou rembourrages verticaux excessifs.
-- **Règle du Zéro-Scroll inutile** : Privilégier les mises en page contenues (`h-screen overflow-hidden` avec défilement interne `overflow-y-auto` dans la zone de contenu principal) pour éviter le défilement interminable de toute la page.
-- **Cohérence des composants** : Utiliser en priorité les primitives shadcn existantes dans `@/components/ui` (`Button`, `Input`, `Textarea`, `Label`, `Card`, `Badge`). Ne pas réinventer des boutons ou cartes en HTML brut.
+Une proposition IA et une donnée validée sont deux états différents.
 
-## 2. Typographie & Couleurs
-- **Police** : Utiliser la police `Geist` (`font-sans`). Varier l'épaisseur avec parcimonie (`font-medium` pour l'interactif, `font-semibold` pour les titres).
-- **Contraste & Hiérarchie des textes** :
-  - Texte principal : `text-neutral-900`
-  - Texte secondaire / descriptions : `text-neutral-500` (taille `text-sm`)
-  - Placeholders / tertiaire : `text-neutral-400`
-- **Actions** : Utiliser la couleur d'action vert-gris désaturée configurée dans `globals.css` sans ajouter de dégradés ni de couleurs vives superflues.
+## 1.3 Données déterministes
 
-## 3. Structure des Écrans & Mise en Page
-- **Formulaires** :
-  - Si un formulaire comporte plus de 4 champs, structurer la mise en page en grille à 2 colonnes (`grid grid-cols-2 gap-4`).
-  - Utiliser la primitive `Label` au-dessus de chaque champ avec un espacement serré (`space-y-1.5`).
-- **Tableaux & Listes** :
-  - Limiter la hauteur des tableaux longs et ajouter un défilement interne ou une pagination.
-  - Densité des lignes : utiliser un rembourrage vertical compact (`py-2` à `py-2.5` par ligne `<tr>`).
-  - Alignement : aligner le texte et les badges à gauche, les montants/chiffres à droite.
-- **Composants HTML bruts (`<details>`, `<table>`, etc.)** :
-  - Styliser la balise `<details>` avec une bordure fine et un fond discret au survol (`border border-neutral-200 rounded-md p-3 hover:bg-neutral-50/50`).
-  - Conserver des bordures fines et claires (`border-neutral-200` ou `border-neutral-100`).
+Les données déterministes ne doivent pas être calculées ou inventées par un modèle de langage.
 
-## 4. Ombrages & Effets
-- Ne **jamais** utiliser d'ombres lourdes (`shadow-lg`, `shadow-xl`).
-- Utiliser uniquement des bordures fines (`border border-neutral-200`) associées à l'ombre minimale `shadow-sm`.
-- Ajouter des transitions douces et rapides sur les états survolés/actifs (`transition-colors duration-150`).
+Cela concerne notamment :
+- montants ;
+- TVA ;
+- totaux ;
+- devises ;
+- numéros de pièce ;
+- règles tarifaires ;
+- calculs de prix.
 
-## 5. Icônes
-- Utiliser uniquement les icônes de la bibliothèque `lucide-react`.
-- Garder les icônes rares et fonctionnelles (taille standard `h-4 w-4` ou `h-3.5 w-3.5`).
+Ces éléments proviennent de `src/domain/pricing.ts`, des données sources et des règles du domaine.
+
+---
+
+# 2. Next.js
+
+Avant d'écrire ou modifier du code Next.js, consulter la documentation correspondant à la version réellement installée dans :
+
+`node_modules/next/dist/docs/`
+
+Ne pas appliquer automatiquement des pratiques provenant d'autres versions de Next.js.
+
+La version installée dans le projet fait foi.
+
+---
+
+# 3. Architecture métier
+
+La logique métier doit rester indépendante de l'interface.
+
+Privilégier la séparation :
+
+`UI → application/use cases → domaine → persistance/services externes`
+
+Ne pas déplacer une règle métier dans un composant React pour simplifier ponctuellement une implémentation.
+
+Les composants d'interface :
+- affichent les données ;
+- collectent les actions utilisateur ;
+- appellent les fonctions applicatives appropriées.
+
+Ils ne deviennent pas la source de vérité métier.
+
+---
+
+# 4. Montants et tarification
+
+Les calculs de prix, montants, taxes et conversions utilisent les fonctions du domaine.
+
+Source principale :
+
+`src/domain/pricing.ts`
+
+Ne pas dupliquer une formule de calcul dans :
+- un composant React ;
+- une route API ;
+- une Server Action ;
+- un prompt ;
+- une fonction IA.
+
+Une même règle de calcul doit avoir une seule implémentation métier.
+
+`convertToEur` concerne le calcul du prix de vente.
+
+Elle ne doit jamais être utilisée pour modifier les montants d'une pièce lors de son ingestion.
+
+---
+
+# 5. Intelligence artificielle
+
+L'assistant utilise Ollama sur le réseau local.
+
+Configuration :
+
+`OLLAMA_BASE_URL`
+
+Valeur par défaut :
+
+`http://192.168.1.5:11434`
+
+Aucun contenu métier ou documentaire ne doit être envoyé à un service d'IA public.
+
+## 5.1 Rôle du LLM
+
+Le LLM est utilisé pour les tâches non déterministes telles que :
+- compréhension d'une demande utilisateur ;
+- extraction sémantique ;
+- classification proposée ;
+- reformulation ;
+- synthèse ;
+- détection d'intention ;
+- suggestion d'action.
+
+Il ne constitue jamais la source de vérité pour :
+- les calculs ;
+- les identifiants ;
+- les relations en base ;
+- les montants ;
+- les règles fiscales ;
+- les décisions de validation.
+
+## 5.2 Sorties IA
+
+Toute sortie destinée à être exploitée par le programme doit être structurée et validée avant utilisation.
+
+Ne jamais supposer qu'une sortie LLM est :
+- complète ;
+- correcte ;
+- conforme au schéma attendu ;
+- cohérente avec la base.
+
+Valider les données avant toute écriture.
+
+Une erreur ou une incertitude IA ne doit pas provoquer silencieusement une écriture métier.
+
+---
+
+# 6. Ingestion des pièces
+
+## 6.1 Principe
+
+Ne pas envoyer le PDF original au modèle.
+
+Le pipeline distingue :
+1. le fichier source ;
+2. l'extraction déterministe ;
+3. l'analyse ou l'enrichissement IA ;
+4. la proposition à l'utilisateur ;
+5. la validation ;
+6. l'écriture métier.
+
+Ne pas fusionner ces étapes pour simplifier l'implémentation.
+
+## 6.2 Montants
+
+Lors de la lecture d'une pièce, recopier les informations explicitement présentes :
+
+- devise ;
+- sous-total si présent ;
+- total ;
+- TVA ;
+- mentions fiscales ;
+- date de validité ;
+- numéro de pièce.
+
+Ne pas recalculer un total en additionnant les lignes lorsque le total est présent sur le document.
+
+Ne pas convertir automatiquement les montants exprimés en :
+- GBP ;
+- CHF ;
+- CAD ;
+- USD ;
+
+vers l'euro.
+
+Conserver la devise et le montant de la pièce.
+
+## 6.3 Données bancaires
+
+Ne pas stocker :
+- IBAN ;
+- RIB ;
+- BIC ;
+- SWIFT ;
+- transit ;
+- institution bancaire ;
+- numéro de compte.
+
+Ces informations doivent être masquées dans les extraits transmis aux mécanismes d'enrichissement.
+
+## 6.4 Classification documentaire
+
+Respecter la nature réelle du document.
+
+Une facture d'acompte reste une facture.
+
+Un relevé bancaire déposé produit uniquement un fichier documentaire.
+
+La classification d'un document comme relevé bancaire ne constitue pas un rapprochement bancaire.
+
+Ne pas créer implicitement de transaction ou de rapprochement à partir de cette classification.
+
+---
+
+# 7. Persistance
+
+Toute écriture en base résultant d'une proposition IA doit être identifiable comme une action applicative distincte.
+
+Avant une création ou une modification importante :
+- vérifier les données ;
+- vérifier les relations ;
+- vérifier les contraintes Prisma ;
+- vérifier l'autorisation de l'action.
+
+Éviter les écritures partielles laissant le domaine dans un état incohérent.
+
+Utiliser une transaction lorsque plusieurs écritures forment une seule opération métier.
+
+---
+
+# 8. Interface utilisateur
+
+L'application est conçue comme une interface desktop.
+
+## 8.1 Structure générale
+
+La fenêtre principale ne défile pas.
+
+Le menu et la barre principale restent visibles.
+
+Seul le cadre de contenu actif peut défiler.
+
+Éviter d'introduire un scroll global sur `body` ou sur la fenêtre principale.
+
+## 8.2 Dossiers
+
+Dans un dossier, un seul volet principal est affiché à la fois.
+
+Ne pas transformer l'écran en juxtaposition permanente de plusieurs panneaux métier.
+
+## 8.3 Assistant
+
+Dans un dossier, l'assistant reste positionné en bas de son espace.
+
+Il doit conserver le contexte du dossier actif.
+
+Une suggestion de l'assistant ne doit jamais être présentée visuellement comme une action déjà réalisée.
+
+Distinguer clairement :
+- information ;
+- proposition ;
+- action à confirmer ;
+- action réalisée ;
+- erreur.
+
+## 8.4 Ergonomie
+
+Lors d'une évolution, privilégier :
+1. la compréhension immédiate ;
+2. la réduction du nombre d'actions ;
+3. la cohérence entre écrans ;
+4. la visibilité de l'état courant ;
+5. la réversibilité des actions ;
+6. la confirmation des actions ayant un impact métier.
+
+Ne pas ajouter un composant ou une interaction uniquement pour moderniser visuellement l'application.
+
+---
+
+# 9. Documentation
+
+La documentation fait partie de la livraison.
+
+Toute modification visible pour l'utilisateur doit mettre à jour :
+
+`docs/manuel-utilisateur.md`
+
+La spécification fonctionnelle de référence reste :
+
+`docs/specifications-gestion-ia.pdf`
+
+## 9.1 Documentation technique
+
+Répartition des responsabilités :
+
+`docs/technique/docs/dat.md`
+→ architecture technique
+
+`docs/technique/docs/dct.md`
+→ conception technique
+
+`modelisation.md`
+→ modèle de données et tables
+
+Un fait doit être décrit dans une seule page responsable.
+
+Les autres documents doivent renvoyer vers cette source au lieu de recopier l'information.
+
+Éviter toute duplication documentaire susceptible de diverger.
+
+---
+
+# 10. Code TypeScript
+
+Les fichiers de `src/domain` utilisés par les tests Node s'importent entre eux avec l'extension `.ts`.
+
+Exemple :
+
+`import { ... } from "./pricing.ts"`
+
+Ne pas utiliser l'alias `@/` entre ces fichiers lorsque cela casse l'exécution des tests Node.
+
+La cible TypeScript est ES2017.
+
+Ne pas utiliser de groupes nommés dans les expressions régulières.
+
+---
+
+# 11. Tests et validation
+
+Après une modification significative, exécuter au minimum :
+
+`npm test`
+
+puis :
+
+`./node_modules/.bin/tsc --noEmit`
+
+Ne pas considérer une modification terminée si :
+- les tests échouent ;
+- TypeScript signale une erreur ;
+- une règle métier existante a été contournée.
+
+Lors de la correction d'un bug, ajouter ou adapter un test lorsque cela permet d'éviter sa réapparition.
+
+---
+
+# 12. Discipline de modification
+
+Avant une modification importante :
+
+1. identifier les fichiers concernés ;
+2. rechercher les implémentations existantes ;
+3. identifier les règles métier impliquées ;
+4. vérifier les tests existants ;
+5. modifier le minimum nécessaire.
+
+Éviter :
+- les refactorisations non demandées ;
+- les changements massifs pendant la correction d'un bug ;
+- la duplication de logique ;
+- la création d'une nouvelle abstraction sans besoin concret ;
+- la suppression d'un comportement sans vérifier son usage.
+
+Si une modification nécessite une évolution du modèle Prisma, vérifier également :
+- le schéma ;
+- les migrations ;
+- les données existantes ;
+- les appels applicatifs ;
+- les tests ;
+- la documentation du modèle.
+
+---
+
+# 13. Fin de cycle
+
+À la fin d'un cycle de développement, ne pas proposer une liste de travaux possibles.
+
+Proposer un seul objectif suivant.
+
+Cet objectif doit être choisi en fonction de ce qui vient réellement d'être livré.
+
+Préciser :
+- pourquoi cet objectif vient maintenant ;
+- ce qui est considéré comme terminé ;
+- ce qui est volontairement laissé au cycle suivant.
+
+Donner également l'état des deux chantiers.
+
+## Chat
+
+La référence est :
+
+`docs/technique/docs/plan-chat.md`
+
+Afficher :
+
+`N sur 11, soit P %`
+
+## Ingestion
+
+La référence est :
+
+`docs/technique/docs/plan-ingestion.md`
+
+Afficher :
+
+`N sur 8, soit P %`
+
+Lorsqu'un lot change d'état, mettre à jour la phrase d'avancement dans le même cycle.
+
+Ne jamais :
+- créer artificiellement un lot ;
+- découper un lot uniquement pour augmenter le pourcentage ;
+- modifier le dénominateur sans évolution explicite du plan.
+
+---
+
+# 14. Définition de terminé
+
+Une évolution n'est considérée comme terminée que lorsque :
+
+- le comportement demandé fonctionne ;
+- les règles métier sont respectées ;
+- les écritures IA nécessitant une validation humaine restent contrôlées ;
+- `npm test` passe ;
+- `./node_modules/.bin/tsc --noEmit` passe ;
+- la documentation concernée est mise à jour ;
+- l'état des plans Chat/Ingestion est cohérent si un lot a évolué.
+
+Ne pas déclarer un travail terminé uniquement parce que le code a été généré.
