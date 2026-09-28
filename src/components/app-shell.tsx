@@ -87,7 +87,7 @@ function SideBar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-border bg-card print:hidden lg:static lg:h-dvh",
+        "fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-border bg-card print:hidden lg:static lg:h-full lg:min-h-0",
         open ? "block" : "hidden lg:block",
       )}
     >
@@ -179,7 +179,7 @@ export function AppShell({
   }, []);
 
   return (
-    <div className="min-h-full lg:grid lg:h-dvh lg:grid-cols-[16rem_minmax(0,1fr)] lg:overflow-hidden">
+    <div className="h-dvh overflow-hidden lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
       <Suspense fallback={<div className="hidden border-r border-border lg:block" />}>
         <SideBar open={open} onNavigate={() => setOpen(false)} />
       </Suspense>
@@ -191,7 +191,7 @@ export function AppShell({
           onClick={() => setOpen(false)}
         />
       ) : null}
-      <div className="flex min-h-dvh min-w-0 flex-col lg:h-dvh lg:min-h-0">
+      <div className="flex h-dvh min-h-0 min-w-0 flex-col">
         <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card px-3 print:hidden sm:px-4">
           <button
             type="button"

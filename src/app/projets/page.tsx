@@ -14,11 +14,11 @@ export default async function ProjectsPage() {
   ]);
 
   return (
-    <div className="grid gap-4">
-      <section className="grid content-start gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
           <div className="grid gap-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Projets</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Projets</h1>
             <Link href="/evenements" className="text-sm font-medium underline-offset-4 hover:underline">
               Événements des dossiers
             </Link>
@@ -27,12 +27,12 @@ export default async function ProjectsPage() {
             <summary className="inline-flex min-h-11 cursor-pointer list-none items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground [&::-webkit-details-marker]:hidden">
               Nouveau dossier
             </summary>
-            <div className="mt-3 max-w-xl rounded-lg border border-border bg-card p-4">
+            <div className="mt-3 max-h-56 max-w-xl overflow-auto rounded-lg border border-border bg-card p-4">
               <ProjectForm clients={clients} />
             </div>
           </details>
         </div>
-        <div className="max-h-[calc(100dvh-9rem)] overflow-auto rounded-lg border border-border bg-card">
+        <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-card">
           <table className="w-full min-w-[42rem] border-collapse text-sm">
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-border bg-muted text-left text-xs tracking-wide text-muted-foreground uppercase">

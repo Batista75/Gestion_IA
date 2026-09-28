@@ -105,7 +105,7 @@ export default async function ProjectPage({
   const deliveryLines = deliverySummary(delivery);
 
   return (
-    <div className="grid min-h-0 gap-3">
+    <div className="grid min-h-0 gap-3" data-onglet={tab}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="grid gap-0.5">
           <h1 className="text-xl font-semibold tracking-tight">{project.name}</h1>

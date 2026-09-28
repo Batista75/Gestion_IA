@@ -22,7 +22,7 @@ export default async function SuppliersPage({
   const opened = suppliers.find((supplier) => supplier.id === fiche) ?? null;
   const keep = q ? `&q=${encodeURIComponent(q)}` : "";
   return (
-    <div className="grid min-h-0 gap-3">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden">
     <DataBoard
       title="Liste des fournisseurs"
       intro="La fiche reprend la forme, le SIRET, la TVA et l’adresse du siège, comme un client. D’autres adresses et d’autres interlocuteurs peuvent y être ajoutés. La commande, la réception et la facture fournisseur ne se saisissent pas encore."
@@ -42,7 +42,7 @@ export default async function SuppliersPage({
       ])}
       empty="Aucun fournisseur ne correspond à cette recherche."
     />
-    <p className="text-sm text-muted-foreground">
+    <p className="shrink-0 text-sm text-muted-foreground">
       Les créations et les corrections sont dans{" "}
       <Link href="/evenements?type=fournisseur" className="font-medium text-foreground underline-offset-4 hover:underline">
         Événements
@@ -50,7 +50,7 @@ export default async function SuppliersPage({
       .
     </p>
     {opened ? (
-      <div className="grid gap-2">
+      <div className="grid min-h-0 max-h-[42%] shrink-0 gap-2 overflow-auto">
         <Link href={`/fournisseurs${q ? `?q=${encodeURIComponent(q)}` : ""}`} className="text-sm font-medium underline-offset-4 hover:underline">
           Fermer la fiche
         </Link>
@@ -72,7 +72,7 @@ export default async function SuppliersPage({
         />
       </div>
     ) : (
-      <details className="rounded-lg border border-border bg-card px-4 py-2">
+      <details className="shrink-0 rounded-lg border border-border bg-card px-4 py-2">
         <summary className="cursor-pointer text-sm font-medium">Nouveau fournisseur</summary>
         <div className="pt-3">
           <PartyManager

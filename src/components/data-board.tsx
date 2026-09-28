@@ -41,8 +41,8 @@ export function DataBoard({
   };
 
   return (
-    <section className="grid min-h-0 gap-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <section className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
         <div className="grid gap-1">
           <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
           {intro ? <p className="max-w-3xl text-sm leading-5 text-muted-foreground">{intro}</p> : null}
@@ -56,7 +56,7 @@ export function DataBoard({
           </a>
         ) : null}
       </div>
-      <form action={basePath} className="flex flex-wrap items-end gap-2">
+      <form action={basePath} className="flex shrink-0 flex-wrap items-end gap-2">
         <label className="grid gap-1 text-xs font-medium text-muted-foreground">
           Recherche
           <Input name="q" defaultValue={query.q ?? ""} placeholder="Rechercher" className="h-11 sm:w-64" />
@@ -76,7 +76,7 @@ export function DataBoard({
           Filtrer
         </Button>
       </form>
-      <div className="max-h-[calc(100dvh-11rem)] overflow-auto rounded-lg border border-border bg-card">
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-card">
         <table className="w-full min-w-[46rem] border-collapse text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-border bg-muted text-left text-xs tracking-wide text-muted-foreground uppercase">
@@ -123,7 +123,7 @@ export function DataBoard({
           </tbody>
         </table>
       </div>
-      <p className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+      <p className="flex shrink-0 flex-wrap items-center gap-3 text-sm text-muted-foreground">
         <span>
           {rows.length === 0
             ? "0 ligne"

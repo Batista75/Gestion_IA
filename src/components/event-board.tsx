@@ -41,8 +41,8 @@ export function EventBoard({
   }
 
   return (
-    <div className="grid gap-4">
-      <form method="get" className="flex flex-wrap items-end gap-2">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <form method="get" className="flex shrink-0 flex-wrap items-end gap-2">
         {filter.projectId ? <input type="hidden" name="projet" value={filter.projectId} /> : null}
         {filter.entityId ? <input type="hidden" name="fiche" value={filter.entityId} /> : null}
         <div className="grid min-w-0 flex-1 gap-1">
@@ -87,7 +87,7 @@ export function EventBoard({
 
       <form
         action={formAction}
-        className="grid gap-3"
+        className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden"
         onSubmit={(event) => {
           if (chosen.length === 0) {
             event.preventDefault();
@@ -101,7 +101,7 @@ export function EventBoard({
           if (!window.confirm(sentence)) event.preventDefault();
         }}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
           <label className="inline-flex min-h-11 items-center gap-3 text-sm">
             <input
               type="checkbox"
@@ -121,12 +121,12 @@ export function EventBoard({
           </Button>
         </div>
         {state.message ? (
-          <p role={state.ok ? "status" : "alert"} className={state.ok ? "text-sm" : "text-sm text-destructive"}>
+          <p role={state.ok ? "status" : "alert"} className={state.ok ? "shrink-0 text-sm" : "shrink-0 text-sm text-destructive"}>
             {state.message}
           </p>
         ) : null}
         {truncated ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="shrink-0 text-sm text-muted-foreground">
             D’autres traces plus anciennes existent. Affinez le filtre pour les retrouver.
           </p>
         ) : null}
@@ -137,7 +137,7 @@ export function EventBoard({
               : "Aucune trace pour le moment. Une création, une correction ou une action de dossier apparaîtra ici."}
           </p>
         ) : (
-          <ul className="grid max-h-[calc(100dvh-16rem)] gap-1 overflow-auto">
+          <ul className="grid min-h-0 flex-1 content-start gap-1 overflow-auto">
             {rows.map((row) => (
               <li key={row.token}>
                 <label className="flex min-h-11 items-start gap-3 rounded-lg px-2 py-2 text-sm leading-6 hover:bg-muted">

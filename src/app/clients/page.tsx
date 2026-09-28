@@ -22,7 +22,7 @@ export default async function ClientsPage({
   const opened = clients.find((client) => client.id === fiche) ?? null;
   const keep = q ? `&q=${encodeURIComponent(q)}` : "";
   return (
-    <div className="grid min-h-0 gap-3">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden">
     <DataBoard
       title="Liste des clients"
       intro="Particuliers et entreprises. Une fiche peut avoir plusieurs interlocuteurs et plusieurs adresses. Le contact et l’adresse du tableau restent ceux du siège. La recherche porte sur le nom, l’e-mail et le SIREN."
@@ -45,7 +45,7 @@ export default async function ClientsPage({
       ])}
       empty="Aucun client ne correspond à cette recherche."
     />
-    <p className="text-sm text-muted-foreground">
+    <p className="shrink-0 text-sm text-muted-foreground">
       Les créations et les corrections sont dans{" "}
       <Link href="/evenements?type=client" className="font-medium text-foreground underline-offset-4 hover:underline">
         Événements
@@ -53,7 +53,7 @@ export default async function ClientsPage({
       .
     </p>
     {opened ? (
-      <div className="grid gap-2">
+      <div className="grid min-h-0 max-h-[42%] shrink-0 gap-2 overflow-auto">
         <Link href={`/clients${q ? `?q=${encodeURIComponent(q)}` : ""}`} className="text-sm font-medium underline-offset-4 hover:underline">
           Fermer la fiche
         </Link>
@@ -75,7 +75,7 @@ export default async function ClientsPage({
         />
       </div>
     ) : (
-      <details className="rounded-lg border border-border bg-card px-4 py-2">
+      <details className="shrink-0 rounded-lg border border-border bg-card px-4 py-2">
         <summary className="cursor-pointer text-sm font-medium">Nouveau client</summary>
         <div className="pt-3">
           <PartyManager

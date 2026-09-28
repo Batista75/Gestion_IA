@@ -22,15 +22,15 @@ export default async function ConfigurationPage() {
   const embedModels = modelsForRole(status.models, "embed");
   const rerankModels = modelsForRole(status.models, "rerank");
   return (
-    <div className="grid gap-3 xl:grid-cols-2">
-      <div className="grid gap-1 xl:col-span-2">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <div className="grid shrink-0 gap-1">
         <h1 className="text-xl font-semibold tracking-tight">Configuration</h1>
         <p className="max-w-3xl text-sm leading-5 text-muted-foreground">
           L’identité de l’entreprise et son logo figurent sur les documents. Le serveur d’inférence, le type de modèle et la clé d’API se règlent ensuite.
         </p>
       </div>
-
-      <Card>
+      <div className="grid min-h-0 flex-1 gap-3 overflow-auto xl:grid-cols-2 xl:overflow-hidden">
+      <Card className="min-h-0 xl:overflow-auto">
         <CardHeader>
           <CardTitle>Entreprise</CardTitle>
           <CardDescription>
@@ -42,7 +42,7 @@ export default async function ConfigurationPage() {
         </CardContent>
       </Card>
 
-      <div className="grid content-start gap-3">
+      <div className="grid min-h-0 content-start gap-3 overflow-auto">
       <Card>
         <CardHeader>
           <CardTitle>État du serveur</CardTitle>
@@ -94,6 +94,7 @@ export default async function ConfigurationPage() {
           />
         </CardContent>
       </Card>
+      </div>
       </div>
     </div>
   );

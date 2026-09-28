@@ -17,16 +17,16 @@ export default async function EventsPage({
   const withoutFiche = eventsQuery({ ...filter, entityId: "" });
 
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Événements</h1>
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <div className="grid shrink-0 gap-1">
+        <h1 className="text-xl font-semibold tracking-tight">Événements</h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
           Toutes les traces des opérations : créations, corrections, suppressions de fiches, et actions de dossier.
           Le filtre limite la liste. Cocher puis supprimer retire la trace. Les fiches, les projets et les pièces restent.
         </p>
       </div>
       {filter.projectId ? (
-        <p className="text-sm">
+        <p className="shrink-0 text-sm">
           Dossier : {subject.projectName || "ce dossier n’est plus dans la liste"}.{" "}
           <Link href={withoutProject} className="font-medium underline-offset-4 hover:underline">
             Tous les événements
@@ -34,7 +34,7 @@ export default async function EventsPage({
         </p>
       ) : null}
       {filter.entityId ? (
-        <p className="text-sm">
+        <p className="shrink-0 text-sm">
           Fiche : {subject.ficheName || "cette fiche n’est plus dans la liste"}.{" "}
           <Link href={withoutFiche} className="font-medium underline-offset-4 hover:underline">
             Toutes les fiches

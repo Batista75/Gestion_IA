@@ -15,7 +15,7 @@ export default async function GroupsPage({
     group.rows.map((row) => [{ text: group.supplier }, ...row]),
   );
   return (
-    <div className="grid gap-4">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden">
       <DataBoard
         title="Regroupements"
         intro="Les articles du catalogue sont regroupés par fournisseur. Un pack au prix ajusté, affiché en une seule ligne sur la pièce, n’est pas un objet distinct."
@@ -26,7 +26,7 @@ export default async function GroupsPage({
         empty="Aucun article ne correspond à cette recherche."
         exportView="regroupements"
       />
-      <ul className="grid gap-2 text-sm">
+      <ul className="grid max-h-24 shrink-0 gap-1 overflow-auto text-sm">
         {groups.map((group) => (
           <li key={group.supplier}>
             <Link href={`/fournisseurs?q=${encodeURIComponent(group.supplier)}`} className="underline-offset-4 hover:underline">

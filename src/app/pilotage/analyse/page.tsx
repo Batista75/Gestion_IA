@@ -32,7 +32,7 @@ export default async function AnalysisPage({
     ["Marge HT", compareMoney(left.margin, right.margin)],
   ] as const;
   return (
-    <div className="grid gap-4">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <DataBoard
         title="Tableau d’analyse"
         intro="Deux périodes, côte à côte. L’écart est la seconde moins la première. Le chiffre d’affaires et la marge ne comptent que les commandes client dont le coût est connu. La TVA n’est pas appliquée."

@@ -42,7 +42,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-background text-foreground">
+      <body className="h-dvh overflow-hidden bg-background text-foreground">
         {bare ? children : <AppShell company={company} operator={operator} role={role}>{children}</AppShell>}
       </body>
     </html>

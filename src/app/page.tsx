@@ -96,8 +96,8 @@ export default async function HomePage({
   const notices = alerts.filter((alert) => alert.href !== "/#a-traiter");
 
   return (
-    <div className="grid min-h-0 flex-1 gap-3 max-xl:overflow-auto xl:grid-cols-[minmax(0,1fr)_18rem] xl:overflow-hidden">
-      <section className="flex max-xl:min-h-[22rem] min-h-0 flex-col gap-2">
+    <div className="grid h-full min-h-0 flex-1 grid-rows-[minmax(0,1fr)_11rem] gap-3 overflow-hidden xl:grid-cols-[minmax(0,1fr)_18rem] xl:grid-rows-1">
+      <section className="flex min-h-0 flex-col gap-2 overflow-hidden">
         {notices.length > 0 ? (
           <ul className="flex shrink-0 flex-wrap gap-2">
             {notices.map((alert) => (
@@ -133,7 +133,7 @@ export default async function HomePage({
         </div>
       </section>
 
-      <aside className="grid min-h-0 gap-2 overflow-hidden max-xl:max-h-44 xl:grid-rows-2">
+      <aside className="grid min-h-0 grid-rows-2 gap-2 overflow-hidden">
       <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-1 overflow-hidden">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-semibold">Projets récents</h2>

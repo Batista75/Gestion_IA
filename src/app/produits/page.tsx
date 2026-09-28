@@ -31,7 +31,7 @@ export default async function ProductsPage({
   const products = await listProducts(query, source);
 
   return (
-    <div className="grid gap-6">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden">
     <DataBoard
       title="Liste des articles"
       intro="Un article est un produit ou un service. Le coût affiché est celui de la dernière offre fournisseur. Les autres offres restent sur la fiche, avec le prix écrit et sa valeur en centimes. La source ouvre la pièce d’origine quand elle existe."
@@ -70,13 +70,14 @@ export default async function ProductsPage({
       empty="Aucun article ne correspond à cette recherche."
       filters={source ? <input type="hidden" name="source" value={source} /> : undefined}
     />
-    <p className="text-sm text-muted-foreground">
+    <p className="shrink-0 text-sm text-muted-foreground">
       Les créations et les corrections sont dans{" "}
       <Link href="/evenements?type=produit" className="font-medium text-foreground underline-offset-4 hover:underline">
         Événements
       </Link>
       .
     </p>
+    <div className={edition ? "min-h-0 flex-1 overflow-auto" : "shrink-0"}>
     <ProductManager
       query={query}
       source={source}
@@ -130,6 +131,7 @@ export default async function ProductsPage({
           })),
       }))}
     />
+    </div>
     </div>
   );
 }

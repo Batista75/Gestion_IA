@@ -16,7 +16,7 @@ export default async function JournalPage({
   const waiting = query.attente === "1";
   const listed = await listJournal(query.q ?? "", query.du ?? "", query.au ?? "", sales);
   return (
-    <div className="grid gap-4">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-3 overflow-hidden">
       <DataBoard
         title="Journal des ventes"
         intro="Devis et commandes client de la période. Les montants sont hors taxes. La référence est celle du dossier, si vous l’avez saisie."
@@ -45,13 +45,13 @@ export default async function JournalPage({
         }
       />
       {payments ? (
-        <p className="text-sm text-muted-foreground">Aucun paiement n’est enregistré. La banque ne lance pas de règlement.</p>
+        <p className="shrink-0 text-sm text-muted-foreground">Aucun paiement n’est enregistré. La banque ne lance pas de règlement.</p>
       ) : null}
       {vat ? (
-        <p className="text-sm text-muted-foreground">La TVA n’est pas calculée. Les montants du journal restent hors taxes.</p>
+        <p className="shrink-0 text-sm text-muted-foreground">La TVA n’est pas calculée. Les montants du journal restent hors taxes.</p>
       ) : null}
       {waiting ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="shrink-0 text-sm text-muted-foreground">
           Les commandes sans référence de facture sont dans les échéances. Aucun montant de retard n’est estimé.
         </p>
       ) : null}
