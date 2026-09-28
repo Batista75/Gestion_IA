@@ -110,6 +110,8 @@ Ce lot reste le dernier. Il ne crée pas d’encaissement ni de rapprochement ba
 
 Chaque lot se termine par une fonction de domaine testée sans modèle, une question exemple qui affiche le paquet, et une phrase du manuel. Les colonnes nouvelles sont décrites dans la modélisation au moment où le lot les crée. L’état ci-dessous est mis à jour quand le lot est livré. Ce n’est pas le tableau de Réalisations, ni le lot de modélisation déjà clos.
 
+Avancement du chantier : 0 sur 11, soit 0 %. Seul un lot marqué livré compte.
+
 1. **Paquet et garde-fou.** Type du paquet, affichage, contrôle des chiffres dans une phrase. Aucune moyenne métier. État : pas commencé.
 2. **Mesures sur l’existant.** Famille de produit, lien produit sur la ligne de vente, marge moyenne, classement d’offres, devis en attente face à une offre plus récente, dernière commande, recherche du procès-verbal indexé. État : pas commencé.
 3. **Devis à plusieurs lignes.** Quantités et prestations nommées dans `prépare un devis pour …`, prix par la bibliothèque déjà en place. État : pas commencé.

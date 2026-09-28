@@ -98,6 +98,11 @@ test("le plan du chat est une page à part, sans recopier le lot", () => {
   assert.match(readFileSync("docs/technique/docs/dat.md", "utf8"), /plan-chat\.md/);
   assert.equal(plan.includes("## Avancement du lot"), false);
   assert.match(plan, /paquet/);
+  const states = [...plan.matchAll(/^\d+\. \*\*.+État : (livré|pas commencé)\.\s*$/gm)].map((match) => match[1]);
+  assert.equal(states.length, 11);
+  const done = states.filter((state) => state === "livré").length;
+  const percent = Math.round((done / 11) * 100);
+  assert.match(plan, new RegExp(`Avancement du chantier : ${done} sur 11, soit ${percent} %`));
 });
 
 test("le fonctionnel et la technique disent la même chose de la mémoire de pièce", () => {
