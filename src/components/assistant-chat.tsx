@@ -2,16 +2,15 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
+import { ArrowUp, Paperclip, Square } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createInboxItemAction } from "@/app/actions";
 import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { provenanceLabel } from "@/domain/provenance";
 import type { StoredTurn } from "@/lib/conversations";
@@ -33,16 +32,21 @@ export function AssistantChat({
   projectName = "",
   initialMessages = [],
   proposals = [],
+  fill = false,
 }: {
   conversationId: string;
   projectName?: string;
   initialMessages?: StoredTurn[];
   proposals?: PendingProposal[];
+  fill?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const hint = useRef({ view: "/", attachments: [] as string[] });
+  // Lu au moment de l’envoi, avec la page et les pièces de cet instant.
+  // eslint-disable-next-line react-hooks/refs -- la valeur sert à la requête, pas au rendu
   hint.current.view = pathname || "/";
+  /* eslint-disable react-hooks/refs -- lu seulement quand le message part */
   const transport = useMemo(
     () =>
       new DefaultChatTransport<ChatMessage>({
@@ -60,7 +64,8 @@ export function AssistantChat({
       }),
     [],
   );
-  const { messages, sendMessage, status, error } = useChat<ChatMessage>({
+  /* eslint-enable react-hooks/refs */
+  const { messages, sendMessage, status, error, stop } = useChat<ChatMessage>({
     id: conversationId,
     messages: toUi(initialMessages),
     transport,
@@ -73,7 +78,11 @@ export function AssistantChat({
   const [busy, setBusy] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const draftRef = useRef<HTMLTextAreaElement>(null);
+  const threadRef = useRef<HTMLDivElement>(null);
+  const stickToEnd = useRef(true);
   const pending = busy || status === "submitted" || status === "streaming";
+  const streaming = status === "submitted" || status === "streaming";
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -82,6 +91,23 @@ export function AssistantChat({
     url.searchParams.set("fil", conversationId);
     router.replace(`${url.pathname}?${url.searchParams.toString()}`);
   }, [conversationId, router]);
+
+  useEffect(() => {
+    const node = draftRef.current;
+    if (!node) return;
+    node.style.height = "0px";
+    node.style.height = `${Math.min(node.scrollHeight, 160)}px`;
+  }, [draft]);
+
+  useEffect(() => {
+    if (document.activeElement === document.body) draftRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const node = threadRef.current;
+    if (!node || !stickToEnd.current) return;
+    node.scrollTop = node.scrollHeight;
+  }, [messages, status, pending]);
 
   async function send(content: string) {
     const text = content.trim();
@@ -94,8 +120,7 @@ export function AssistantChat({
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const selected = [...(fileRef.current?.files ?? [])];
-    const attached = selected.length > 0 ? selected : files;
+    const attached = files;
     const text = draft.trim();
     if ((!text && attached.length === 0) || pending) return;
     if (attached.length === 0) {
@@ -130,16 +155,7 @@ export function AssistantChat({
   }
 
   const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
-  const older = messages.slice(0, -2);
-  const recent = messages.slice(-2);
   const canSend = draft.trim().length > 0 || files.length > 0;
-
-  function clearDraft() {
-    setDraft("");
-    setFiles([]);
-    setFileError(null);
-    if (fileRef.current) fileRef.current.value = "";
-  }
 
   function renderMessage(message: ChatMessage) {
     return (
@@ -147,6 +163,7 @@ export function AssistantChat({
         key={message.id}
         message={message}
         pending={pending}
+        live={pending && message.id === lastAssistant?.id}
         confirm={message.id === lastAssistant?.id && hasProposal(message)}
         editable={message.id === lastAssistant?.id}
         onConfirm={() => void send("Je confirme.")}
@@ -160,103 +177,142 @@ export function AssistantChat({
     );
   }
 
+  function addFiles(list: FileList | null) {
+    const picked = [...(list ?? [])];
+    if (picked.length === 0) return;
+    const next = [...files, ...picked];
+    if (next.length > 8) {
+      setFileError("Au plus 8 pièces à la fois.");
+      setFiles(next.slice(0, 8));
+    } else {
+      setFileError(null);
+      setFiles(next);
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function dropFile(index: number) {
+    setFiles((current) => current.filter((_, position) => position !== index));
+  }
+
   return (
-    <div className="grid gap-4" id="assistant">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {projectName ? `Fil du projet ${projectName}.` : "Le fil reste sur cette machine."}
-        </p>
-        <Link
-          href="/?nouveau=1"
-          className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
-        >
+    <div
+      className={cn("flex min-h-0 flex-col", fill ? "h-full" : "h-[min(36rem,70dvh)]")}
+      id="assistant"
+    >
+      <div className="flex shrink-0 items-center justify-between gap-3 pb-2">
+        <p className="truncate text-sm font-medium">{projectName ? projectName : "Assistant"}</p>
+        <Link href="/?nouveau=1" className="inline-flex min-h-11 shrink-0 items-center text-sm underline-offset-4 hover:underline">
           Nouveau fil
         </Link>
       </div>
-      <Card>
-        <CardContent className="grid gap-4">
-          <form onSubmit={onSubmit} aria-busy={pending} className="grid gap-3">
-            <Label htmlFor="assistant-draft">Que souhaitez-vous faire ?</Label>
-            <Textarea
-              id="assistant-draft"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-                  event.preventDefault();
-                  event.currentTarget.form?.requestSubmit();
-                }
-              }}
-              placeholder="Exemple : j’ai reçu le devis de Durand pour le projet Atlas."
-              maxLength={4000}
-              className="min-h-24"
-            />
-            <div className="grid gap-2">
-              <Label htmlFor="assistant-files">Joindre une pièce</Label>
-              <input
-                ref={fileRef}
-                id="assistant-files"
-                type="file"
-                multiple
-                onChange={(event) => setFiles([...(event.target.files ?? [])])}
-                className="block w-full min-h-11 text-sm file:mr-3 file:min-h-9 file:rounded-md file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium"
-              />
-              {files.length > 0 ? (
-                <p className="text-sm text-muted-foreground break-words">
-                  {files.map((file) => file.name).join(", ")}
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  La pièce est lue telle quelle. Les montants ne sont pas recalculés.
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button type="submit" disabled={pending || !canSend} className="min-h-11 px-4">
-                {pending ? "Lecture…" : "Envoyer"}
-              </Button>
-              {canSend && !pending ? (
-                <Button type="button" variant="outline" className="min-h-11 px-4" onClick={clearDraft}>
-                  Annuler
-                </Button>
-              ) : null}
-              <p className="text-xs text-muted-foreground">Ctrl+Entrée envoie.</p>
-            </div>
-            {pending ? (
-              <p role="status" className="text-sm text-muted-foreground">
-                Lecture en cours. L’étape s’affiche dans le fil.
+      <div
+        ref={threadRef}
+        className="min-h-0 flex-1 overflow-y-auto"
+        onScroll={(event) => {
+          const node = event.currentTarget;
+          stickToEnd.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80;
+        }}
+      >
+        {messages.length === 0 ? (
+          <div className="flex h-full items-center justify-center px-4 text-center">
+            <div className="grid max-w-md gap-2">
+              <p className="text-lg font-medium">Que souhaitez-vous faire ?</p>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Décrivez la demande, ou joignez une pièce. Rien n’est écrit sans votre accord. Les montants restent ceux de la pièce.
               </p>
-            ) : null}
-            {error ? (
-              <p role="alert" className="text-sm leading-6 text-destructive">
-                {error.message || "La réponse n’est pas arrivée. Reformulez la demande, ou réessayez dans un instant."}
-              </p>
-            ) : null}
-            {fileError ? (
-              <p role="alert" className="text-sm leading-6 text-destructive">
-                {fileError}
-              </p>
-            ) : null}
-          </form>
-          {proposals.length > 0 ? (
-            <div className="grid gap-2">
-              <h2 className="text-sm font-medium">À confirmer</h2>
-              <ProposalBoard proposals={proposals} />
             </div>
-          ) : null}
-          {recent.length > 0 ? (
-            <ol className="grid gap-3">{recent.map((message) => renderMessage(message))}</ol>
-          ) : null}
-          {older.length > 0 ? (
-            <details>
-              <summary className="min-h-11 cursor-pointer text-sm font-medium">
-                Messages précédents ({older.length})
-              </summary>
-              <ol className="grid gap-3 pt-3">{older.map((message) => renderMessage(message))}</ol>
-            </details>
-          ) : null}
-        </CardContent>
-      </Card>
+          </div>
+        ) : (
+          <ol className="mx-auto grid w-full max-w-3xl gap-4 px-1 py-4">{messages.map((message) => renderMessage(message))}</ol>
+        )}
+      </div>
+      {proposals.length > 0 ? (
+        <div className="mx-auto grid w-full max-w-3xl shrink-0 gap-2 py-2">
+          <h2 className="text-sm font-medium">À confirmer</h2>
+          <ProposalBoard proposals={proposals} />
+        </div>
+      ) : null}
+      <form onSubmit={onSubmit} aria-busy={pending} className="mx-auto grid w-full max-w-3xl shrink-0 gap-2 pt-2">
+        {files.length > 0 ? (
+          <ul className="flex flex-wrap gap-2">
+            {files.map((file, index) => (
+              <li key={`${file.name}-${file.size}-${index}`} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-muted px-3 text-sm">
+                <span className="max-w-48 truncate">{file.name}</span>
+                <button type="button" className="text-base leading-none" aria-label={`Retirer ${file.name}`} onClick={() => dropFile(index)}>
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <div className="flex items-end gap-1 rounded-3xl border border-border bg-card py-1 pr-1 pl-1 shadow-sm">
+          <input
+            ref={fileRef}
+            id="assistant-files"
+            type="file"
+            multiple
+            className="sr-only"
+            onChange={(event) => addFiles(event.target.files)}
+          />
+          <button
+            type="button"
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-muted"
+            aria-label="Joindre une pièce"
+            onClick={() => fileRef.current?.click()}
+          >
+            <Paperclip aria-hidden="true" className="size-5" />
+          </button>
+          <label htmlFor="assistant-draft" className="sr-only">
+            Message
+          </label>
+          <textarea
+            ref={draftRef}
+            id="assistant-draft"
+            value={draft}
+            rows={1}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }}
+            placeholder="Écrire un message"
+            maxLength={4000}
+            className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-1 py-2.5 text-base outline-none placeholder:text-muted-foreground md:text-sm"
+          />
+          {streaming ? (
+            <button
+              type="button"
+              className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+              aria-label="Arrêter"
+              onClick={() => stop()}
+            >
+              <Square aria-hidden="true" className="size-4 fill-current" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+              aria-label="Envoyer"
+              disabled={pending || !canSend}
+            >
+              <ArrowUp aria-hidden="true" className="size-5" />
+            </button>
+          )}
+        </div>
+        <p className="text-center text-xs text-muted-foreground">Entrée envoie. Maj+Entrée passe à la ligne.</p>
+        {error ? (
+          <p role="alert" className="text-sm leading-6 text-destructive">
+            {error.message || "La réponse n’est pas arrivée. Reformulez la demande, ou réessayez dans un instant."}
+          </p>
+        ) : null}
+        {fileError ? (
+          <p role="alert" className="text-sm leading-6 text-destructive">
+            {fileError}
+          </p>
+        ) : null}
+      </form>
     </div>
   );
 }
@@ -264,6 +320,7 @@ export function AssistantChat({
 function MessageRow({
   message,
   pending,
+  live,
   confirm,
   editable,
   onConfirm,
@@ -271,6 +328,7 @@ function MessageRow({
 }: {
   message: ChatMessage;
   pending: boolean;
+  live: boolean;
   confirm: boolean;
   editable: boolean;
   onConfirm: () => void;
@@ -289,12 +347,21 @@ function MessageRow({
   const sources = message.metadata?.sources ?? [];
   const understanding = message.metadata?.understanding ?? null;
 
+  const mine = message.role === "user";
+  const version = provenanceLabel(message.metadata?.modelVersion ?? "");
+
   return (
-    <li className="grid gap-1 rounded-lg border border-border px-3 py-2">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      {provenanceLabel(message.metadata?.modelVersion ?? "") ? (
-        <span className="text-xs text-muted-foreground">{provenanceLabel(message.metadata?.modelVersion ?? "")}</span>
-      ) : null}
+    <li className={cn("flex", mine ? "justify-end" : "justify-start")}>
+      <article
+        aria-label={label}
+        className={cn(
+          "grid gap-2 break-words",
+          mine
+            ? "w-fit max-w-[min(100%,36rem)] rounded-3xl bg-primary px-4 py-3 text-primary-foreground"
+            : "w-full max-w-3xl py-1",
+        )}
+      >
+      {version && !mine ? <span className="text-xs text-muted-foreground">{version}</span> : null}
       {steps.length > 0 ? (
         <ul className="grid gap-1">
           {steps.map((step, index) => (
@@ -305,6 +372,13 @@ function MessageRow({
         </ul>
       ) : null}
       {text ? <p className="text-sm leading-6 whitespace-pre-wrap">{text}</p> : null}
+      {live && !text ? (
+        <span className="inline-flex items-center gap-1 py-1" role="status" aria-label="Réponse en cours">
+          <span className="size-1.5 animate-pulse rounded-full bg-current" />
+          <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:150ms]" />
+          <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:300ms]" />
+        </span>
+      ) : null}
       {sources.length > 0 ? (
         <p className="text-xs leading-5 text-muted-foreground">
           Sources : {sources.map((source) => `${source.label} ${source.title}`).join(" · ")}
@@ -334,6 +408,7 @@ function MessageRow({
           Confirmer
         </Button>
       ) : null}
+      </article>
     </li>
   );
 }

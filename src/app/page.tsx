@@ -93,48 +93,44 @@ export default async function HomePage({
     };
   });
 
+  const notices = alerts.filter((alert) => alert.href !== "/#a-traiter");
+
   return (
     <div className="grid gap-6">
-      <div className="grid gap-3">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Accueil</h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            Confirmez une pièce, ou décrivez ce qu’il faut faire. Rien n’est écrit sans votre accord.
-          </p>
-        </div>
-        {alerts.some((alert) => alert.href !== "/#a-traiter") ? (
-          <ul className="flex flex-wrap gap-2">
-            {alerts
-              .filter((alert) => alert.href !== "/#a-traiter")
-              .map((alert) => (
-                <li key={alert.text}>
-                  <Link
-                    href={alert.href}
-                    className="inline-flex min-h-11 items-center rounded-lg bg-muted px-3 text-sm font-medium"
-                  >
-                    {alert.text}
-                  </Link>
-                </li>
-              ))}
+      <section className="flex h-[calc(100dvh-8.5rem)] min-h-[28rem] flex-col gap-3">
+        {notices.length > 0 ? (
+          <ul className="flex shrink-0 flex-wrap gap-2">
+            {notices.map((alert) => (
+              <li key={alert.text}>
+                <Link
+                  href={alert.href}
+                  className="inline-flex min-h-11 items-center rounded-full bg-muted px-3 text-sm font-medium"
+                >
+                  {alert.text}
+                </Link>
+              </li>
+            ))}
           </ul>
-        ) : pending.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Rien n’attend de décision.</p>
         ) : null}
-      </div>
-
-      <section id="a-traiter" className="grid scroll-mt-6 gap-3">
-        <h2 className="text-lg font-semibold">À traiter</h2>
-        <ProposalBoard proposals={pending} />
-      </section>
-
-      <section id="assistant" className="grid scroll-mt-6 gap-3">
-        <h2 className="text-lg font-semibold">Demande</h2>
-        <AssistantChat
-          key={conversationId}
-          conversationId={conversationId}
-          projectName={thread?.projectName ?? ""}
-          initialMessages={thread?.messages ?? []}
-        />
+        {pending.length > 0 ? (
+          <details id="a-traiter" open className="shrink-0 scroll-mt-6 rounded-2xl border border-border bg-card">
+            <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm font-medium">
+              À traiter · {pending.length}
+            </summary>
+            <div className="max-h-56 overflow-auto px-4 pb-4">
+              <ProposalBoard proposals={pending} />
+            </div>
+          </details>
+        ) : null}
+        <div className="min-h-0 flex-1">
+          <AssistantChat
+            key={conversationId}
+            fill
+            conversationId={conversationId}
+            projectName={thread?.projectName ?? ""}
+            initialMessages={thread?.messages ?? []}
+          />
+        </div>
       </section>
 
       <section className="grid gap-3">
