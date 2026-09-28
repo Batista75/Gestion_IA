@@ -1,6 +1,6 @@
 # Manuel utilisateur
 
-Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La cible de revue est la [spécification V2](/documentation/v2). Le PDF d’origine reste la [spécification fonctionnelle](/documentation/specification), conservée. Le fonctionnement du socle livré est dans la [spécification technique](/documentation/technique).
+Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La cible de revue est la [spécification V2](/documentation/v2). Le PDF d’origine reste la [spécification fonctionnelle](/documentation/specification), conservée. L’architecture du socle est le [DAT](/documentation/technique/dat). La conception est le [DCT](/documentation/technique/dct). L’ensemble est la [spécification technique](/documentation/technique).
 
 Dernière mise à jour : 28 septembre 2026. Le menu Configuration règle le serveur, les modèles et la clé d’API.
 

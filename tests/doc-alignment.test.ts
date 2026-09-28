@@ -70,6 +70,27 @@ test("la modélisation cite chaque modèle Prisma", () => {
   assert.match(page, /Les lignes ne sont pas additionnées/);
 });
 
+test("le DAT et le DCT sont les deux entrées, sans recopier le lot", () => {
+  const index = readFileSync("docs/technique/docs/index.md", "utf8");
+  const dat = readFileSync("docs/technique/docs/dat.md", "utf8");
+  const dct = readFileSync("docs/technique/docs/dct.md", "utf8");
+  const donnees = readFileSync("docs/technique/docs/donnees.md", "utf8");
+  assert.match(index, /dat\.md/);
+  assert.match(index, /dct\.md/);
+  assert.match(index, /modelisation\.md/);
+  assert.match(readFileSync("src/lib/spec-books.ts", "utf8"), /"dat"/);
+  assert.match(readFileSync("src/lib/spec-books.ts", "utf8"), /"dct"/);
+  assert.match(readFileSync("docs/technique/mkdocs.yml", "utf8"), /dat\.md/);
+  assert.match(readFileSync("docs/technique/mkdocs.yml", "utf8"), /dct\.md/);
+  assert.match(dat, /Document d’architecture technique/);
+  assert.match(dct, /Document de conception technique/);
+  assert.equal(dat.includes("## Avancement du lot"), false);
+  assert.equal(dct.includes("## Avancement du lot"), false);
+  assert.match(donnees, /dct\.md/);
+  assert.match(donnees, /modelisation\.md/);
+  assert.ok(donnees.length < 700);
+});
+
 test("le fonctionnel et la technique disent la même chose de la mémoire de pièce", () => {
   const chaine = readFileSync("docs/fonctionnel/docs/chaine.md", "utf8");
   const ecart = readFileSync("docs/technique/docs/ecart.md", "utf8");

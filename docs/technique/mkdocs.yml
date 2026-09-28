@@ -6,6 +6,8 @@ theme:
   name: mkdocs
 nav:
   - Accueil: index.md
+  - DAT: dat.md
+  - DCT: dct.md
   - Orchestration: orchestration.md
   - Devis hybride: devis-hybride.md
   - Recherche et modèles: recherche.md

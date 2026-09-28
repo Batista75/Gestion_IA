@@ -15,7 +15,7 @@ Dans l’application : [Demandes fonctionnelles](/documentation/v2).
 
 ## Spécification technique
 
-Répertoire `docs/technique`. Pages : orchestration, devis hybride, recherche, données, écrans, écart, réalisations.
+Répertoire `docs/technique`. Le [DAT](technique/docs/dat.md) tient l’architecture. Le [DCT](technique/docs/dct.md) tient la conception. Les chapitres ne répètent pas ces deux documents : orchestration, devis hybride, recherche, modélisation, écrans, écart, réalisations. La page données ne fait que renvoyer.
 
 ```bash
 cd docs/technique

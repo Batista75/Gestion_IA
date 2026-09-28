@@ -2,7 +2,7 @@
 
 PostgreSQL conserve toutes les informations métier. Le schéma de référence est `prisma/schema.prisma`. Les identifiants sont des `cuid`, sauf les deux lignes de réglage dont l’identifiant est `local`. Les montants écrits sur une pièce ou un article restent des chaînes. Les centimes des lignes de dossier et de pièce de vente viennent de `src/domain/pricing.ts`.
 
-Cette page liste chaque modèle, ses champs utiles, ses liens et ce que l’application calcule sans le stocker.
+Cette page liste chaque modèle, ses champs utiles, ses liens et ce que l’application calcule sans le stocker. L’architecture est le [DAT](dat.md). La conception est le [DCT](dct.md).
 
 ## Carte
 
@@ -48,14 +48,13 @@ Une seule ligne, `id` = `local`.
 
 ### Account
 
-Accès à l’application. Tant qu’aucune ligne n’existe, `/connexion` crée le premier compte, au rôle `admin`. Ensuite l’adresse et le mot de passe sont exigés. En développement, `ensureDevAdmin` crée `admin@atelier.local` s’il manque. Le mot de passe initial est `Admin-local-1`. Ce compte n’est pas créé hors du mode développement.
+Compte d’accès. Le parcours de connexion, le cookie et le compte de développement sont dans le [DCT](dct.md).
 
 - `email` unique, en minuscules.
 - `firstName`, `lastName`. La marque affichée est l’initiale du prénom et le nom.
 - `role` : `admin` ou `utilisateur`. Défaut `utilisateur`.
-- `passwordHash` : empreinte scrypt. Le mot de passe en clair n’est pas stocké.
+- `passwordHash` : empreinte scrypt.
 - `createdAt`.
-- Le cookie `gestion_session` est signé pour 14 jours. Il porte l’identifiant et la marque. Le navigateur ne peut pas le lire.
 
 ### CompanyProfile
 
@@ -172,7 +171,7 @@ Une ligne par étape et par projet. Couple unique `(projectId, stepKey)`.
 
 ### ProjectEvent
 
-Action du dossier. Distincte de `RecordEvent`. L’écran `/evenements` réunit les deux. Supprimer une trace retire la ligne, pas le dossier.
+Action du dossier. Distincte de `RecordEvent`. La réunion des deux journaux est dans le [DCT](dct.md).
 
 - `kind`, `body`.
 - `fileId` : identifiant de fichier en texte, sans clé étrangère.
@@ -208,7 +207,7 @@ Pièce établie dans le dossier. Suppression du projet en cascade.
 - `createdAt`, `updatedAt`.
 - Enfants : `SaleDocumentLine`.
 
-Aucune colonne de numéro. L’écran `/projets/[id]/facture` réimprime la dernière commande client et la référence de preuve de l’étape Facturation. Il n’écrit ni facture ni numéro.
+Aucune colonne de numéro. La réimpression est décrite dans le [DCT](dct.md).
 
 ### SaleDocumentLine
 
@@ -375,7 +374,7 @@ Index de recherche dans PostgreSQL. Une ligne par source. Couple unique `(source
 
 ### RecordEvent
 
-Journal des créations, mises à jour et suppressions de `Client`, `Supplier`, `Product` et `Project`. Pas de clé étrangère : la ligne reste si la fiche est supprimée. L’écran `/evenements` filtre ces lignes et celles de `ProjectEvent`. Supprimer les cases cochées retire la trace, pas la fiche.
+Journal des créations, mises à jour et suppressions de `Client`, `Supplier`, `Product` et `Project`. Pas de clé étrangère : la ligne reste si la fiche est supprimée. L’écran qui filtre et supprime ces lignes est dans le [DCT](dct.md).
 
 - `entityType` : `client`, `supplier`, `product`, `project`.
 - `entityId`, `entityName`.

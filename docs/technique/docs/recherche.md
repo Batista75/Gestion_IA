@@ -1,5 +1,7 @@
 # Recherche et modèles
 
+Ce chapitre fixe l’index, la lecture des pièces, le GPU et les modèles. L’architecture est le [DAT](dat.md). La place de cette recherche dans la conception est le [DCT](dct.md).
+
 La recherche élargie réunit le tri par les mots, le tri vectoriel et le tri hybride, au plus 12 fiches. Le reranker, s’il répond, ne garde que les passages qui répondent à la question. Un score trop bas écarte la fiche. Si le reranker manque ou si ses scores ne départagent rien, l’ordre hybride est gardé. Une liste du répertoire ne passe pas par le reranker.
 
 Sans embeddings, la recherche par les mots continue. Le passage envoyé au reranker reprend les lignes qui portent les mots de la question.

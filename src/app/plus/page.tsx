@@ -36,7 +36,15 @@ export default async function MorePage({
           <Link href="/documentation/technique" className="font-medium text-foreground underline-offset-4 hover:underline">
             docs/technique
           </Link>
-          . Les deux affichent les mêmes réalisations que le tableau ci-dessous. Les listes sont dans le menu de gauche. Le serveur, les modèles
+          {" "}(
+          <Link href="/documentation/technique/dat" className="font-medium text-foreground underline-offset-4 hover:underline">
+            DAT
+          </Link>
+          ,{" "}
+          <Link href="/documentation/technique/dct" className="font-medium text-foreground underline-offset-4 hover:underline">
+            DCT
+          </Link>
+          ). Les deux affichent les mêmes réalisations que le tableau ci-dessous. Les listes sont dans le menu de gauche. Le serveur, les modèles
           et la clé d’API sont dans{" "}
           <Link href="/configuration" className="font-medium text-foreground underline-offset-4 hover:underline">
             Configuration
@@ -77,6 +85,18 @@ export default async function MorePage({
             className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
           >
             Spécification technique
+          </Link>
+          <Link
+            href="/documentation/technique/dat"
+            className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
+          >
+            DAT
+          </Link>
+          <Link
+            href="/documentation/technique/dct"
+            className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-4")}
+          >
+            DCT
           </Link>
           <Link
             href="/documentation/devis-hybride"

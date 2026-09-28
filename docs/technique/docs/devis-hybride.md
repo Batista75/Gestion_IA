@@ -26,15 +26,13 @@ Le stock vide reste « non indiqué ». Il se saisit sur la fiche article.
 
 ## Conditions du client
 
-L’index vectoriel est la table `KnowledgeChunk`, avec `bge-m3` lorsqu’il est installé. Il n’y a pas de seconde base Chroma, Qdrant ou LanceDB.
+L’index des conditions est `KnowledgeChunk`. Son fonctionnement est dans [Recherche et modèles](recherche.md).
 
 Pour un devis, la lecture des conditions est limitée au client nommé. Les pièces d’un autre client ne sont pas interrogées, même si le vecteur est calculé. Sans client unique, aucune recherche de conditions n’est lancée.
 
 Une remise est appliquée seulement si une seule valeur est écrite, par exemple `remise de 10 %`. Deux remises différentes ne sont pas tranchées. Aucune remise inventée n’est ajoutée.
 
-## Modèle local
-
-Cible : NVIDIA RTX 4080, 16 Go de mémoire graphique, 32 Go de RAM. Modèle de conversation : Qwen2.5-14B-Instruct, quantifié. Le contexte de conversation reste 4 096 jetons. Les travaux graphiques passent par la file unique.
+Le budget graphique, la file et les modèles sont dans [Recherche et modèles](recherche.md).
 
 ## Suite d’une demande
 

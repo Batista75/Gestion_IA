@@ -1,5 +1,7 @@
 # Orchestration en service
 
+Ce chapitre fixe l’ordre de traitement. L’architecture est le [DAT](dat.md). La conception d’ensemble est le [DCT](dct.md).
+
 `POST /api/assistant` reçoit le fil, au plus 40 messages. Le dernier message utilisateur est enregistré, puis traité dans cet ordre.
 
 1. Une phrase parlée du type « Créer le projet : … Le projet consiste à … », ou un tableau collé, est enregistrée tout de suite.

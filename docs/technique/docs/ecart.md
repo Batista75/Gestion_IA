@@ -1,6 +1,8 @@
 # Écart avec les demandes
 
-Les demandes décrites dans `docs/fonctionnel` ne sont pas toutes le chemin par défaut. Aujourd’hui :
+Ce chapitre liste ce que les demandes de `docs/fonctionnel` n’obtiennent pas encore. La conception livrée est le [DCT](dct.md). Une ligne pas faite de [Réalisations](realisations.md) n’est pas décrite ici comme livrée.
+
+Aujourd’hui :
 
 - l’enveloppe cite la page, le projet, le document ouvert et les noms de pièces, pas encore la zone dans la page ;
 - une pièce jointe est lue sans la phrase : `readDocumentFacts` dans `src/domain/document-facts.ts` pose des faits avec la page et la zone ; les montants restent ceux écrits sur la pièce ;
@@ -11,10 +13,8 @@ Les demandes décrites dans `docs/fonctionnel` ne sont pas toutes le chemin par 
 - une correction de projet, de type ou de fournisseur est isolée dans `DocumentMemory` pour le nom de la pièce ; elle ne devient pas une règle du répertoire ;
 - le journal trace les changements de fiche, pas encore l’entrée, le contexte, la proposition, la validation et le résultat d’une action de la chaîne.
 
-Deux bornes sont déjà en place et restent la référence des règles : `prépare un devis pour …` calcule hors du modèle, et les outils d’écriture du catalogue ne font que proposer. Le détail du devis est dans [Devis hybride](devis-hybride.md).
-
-L’état de chaque demande est [Réalisations](realisations.md). Une ligne pas faite de ce tableau n’est pas décrite ici comme livrée.
+Le devis préparé hors du modèle est dans [Devis hybride](devis-hybride.md).
 
 ## Hors de ce socle
 
-L’avoir, l’encaissement, le rapprochement bancaire, la date d’échéance, le pack d’articles et le connecteur agréé ne sont pas implémentés. Ils restent des demandes. La facture affichée ne crée pas de titre de paiement : elle montre la référence déjà saisie. La commande client et la commande fournisseur de la vue projet préparent l’opération, sans numéro de pièce ni transmission.
+L’avoir émis, l’encaissement, le rapprochement bancaire, la date d’échéance, le pack d’articles et le connecteur agréé ne sont pas implémentés. Ils restent des demandes. La facture affichée ne crée pas de titre de paiement. Le mécanisme de réimpression est dans le [DCT](dct.md).
