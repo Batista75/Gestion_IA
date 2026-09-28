@@ -91,6 +91,19 @@ test("le DAT et le DCT sont les deux entrées, sans recopier le lot", () => {
   assert.ok(donnees.length < 700);
 });
 
+test("le plan d’ingestion compte les lots livrés", () => {
+  const plan = readFileSync("docs/technique/docs/plan-ingestion.md", "utf8");
+  assert.match(readFileSync("src/lib/spec-books.ts", "utf8"), /"plan-ingestion"/);
+  assert.match(readFileSync("docs/technique/mkdocs.yml", "utf8"), /plan-ingestion\.md/);
+  assert.match(readFileSync("docs/technique/docs/dat.md", "utf8"), /plan-ingestion\.md/);
+  assert.equal(plan.includes("## Avancement du lot"), false);
+  const states = [...plan.matchAll(/^\d+\. \*\*.+État : (livré|pas commencé)\.\s*$/gm)].map((match) => match[1]);
+  assert.equal(states.length, 8);
+  const done = states.filter((state) => state === "livré").length;
+  const percent = Math.round((done / 8) * 100);
+  assert.match(plan, new RegExp(`Avancement du chantier : ${done} sur 8, soit ${percent} %`));
+});
+
 test("le plan du chat est une page à part, sans recopier le lot", () => {
   const plan = readFileSync("docs/technique/docs/plan-chat.md", "utf8");
   assert.match(readFileSync("src/lib/spec-books.ts", "utf8"), /"plan-chat"/);

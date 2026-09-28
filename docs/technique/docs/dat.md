@@ -69,5 +69,6 @@ Chaque fait a une seule page. Les autres renvoient.
 - **[Écrans](ecrans.md)** : routes et contrôles.
 - **[Écart](ecart.md)** : demandes encore absentes du chemin livré.
 - **[Plan du chat](plan-chat.md)** : familles de questions et ordre des lots.
+- **[Plan d’ingestion](plan-ingestion.md)** : nature des pièces lues et ordre des lots.
 - **[Réalisations](realisations.md)** : état fait ou pas fait, le même tableau que Plus.
 - **[Données](donnees.md)** : renvois, pour les liens déjà publiés.

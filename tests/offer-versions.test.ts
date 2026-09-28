@@ -312,6 +312,7 @@ test("chaque type de pièce écrit seulement les tables du modèle", () => {
     "livraison",
     "contrat",
     "fiche",
+    "releve",
     "document",
     "autre",
   ];
@@ -322,6 +323,7 @@ test("chaque type de pièce écrit seulement les tables du modèle", () => {
     assert.equal(targets.includes("demand"), kind === "rfq" || kind === "devis" || kind === "tarif");
   }
   assert.deepEqual(documentWriteTargets("autre"), ["fichier"]);
+  assert.deepEqual(documentWriteTargets("releve"), ["fichier"]);
   assert.deepEqual(documentWriteTargets("facture"), ["fichier", "client", "supplier", "product"]);
   assert.deepEqual(documentWriteTargets("avoir"), documentWriteTargets("facture"));
   assert.deepEqual(documentWriteTargets("livraison"), documentWriteTargets("facture"));

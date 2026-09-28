@@ -37,8 +37,12 @@ export type DocumentKind =
   | "livraison"
   | "contrat"
   | "fiche"
+  | "releve"
   | "document"
   | "autre";
+
+/** Rôle relu sur une facture. Ce n’est pas une nature. */
+export type DocumentRole = "" | "acompte";
 
 export type DocumentParties = {
   clientName: string;
@@ -47,6 +51,7 @@ export type DocumentParties = {
 
 export type DocumentReading = {
   kind: DocumentKind;
+  role: DocumentRole;
   heading: string;
   enrichment: string;
   offers: OfferVersion[];
@@ -61,8 +66,10 @@ export function readOfferFile(text: string, filename: string): DocumentReading {
   const parts = splitDocuments(text);
   const readings = (parts.length > 0 ? parts : [text]).map((part) => readSingle(part, filename));
   if (readings.length === 1) return readings[0] ?? readSingle("", filename);
+  const primary = readings.find((reading) => reading.kind !== "document" && reading.kind !== "autre") ?? readings[0];
   return {
-    kind: readings[0]?.kind ?? "document",
+    kind: primary?.kind ?? "document",
+    role: primary?.role ?? "",
     heading: readings[0]?.heading ?? filename,
     offers: readings.flatMap((reading) => reading.offers),
     pricedLines: readings.flatMap((reading) => reading.pricedLines),
@@ -85,11 +92,13 @@ function readSingle(text: string, filename: string): DocumentReading {
       clientName: offer.clientName || parties.clientName,
     }));
   const kind = documentKind(text, filename);
+  const role = documentRole(kind, text, filename);
   const offers = keepsCommercialVersion(kind) ? parsed : [];
   const pricedLines = parsed.flatMap((offer) => offer.lines);
   const heading = clean(text.split(/\n/).map((line) => line.trim()).find(Boolean) || filename).slice(0, 180);
   return {
     kind,
+    role,
     heading,
     offers,
     pricedLines,
@@ -124,6 +133,7 @@ export function documentWriteTargets(kind: DocumentKind): Array<
 > {
   switch (kind) {
     case "autre":
+    case "releve":
       return ["fichier"];
     case "rfq":
       return ["fichier", "client", "supplier", "demand"];
@@ -138,7 +148,7 @@ export function documentWriteTargets(kind: DocumentKind): Array<
 export function kindLabel(kind: string): string {
   switch (kind) {
     case "rfq":
-      return "Demande de prix";
+      return "Demande de chiffrage";
     case "devis":
       return "Devis";
     case "commande":
@@ -154,7 +164,9 @@ export function kindLabel(kind: string): string {
     case "contrat":
       return "Contrat";
     case "fiche":
-      return "Fiche technique";
+      return "Documentation technique";
+    case "releve":
+      return "Relevé bancaire";
     case "document":
       return "Document";
     default:
@@ -439,7 +451,7 @@ function offerDate(text: string): string {
 
 const KIND_RULES: Array<{ kind: DocumentKind; pattern: RegExp }> = [
   { kind: "facture", pattern: /\b(factures?|invoices?)\b/i },
-  { kind: "avoir", pattern: /\b(avoirs?|credit note|note de cr[ée]dit)\b/i },
+  { kind: "avoir", pattern: /\b(avoirs?\s*(?:n[°o]|#|num[ée]ro)|credit note|note de cr[ée]dit)\b/i },
   { kind: "livraison", pattern: /\b(bon de livraison|delivery note|bordereau de livraison)\b/i },
   { kind: "commande", pattern: /\b(bon de commande|purchase order|commandes?)\b/i },
   {
@@ -453,28 +465,63 @@ const KIND_RULES: Array<{ kind: DocumentKind; pattern: RegExp }> = [
   { kind: "fiche", pattern: /\b(development kit|fiche technique|datasheet|data sheet)\b/i },
 ];
 
+/** Titre de la pièce. Le premier mot de nature dans le nom ou les premières lignes l’emporte. Une adresse courriel ne compte pas. */
+const TITLE_RULES: Array<{ kind: DocumentKind; pattern: RegExp }> = [
+  { kind: "facture", pattern: /\b(factures?|invoices?)\b(?!@)/i },
+  { kind: "avoir", pattern: /(?:^\s*avoirs?\b|\bavoirs?\s*(?:n[°o]|#|num[ée]ro)\b|\bcredit note\b|\bnote de cr[ée]dit\b)(?!@)/i },
+  { kind: "livraison", pattern: /\b(bon de livraison|delivery note|bordereau de livraison)\b(?!@)/i },
+  { kind: "commande", pattern: /\b(bon de commande|purchase order)\b(?!@)/i },
+  {
+    kind: "releve",
+    pattern: /\b(relev[ée]s? bancaires?|relev[ée]s? de compte|extraits? de compte|bank statements?|account statements?)\b(?!@)/i,
+  },
+  {
+    kind: "rfq",
+    pattern:
+      /\b(rfq|rfp|demandes?[\s-]+de[\s-]+(?:prix|chiffrage|cotation)|requests?[\s-]+for[\s-]+quotations?|appels? d['’\s-]*offres)\b(?!@)/i,
+  },
+  {
+    kind: "devis",
+    pattern:
+      /\b(devis|offres?|offers?|quotations?|quotes?|soumissions?|price\s+offers?|nous vous offrons|n[°o]\s*d[´'`’']?\s*offre)\b(?!@)/i,
+  },
+  { kind: "tarif", pattern: /\btarifs?\b(?!@)/i },
+  { kind: "contrat", pattern: /\b(contrats?|conditions g[ée]n[ée]rales|cgv)\b(?!@)/i },
+  {
+    kind: "fiche",
+    pattern:
+      /\b(documentations? techniques?|fiches? techniques?|notices? techniques?|development kits?|datasheets?|data sheets?)\b(?!@)/i,
+  },
+];
+
 function documentKind(text: string, filename: string): DocumentKind {
+  if (!text.trim()) return "autre";
   const lines = text.split(/\n/).map((line) => line.trim()).filter(Boolean);
-  const first = lines[0] ?? "";
-  const head = lines.slice(0, 40).join("\n");
-  return (
-    titleKind(`${filename}\n${head}`) ??
-    matchKind(`${filename}\n${first}`) ??
-    matchKind(head) ??
-    matchKind(text) ??
-    (text.trim() ? "document" : "autre")
-  );
+  const header = [filename.replace(/[_./-]+/g, " "), ...lines.slice(0, 24)].join("\n");
+  return titleKind(header) ?? matchKind(header) ?? matchKind(text) ?? "document";
+}
+
+function documentRole(kind: DocumentKind, text: string, filename: string): DocumentRole {
+  if (kind !== "facture") return "";
+  return /\bacompte\b(?!@)/i.test(`${filename}\n${text}`) ? "acompte" : "";
 }
 
 function titleKind(head: string): DocumentKind | null {
-  if (/^(?:.*\n)?\s*(facture|invoice)\b/i.test(head)) return "facture";
-  if (/\b(bon de commande|purchase order)\b/i.test(head)) return "commande";
-  if (/\b(bon de livraison|delivery note)\b/i.test(head)) return "livraison";
-  if (/\b(avoir|credit note|note de cr[ée]dit)\b/i.test(head)) return "avoir";
-  if (/\b(rfq|demande[\s-]+de[\s-]+prix)\b/i.test(head)) return "rfq";
-  if (/\b(devis|n[°o]\s*d[´'`’']?\s*offre|price\s+offer|nous vous offrons|quotations?)\b/i.test(head)) return "devis";
-  if (/\btarifs?\b/i.test(head)) return "tarif";
+  for (const line of head.split(/\n/)) {
+    const found = titleOnLine(line);
+    if (found) return found;
+  }
   return null;
+}
+
+function titleOnLine(line: string): DocumentKind | null {
+  let best: { index: number; kind: DocumentKind } | null = null;
+  for (const rule of TITLE_RULES) {
+    const match = rule.pattern.exec(line);
+    if (!match || match.index === undefined) continue;
+    if (!best || match.index < best.index) best = { index: match.index, kind: rule.kind };
+  }
+  return best?.kind ?? null;
 }
 
 function matchKind(value: string): DocumentKind | null {
@@ -756,8 +803,9 @@ export function proposeFromReading(
   const title = (reading.offers[0]?.title || reading.heading || filename).slice(0, 180);
   const reference = reading.offers[0]?.versionLabel || "";
 
-  if (clientName && !knownClient) actions.push({ type: "create_client", name: clientName });
-  if (supplierName && !knownSupplier) actions.push({ type: "create_supplier", name: supplierName });
+  const archival = reading.kind === "releve";
+  if (clientName && !knownClient && !archival) actions.push({ type: "create_client", name: clientName });
+  if (supplierName && !knownSupplier && !archival) actions.push({ type: "create_supplier", name: supplierName });
 
   if (reading.kind === "devis" || reading.kind === "tarif") {
     for (const offer of reading.offers) {
@@ -800,7 +848,7 @@ export function proposeFromReading(
         supplierName,
       });
     }
-  } else {
+  } else if (!archival) {
     for (const line of reading.pricedLines) {
       if (!matchProduct(line, directory.products)) actions.push(productFromLine(line, supplierName, reading.kind));
     }
@@ -849,6 +897,7 @@ function fieldsOf(
   });
   return [
     { label: "Type", value: kindLabel(reading.kind) },
+    ...(reading.role === "acompte" ? [{ label: "Rôle", value: "Acompte" }] : []),
     { label: "Étape", value: cycleSentence(reading.kind) },
     {
       label: "Projet",
@@ -900,6 +949,7 @@ function summaryOf(
     cycleSentence(reading.kind),
     `Pièce : ${filename}.`,
   ];
+  if (reading.role === "acompte") lines.splice(1, 0, "Rôle : acompte.");
   lines.push(
     clientName
       ? knownClient
@@ -1002,7 +1052,9 @@ export function cycleSentence(kind: DocumentKind): string {
     case "contrat":
       return "Cadre de la fourniture, avant ou pendant le projet.";
     case "fiche":
-      return "Fiche technique du produit ou du kit à fournir. Elle n’indique pas un prix de devis.";
+      return "Documentation technique du produit ou du kit à fournir. Elle n’indique pas un prix de devis.";
+    case "releve":
+      return "Relevé bancaire reçu. Aucun paiement n’est rapproché.";
     default:
       return "Pièce reçue dans le fil de l’activité.";
   }

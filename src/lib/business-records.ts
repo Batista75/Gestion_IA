@@ -441,14 +441,14 @@ async function attachPieces(attached: AttachedPiece[], projects: SavedProject[])
     if (targets.length === 0) {
       notes.push(
         sheet
-          ? `Fiche technique ${sheet.reference} enregistrée, sans projet désigné dans le message.`
+          ? `Documentation technique ${sheet.reference} enregistrée, sans projet désigné dans le message.`
           : "",
       );
       continue;
     }
     for (const project of targets) {
       const body = sheet
-        ? `Fiche technique « ${piece.originalName} » rattachée. ${sheet.name}, référence ${sheet.reference}${sheet.ordering ? `, commande ${sheet.ordering}` : ""}. Aucun prix n’est indiqué sur cette fiche.`
+        ? `Documentation technique « ${piece.originalName} » rattachée. ${sheet.name}, référence ${sheet.reference}${sheet.ordering ? `, commande ${sheet.ordering}` : ""}. Aucun prix n’est indiqué sur cette fiche.`
         : `Pièce « ${piece.originalName} » rattachée au projet.`;
       await addEvent(project.id, "piece", body, piece.id);
       notes.push(body);

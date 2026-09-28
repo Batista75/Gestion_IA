@@ -45,6 +45,17 @@ test("les faits viennent de la pièce, avec la page et la zone", () => {
   assert.equal(notice.includes(phrase), false);
 });
 
+test("une facture d'acompte qui cite un devis reste une facture", () => {
+  const text = `FACTURE
+# FAC-2026-018
+ACOMPTE 50%
+Objet : Facture d'acompte selon le Devis # DEV-2026-004
+Banque : Banque Nationale`;
+  const read = readDocumentFacts(text, "piece.txt");
+  assert.equal(read.facts.find((fact) => fact.label === "Nature")?.value, "Facture");
+  assert.equal(read.facts.find((fact) => fact.label === "Rôle")?.value, "Acompte");
+});
+
 test("sans lecture, aucun fait n’est tiré d’une phrase", () => {
   const read = readDocumentFacts("", "piece.txt", ["Durand"]);
   assert.deepEqual(read.facts, []);

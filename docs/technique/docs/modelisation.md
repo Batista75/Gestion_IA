@@ -261,7 +261,7 @@ Fichier reçu. Le binaire est sur le disque, chemin `storagePath`, sous `data/pi
 - `inboxItemId` facultatif vers `InboxItem`.
 - `originalName`, `mimeType`, `sizeBytes`.
 - `extractedText` : texte lu, vide si la lecture n’a rien donné.
-- `kind` : `rfq`, `devis`, `commande`, `facture`, `tarif`, `avoir`, `livraison`, `contrat`, `fiche`, `document`, `autre`. Défaut `autre`. Le mot `facture` qualifie une pièce lue. Il ne crée pas une facture émise.
+- `kind` : `rfq`, `devis`, `commande`, `facture`, `tarif`, `avoir`, `livraison`, `contrat`, `fiche`, `releve`, `document`, `autre`. Défaut `autre`. Le mot `facture` qualifie une pièce lue. Il ne crée pas une facture émise. `releve` qualifie un relevé bancaire. Le rôle acompte d’une facture est relu par `readOfferFile`. Aucune colonne ne le conserve.
 - `enrichment`, `contentHash`.
 - `createdAt`.
 - Liens : `Quote` (la pièce reste, le lien est vidé), `DocumentProposal` (cascade), `Demand` (lien vidé).

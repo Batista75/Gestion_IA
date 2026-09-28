@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 export const functionalPages = ["index", "chaine", "catalogue", "perimetre", "realisations"] as const;
-export const technicalPages = ["index", "dat", "dct", "orchestration", "devis-hybride", "recherche", "donnees", "modelisation", "ecrans", "ecart", "plan-chat", "realisations"] as const;
+export const technicalPages = ["index", "dat", "dct", "orchestration", "devis-hybride", "recherche", "donnees", "modelisation", "ecrans", "ecart", "plan-chat", "plan-ingestion", "realisations"] as const;
 
 export type SpecBook = "fonctionnel" | "technique";
 

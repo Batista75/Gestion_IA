@@ -8,14 +8,16 @@ export type DocumentFact = {
 type Hit = DocumentFact & { rank: number };
 
 const KINDS: Array<{ pattern: RegExp; label: string }> = [
+  { pattern: /\b(relev[ée]s? bancaires?|relev[ée]s? de compte|extraits? de compte|bank statements?|account statements?)\b/i, label: "Relevé bancaire" },
   { pattern: /\bbon de livraison\b/i, label: "Bon de livraison" },
   { pattern: /\bbon de commande\b/i, label: "Bon de commande" },
-  { pattern: /\bdemande de prix\b/i, label: "Demande de prix" },
-  { pattern: /\bfacture\b/i, label: "Facture" },
-  { pattern: /\bavoir\b/i, label: "Avoir" },
-  { pattern: /\bdevis\b/i, label: "Devis" },
-  { pattern: /\bcommande\b/i, label: "Commande" },
-  { pattern: /\btarif\b/i, label: "Tarif" },
+  { pattern: /\b(demande de prix|demande de chiffrage|rfq)\b/i, label: "Demande de chiffrage" },
+  { pattern: /\b(documentations? techniques?|fiches? techniques?|notices? techniques?|datasheets?|data sheets?)\b/i, label: "Documentation technique" },
+  { pattern: /\bfactures?\b(?!@)/i, label: "Facture" },
+  { pattern: /(?:^\s*avoirs?\b|\bavoirs?\s*(?:n[°o]|#|num[ée]ro)\b)(?!@)/i, label: "Avoir" },
+  { pattern: /\b(devis|soumissions?|quotations?|quotes?|offres?|price offer)\b(?!@)/i, label: "Devis" },
+  { pattern: /\bcommandes?\b(?!@)/i, label: "Commande" },
+  { pattern: /\btarifs?\b/i, label: "Tarif" },
 ];
 
 const NUMBERS: Array<{ pattern: RegExp; label: string }> = [
@@ -39,8 +41,10 @@ export function readDocumentFacts(text: string, filename: string, knownNames: st
   const pages = pagesOf(plainText(text));
   const hits: Hit[] = [];
   let nature = "";
+  let acompte: { page: number; zone: string } | null = null;
   for (const page of pages) {
-    page.lines.forEach((line, index) => {
+    for (let index = 0; index < page.lines.length; index += 1) {
+      const line = page.lines[index] ?? "";
       const zone = zoneOf(index, page.lines.length);
       if (!nature) {
         const kind = kindOnLine(line);
@@ -49,6 +53,7 @@ export function readDocumentFacts(text: string, filename: string, knownNames: st
           add(hits, 0, "Nature", kind, page.number, zone);
         }
       }
+      if (!acompte && /\bacompte\b/i.test(line)) acompte = { page: page.number, zone };
       for (const number of NUMBERS) {
         const match = number.pattern.exec(line);
         if (match?.[1]) add(hits, 1, number.label, match[1], page.number, zone);
@@ -72,12 +77,16 @@ export function readDocumentFacts(text: string, filename: string, knownNames: st
       }
       const total = TOTAL.exec(line);
       if (total?.[1]) add(hits, 8, "Montant écrit", writtenAmount(total[1], total[2] ?? ""), page.number, zone);
-    });
+    }
   }
   if (!nature) {
     const fromName = kindOnLine(filename.replace(/[_.-]+/g, " "));
-    if (fromName) add(hits, 0, "Nature", fromName, 1, "nom du fichier");
+    if (fromName) {
+      nature = fromName;
+      add(hits, 0, "Nature", fromName, 1, "nom du fichier");
+    }
   }
+  if (nature === "Facture" && acompte) add(hits, 0, "Rôle", "Acompte", acompte.page, acompte.zone);
   for (const name of knownNames) {
     const found = findName(pages, name);
     if (found) add(hits, 9, "Lien possible", found.name, found.page, found.zone);
