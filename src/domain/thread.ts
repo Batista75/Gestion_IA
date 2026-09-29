@@ -6,6 +6,7 @@ export type ThreadSummary = {
   suggested: string;
   updatedAt: string;
   count: number;
+  projectName: string;
 };
 
 export function threadIsFull(count: number): boolean {

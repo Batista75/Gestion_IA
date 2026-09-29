@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { deleteFileAction, deleteInboxAction, updateInboxAction } from "@/app/catalog-actions";
-import { AssistantChat } from "@/components/assistant-chat";
+import { ProjectAssistant } from "@/components/project-assistant";
 import { ConfirmDelete, NoteEditor } from "@/components/record-actions";
 import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
 import { fillDocumentProvenance } from "@/lib/document-proposals";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { kindLabel } from "@/domain/offer-versions";
 import { homeAlerts, recentProjectCards } from "@/lib/home-board";
-import { isConversationId, latestConversation, loadConversation } from "@/lib/conversations";
+import { archivedConversations, isConversationId, latestConversation, loadConversation, recentConversations } from "@/lib/conversations";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +62,7 @@ export default async function HomePage({
       : await latestConversation();
   const conversationId = thread?.id ?? (requested && !fresh ? requested : crypto.randomUUID());
   await fillDocumentProvenance();
-  const [projects, inbox, proposals, alerts] = await Promise.all([
+  const [projects, inbox, proposals, alerts, threads, archived] = await Promise.all([
     recentProjectCards(),
     prisma.inboxItem.findMany({
       orderBy: { createdAt: "desc" },
@@ -76,6 +76,8 @@ export default async function HomePage({
       include: { file: true },
     }),
     homeAlerts(),
+    recentConversations(),
+    archivedConversations(),
   ]);
   const pending: PendingProposal[] = proposals.map((proposal) => {
     const view = proposalView(proposal.payload);
@@ -123,13 +125,14 @@ export default async function HomePage({
           </details>
         ) : null}
         <div className="min-h-0 flex-1">
-          <AssistantChat
-            key={conversationId}
-            fill
-            conversationId={conversationId}
+          <ProjectAssistant
+            panel={false}
             projectName={thread?.projectName ?? ""}
-            initialMessages={thread?.messages ?? []}
-            hidden={thread?.hidden ?? 0}
+            projectStatus=""
+            current={thread ? { id: thread.id, messages: thread.messages, hidden: thread.hidden, projectName: thread.projectName } : null}
+            fallbackId={conversationId}
+            threads={threads}
+            archived={archived}
           />
         </div>
       </section>

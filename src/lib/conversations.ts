@@ -28,6 +28,7 @@ const threadListSelect = {
   title: true,
   archivedAt: true,
   updatedAt: true,
+  project: { select: { name: true } },
   _count: { select: { messages: true } },
   messages: {
     where: { role: "user" },
@@ -42,6 +43,7 @@ function summarizeThread(row: {
   title: string;
   archivedAt: Date | null;
   updatedAt: Date;
+  project: { name: string } | null;
   _count: { messages: number };
   messages: Array<{ content: string }>;
 }): ThreadSummary {
@@ -54,27 +56,37 @@ function summarizeThread(row: {
     suggested: suggested && suggested !== title ? suggested : "",
     updatedAt: when.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }),
     count: row._count.messages,
+    projectName: row.project?.name ?? "",
   };
 }
 
-export async function projectConversations(projectId: string): Promise<ThreadSummary[]> {
+async function listedThreads(
+  where: { projectId?: string; archivedAt: null } | { projectId?: string; archivedAt: { not: null } },
+  orderBy: { updatedAt: "desc" } | { archivedAt: "desc" },
+): Promise<ThreadSummary[]> {
   const rows = await prisma.conversation.findMany({
-    where: { projectId, archivedAt: null },
-    orderBy: { updatedAt: "desc" },
+    where,
+    orderBy,
     take: 20,
     select: threadListSelect,
   });
   return rows.map(summarizeThread);
 }
 
+export async function projectConversations(projectId: string): Promise<ThreadSummary[]> {
+  return listedThreads({ projectId, archivedAt: null }, { updatedAt: "desc" });
+}
+
 export async function archivedProjectConversations(projectId: string): Promise<ThreadSummary[]> {
-  const rows = await prisma.conversation.findMany({
-    where: { projectId, archivedAt: { not: null } },
-    orderBy: { archivedAt: "desc" },
-    take: 20,
-    select: threadListSelect,
-  });
-  return rows.map(summarizeThread);
+  return listedThreads({ projectId, archivedAt: { not: null } }, { archivedAt: "desc" });
+}
+
+export async function recentConversations(): Promise<ThreadSummary[]> {
+  return listedThreads({ archivedAt: null }, { updatedAt: "desc" });
+}
+
+export async function archivedConversations(): Promise<ThreadSummary[]> {
+  return listedThreads({ archivedAt: { not: null } }, { archivedAt: "desc" });
 }
 
 export function isConversationId(value: string): boolean {

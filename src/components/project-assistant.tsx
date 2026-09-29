@@ -6,7 +6,7 @@ import { AssistantChat } from "@/components/assistant-chat";
 import { nextOpenThread, type ThreadSummary } from "@/domain/thread";
 import type { StoredTurn } from "@/lib/conversations";
 
-type Thread = { id: string; messages: StoredTurn[]; hidden: number };
+type Thread = { id: string; messages: StoredTurn[]; hidden: number; projectName: string };
 
 export function ProjectAssistant({
   projectName,
@@ -15,6 +15,7 @@ export function ProjectAssistant({
   fallbackId,
   threads,
   archived = [],
+  panel = true,
 }: {
   projectName: string;
   projectStatus: string;
@@ -22,6 +23,7 @@ export function ProjectAssistant({
   fallbackId: string;
   threads: ThreadSummary[];
   archived?: ThreadSummary[];
+  panel?: boolean;
 }) {
   const [chosen, setChosen] = useState<Thread | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export function ProjectAssistant({
   const [aside, setAside] = useState<Record<string, "open" | "archived" | "gone">>({});
   const [lead, setLead] = useState<string[]>([]);
   const [loading, startLoading] = useTransition();
-  const shown = chosen ?? current ?? { id: fallbackId, messages: [], hidden: 0 };
+  const shown = chosen ?? current ?? { id: fallbackId, messages: [], hidden: 0, projectName };
   const known = [...threads, ...archived.filter((thread) => !threads.some((open) => open.id === thread.id))];
 
   function status(id: string): "open" | "archived" | "gone" {
@@ -51,17 +53,30 @@ export function ProjectAssistant({
   );
   const archivedThreads = present(known.filter((thread) => status(thread.id) === "archived"));
 
+  function emptyThread(): Thread {
+    return { id: crypto.randomUUID(), messages: [], hidden: 0, projectName: panel ? projectName : "" };
+  }
+
+  function fromLoaded(thread: Awaited<ReturnType<typeof loadThreadAction>>): Thread {
+    if (!thread) return emptyThread();
+    return {
+      id: thread.id,
+      messages: thread.messages,
+      hidden: thread.hidden,
+      projectName: thread.projectName || (panel ? projectName : ""),
+    };
+  }
+
   function openNext(id: string) {
     const next = nextOpenThread(namedThreads, id);
     setAside((places) => ({ ...places, [id]: "archived" }));
     setLead((ids) => ids.filter((item) => item !== id));
     if (!next) {
-      setChosen({ id: crypto.randomUUID(), messages: [], hidden: 0 });
+      setChosen(emptyThread());
       return;
     }
     startLoading(async () => {
-      const thread = await loadThreadAction(next.id);
-      setChosen(thread ?? { id: crypto.randomUUID(), messages: [], hidden: 0 });
+      setChosen(fromLoaded(await loadThreadAction(next.id)));
     });
   }
 
@@ -70,7 +85,7 @@ export function ProjectAssistant({
     setFailed(null);
     startLoading(async () => {
       const thread = await loadThreadAction(id);
-      if (thread) setChosen(thread);
+      if (thread) setChosen(fromLoaded(thread));
       else setFailed("Ce fil n’a pas pu être rouvert.");
     });
   }
@@ -79,10 +94,10 @@ export function ProjectAssistant({
     <AssistantChat
       key={shown.id}
       fill
-      panel
+      panel={panel}
       conversationId={shown.id}
-      projectName={projectName}
-      projectStatus={projectStatus}
+      projectName={shown.projectName || projectName}
+      projectStatus={panel ? projectStatus : ""}
       initialMessages={shown.messages}
       hidden={shown.hidden}
       threads={namedThreads}
@@ -102,11 +117,8 @@ export function ProjectAssistant({
           setAside((places) => ({ ...places, [id]: "gone" }));
           setLead((ids) => ids.filter((item) => item !== id));
           const next = nextOpenThread(namedThreads, id);
-          if (!next) setChosen({ id: crypto.randomUUID(), messages: [], hidden: 0 });
-          else {
-            const thread = await loadThreadAction(next.id);
-            setChosen(thread ?? { id: crypto.randomUUID(), messages: [], hidden: 0 });
-          }
+          if (!next) setChosen(emptyThread());
+          else setChosen(fromLoaded(await loadThreadAction(next.id)));
           return null;
         }
         openNext(id);
@@ -119,12 +131,12 @@ export function ProjectAssistant({
         setLead((ids) => [id, ...ids.filter((item) => item !== id)]);
         const thread = await loadThreadAction(id);
         if (!thread) return "Ce fil n’a pas pu être rouvert.";
-        setChosen(thread);
+        setChosen(fromLoaded(thread));
         return null;
       }}
       onNewThread={() => {
         setFailed(null);
-        setChosen({ id: crypto.randomUUID(), messages: [], hidden: 0 });
+        setChosen(emptyThread());
       }}
       onSelectThread={openThread}
     />

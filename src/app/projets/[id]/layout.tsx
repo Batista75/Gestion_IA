@@ -31,7 +31,7 @@ export default async function ProjectSectionLayout({
           key={id}
           projectName={project.name}
           projectStatus={project.status}
-          current={thread ? { id: thread.id, messages: thread.messages, hidden: thread.hidden } : null}
+          current={thread ? { id: thread.id, messages: thread.messages, hidden: thread.hidden, projectName: thread.projectName } : null}
           fallbackId={crypto.randomUUID()}
           threads={threads}
           archived={archived}

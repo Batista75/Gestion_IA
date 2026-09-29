@@ -126,6 +126,7 @@ export function AssistantChat({
   const stickToEnd = useRef(true);
   const pending = busy || status === "submitted" || status === "streaming";
   const streaming = status === "submitted" || status === "streaming";
+  const threadListLabel = panel ? "Fils de ce dossier" : "Fils";
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -290,15 +291,15 @@ export function AssistantChat({
           {onSelectThread && (threads.length > 0 || archivedThreads.length > 0) ? (
             <DropdownMenu>
               <DropdownMenuTrigger
-                aria-label="Fils de ce dossier"
-                title="Fils de ce dossier"
+                aria-label={threadListLabel}
+                title={threadListLabel}
                 className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "text-muted-foreground")}
               >
                 <History aria-hidden="true" className="size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel>Fils de ce dossier</DropdownMenuLabel>
+                  <DropdownMenuLabel>{threadListLabel}</DropdownMenuLabel>
                   {onRenameThread && currentThread ? (
                     <DropdownMenuItem onClick={() => setRenameOpen(true)}>Renommer ce fil</DropdownMenuItem>
                   ) : null}
@@ -316,9 +317,7 @@ export function AssistantChat({
                       />
                       <span className="grid min-w-0">
                         <span className="truncate text-sm">{thread.title}</span>
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {thread.updatedAt} · {thread.count} message{thread.count > 1 ? "s" : ""}
-                        </span>
+                        <span className="text-xs text-muted-foreground tabular-nums">{threadMeta(thread, !panel)}</span>
                       </span>
                     </DropdownMenuItem>
                   ))}
@@ -335,9 +334,7 @@ export function AssistantChat({
                         >
                           <span className="grid min-w-0">
                             <span className="truncate text-sm">{thread.title}</span>
-                            <span className="text-xs text-muted-foreground tabular-nums">
-                              {thread.updatedAt} · {thread.count} message{thread.count > 1 ? "s" : ""}
-                            </span>
+                            <span className="text-xs text-muted-foreground tabular-nums">{threadMeta(thread, !panel)}</span>
                           </span>
                         </DropdownMenuItem>
                       ))}
@@ -649,6 +646,12 @@ function ThreadRenameDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function threadMeta(thread: ThreadSummary, withProject: boolean): string {
+  const count = `${thread.count} message${thread.count > 1 ? "s" : ""}`;
+  if (withProject && thread.projectName) return `${thread.updatedAt} · ${count} · ${thread.projectName}`;
+  return `${thread.updatedAt} · ${count}`;
 }
 
 function NewThreadButton({ onNewThread, labelled = false }: { onNewThread?: () => void; labelled?: boolean }) {
