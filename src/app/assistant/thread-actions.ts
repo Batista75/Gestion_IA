@@ -30,6 +30,15 @@ export async function archiveThreadAction(id: string): Promise<{ ok: true } | { 
   return { ok: true };
 }
 
+export async function restoreThreadAction(id: string): Promise<{ ok: true } | { error: string }> {
+  if (!isConversationId(id)) return { error: "Ce fil est introuvable." };
+  const existing = await prisma.conversation.findUnique({ where: { id }, select: { id: true, archivedAt: true } });
+  if (!existing) return { error: "Ce fil est introuvable." };
+  if (!existing.archivedAt) return { ok: true };
+  await prisma.conversation.update({ where: { id }, data: { archivedAt: null } });
+  return { ok: true };
+}
+
 export async function deleteThreadAction(id: string): Promise<{ ok: true } | { error: string }> {
   if (!isConversationId(id)) return { error: "Ce fil est introuvable." };
   const existing = await prisma.conversation.findUnique({ where: { id }, select: { id: true } });

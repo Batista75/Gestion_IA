@@ -23,6 +23,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -57,11 +58,13 @@ export function AssistantChat({
   panel = false,
   hidden = 0,
   threads = [],
+  archivedThreads = [],
   threadNotice = null,
   onNewThread,
   onSelectThread,
   onRenameThread,
   onLeaveThread,
+  onRestoreThread,
 }: {
   conversationId: string;
   projectName?: string;
@@ -72,11 +75,13 @@ export function AssistantChat({
   panel?: boolean;
   hidden?: number;
   threads?: ThreadSummary[];
+  archivedThreads?: ThreadSummary[];
   threadNotice?: string | null;
   onNewThread?: () => void;
   onSelectThread?: (id: string) => void;
   onRenameThread?: (title: string) => Promise<string | null>;
   onLeaveThread?: (kind: "archive" | "delete") => Promise<string | null>;
+  onRestoreThread?: (id: string) => Promise<string | null>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -195,7 +200,18 @@ export function AssistantChat({
   const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
   const [renameOpen, setRenameOpen] = useState(false);
   const [leaveKind, setLeaveKind] = useState<"archive" | "delete" | null>(null);
+  const [pickerError, setPickerError] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
   const currentThread = threads.find((thread) => thread.id === conversationId) ?? null;
+
+  async function restoreArchived(id: string) {
+    if (!onRestoreThread || restoring) return;
+    setRestoring(true);
+    setPickerError(null);
+    const failure = await onRestoreThread(id);
+    setRestoring(false);
+    if (failure) setPickerError(failure);
+  }
   const full = threadIsFull(messages.length);
   const canSend = !full && (draft.trim().length > 0 || files.length > 0);
 
@@ -270,7 +286,7 @@ export function AssistantChat({
           </div>
         </div>
         <div className="flex shrink-0 items-center">
-          {onSelectThread && threads.length > 0 ? (
+          {onSelectThread && (threads.length > 0 || archivedThreads.length > 0) ? (
             <DropdownMenu>
               <DropdownMenuTrigger
                 aria-label="Fils de ce dossier"
@@ -305,6 +321,27 @@ export function AssistantChat({
                       </span>
                     </DropdownMenuItem>
                   ))}
+                  {archivedThreads.length > 0 && onRestoreThread ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Archivés</DropdownMenuLabel>
+                      {archivedThreads.map((thread) => (
+                        <DropdownMenuItem
+                          key={thread.id}
+                          disabled={restoring}
+                          onClick={() => restoreArchived(thread.id)}
+                          className="items-start"
+                        >
+                          <span className="grid min-w-0">
+                            <span className="truncate text-sm">{thread.title}</span>
+                            <span className="text-xs text-muted-foreground tabular-nums">
+                              {thread.updatedAt} · {thread.count} message{thread.count > 1 ? "s" : ""}
+                            </span>
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  ) : null}
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -332,9 +369,9 @@ export function AssistantChat({
           <NewThreadButton onNewThread={onNewThread} />
         </div>
       </div>
-      {threadNotice ? (
+      {pickerError || threadNotice ? (
         <p role="status" className="shrink-0 border-b border-border bg-surface-2/60 px-3 py-1.5 text-xs text-muted-foreground">
-          {threadNotice}
+          {pickerError || threadNotice}
         </p>
       ) : null}
       <div

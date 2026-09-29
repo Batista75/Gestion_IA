@@ -23,35 +23,58 @@ const ID_RE = /^[\w-]{8,80}$/;
 
 export const SHOWN_MESSAGES = THREAD_MESSAGE_LIMIT;
 
+const threadListSelect = {
+  id: true,
+  title: true,
+  archivedAt: true,
+  updatedAt: true,
+  _count: { select: { messages: true } },
+  messages: {
+    where: { role: "user" },
+    orderBy: { createdAt: "asc" as const },
+    take: 1,
+    select: { content: true },
+  },
+};
+
+function summarizeThread(row: {
+  id: string;
+  title: string;
+  archivedAt: Date | null;
+  updatedAt: Date;
+  _count: { messages: number };
+  messages: Array<{ content: string }>;
+}): ThreadSummary {
+  const title = row.title.trim() || "Fil sans titre";
+  const suggested = row.messages[0] ? proposedThreadTitle(row.messages[0].content) : "";
+  const when = row.archivedAt ?? row.updatedAt;
+  return {
+    id: row.id,
+    title,
+    suggested: suggested && suggested !== title ? suggested : "",
+    updatedAt: when.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }),
+    count: row._count.messages,
+  };
+}
+
 export async function projectConversations(projectId: string): Promise<ThreadSummary[]> {
   const rows = await prisma.conversation.findMany({
     where: { projectId, archivedAt: null },
     orderBy: { updatedAt: "desc" },
     take: 20,
-    select: {
-      id: true,
-      title: true,
-      updatedAt: true,
-      _count: { select: { messages: true } },
-      messages: {
-        where: { role: "user" },
-        orderBy: { createdAt: "asc" },
-        take: 1,
-        select: { content: true },
-      },
-    },
+    select: threadListSelect,
   });
-  return rows.map((row) => {
-    const title = row.title.trim() || "Fil sans titre";
-    const suggested = row.messages[0] ? proposedThreadTitle(row.messages[0].content) : "";
-    return {
-      id: row.id,
-      title,
-      suggested: suggested && suggested !== title ? suggested : "",
-      updatedAt: row.updatedAt.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }),
-      count: row._count.messages,
-    };
+  return rows.map(summarizeThread);
+}
+
+export async function archivedProjectConversations(projectId: string): Promise<ThreadSummary[]> {
+  const rows = await prisma.conversation.findMany({
+    where: { projectId, archivedAt: { not: null } },
+    orderBy: { archivedAt: "desc" },
+    take: 20,
+    select: threadListSelect,
   });
+  return rows.map(summarizeThread);
 }
 
 export function isConversationId(value: string): boolean {

@@ -17,6 +17,20 @@ export function nextOpenThread<T extends { id: string }>(threads: T[], leavingId
   return threads.find((thread) => thread.id !== leavingId) ?? null;
 }
 
+/** Un fil rouvert reprend la tête des fils affichés et quitte les archivés. */
+export function restoreThread<T extends { id: string }>(
+  open: T[],
+  archived: T[],
+  id: string,
+): { open: T[]; archived: T[] } | null {
+  const thread = archived.find((item) => item.id === id);
+  if (!thread) return null;
+  return {
+    open: [thread, ...open.filter((item) => item.id !== id)],
+    archived: archived.filter((item) => item.id !== id),
+  };
+}
+
 export function cleanThreadTitle(raw: string): { title: string } | { error: string } {
   const title = raw.trim().replace(/\s+/g, " ");
   if (title.length < 2) return { error: "Le titre doit contenir au moins 2 caractères." };

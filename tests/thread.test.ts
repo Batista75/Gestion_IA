@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { THREAD_MESSAGE_LIMIT, cleanThreadTitle, nextOpenThread, threadIsFull } from "../src/domain/thread.ts";
+import { THREAD_MESSAGE_LIMIT, cleanThreadTitle, nextOpenThread, restoreThread, threadIsFull } from "../src/domain/thread.ts";
 import { proposedThreadTitle } from "../src/domain/thread-title.ts";
 
 test("un fil accepte des messages jusqu’à la limite, puis demande un nouveau fil", () => {
@@ -36,6 +36,12 @@ test("écarter un fil ouvre le précédent, ou aucun s’il était seul", () => 
   assert.deepEqual(nextOpenThread(threads, "recent"), { id: "ancien" });
   assert.equal(nextOpenThread(threads, "autre"), threads[0]);
   assert.equal(nextOpenThread([{ id: "seul" }], "seul"), null);
+});
+
+test("un fil rouvert reprend la tête et quitte les archivés", () => {
+  const moved = restoreThread([{ id: "ouvert" }], [{ id: "arch" }, { id: "autre" }], "arch");
+  assert.deepEqual(moved, { open: [{ id: "arch" }, { id: "ouvert" }], archived: [{ id: "autre" }] });
+  assert.equal(restoreThread([], [{ id: "arch" }], "absent"), null);
 });
 
 test("un titre de fil se limite à 80 caractères", () => {
