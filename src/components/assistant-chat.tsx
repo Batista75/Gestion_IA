@@ -61,6 +61,7 @@ export function AssistantChat({
   onNewThread,
   onSelectThread,
   onRenameThread,
+  onLeaveThread,
 }: {
   conversationId: string;
   projectName?: string;
@@ -75,6 +76,7 @@ export function AssistantChat({
   onNewThread?: () => void;
   onSelectThread?: (id: string) => void;
   onRenameThread?: (title: string) => Promise<string | null>;
+  onLeaveThread?: (kind: "archive" | "delete") => Promise<string | null>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -192,6 +194,7 @@ export function AssistantChat({
 
   const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
   const [renameOpen, setRenameOpen] = useState(false);
+  const [leaveKind, setLeaveKind] = useState<"archive" | "delete" | null>(null);
   const currentThread = threads.find((thread) => thread.id === conversationId) ?? null;
   const full = threadIsFull(messages.length);
   const canSend = !full && (draft.trim().length > 0 || files.length > 0);
@@ -282,6 +285,12 @@ export function AssistantChat({
                   {onRenameThread && currentThread ? (
                     <DropdownMenuItem onClick={() => setRenameOpen(true)}>Renommer ce fil</DropdownMenuItem>
                   ) : null}
+                  {onLeaveThread && currentThread ? (
+                    <DropdownMenuItem onClick={() => setLeaveKind("archive")}>Archiver ce fil</DropdownMenuItem>
+                  ) : null}
+                  {onLeaveThread && currentThread ? (
+                    <DropdownMenuItem onClick={() => setLeaveKind("delete")}>Supprimer ce fil</DropdownMenuItem>
+                  ) : null}
                   {threads.map((thread) => (
                     <DropdownMenuItem key={thread.id} onClick={() => onSelectThread(thread.id)} className="items-start gap-2">
                       <Check
@@ -307,6 +316,17 @@ export function AssistantChat({
               thread={currentThread}
               onOpenChange={setRenameOpen}
               onRename={onRenameThread}
+            />
+          ) : null}
+          {onLeaveThread && currentThread ? (
+            <ThreadLeaveDialog
+              key={`${currentThread.id}-${leaveKind ?? "ferme"}`}
+              kind={leaveKind}
+              title={currentThread.title}
+              onOpenChange={(open) => {
+                if (!open) setLeaveKind(null);
+              }}
+              onLeave={onLeaveThread}
             />
           ) : null}
           <NewThreadButton onNewThread={onNewThread} />
@@ -475,6 +495,57 @@ export function AssistantChat({
         ) : null}
       </form>
     </div>
+  );
+}
+
+function ThreadLeaveDialog({
+  kind,
+  title,
+  onOpenChange,
+  onLeave,
+}: {
+  kind: "archive" | "delete" | null;
+  title: string;
+  onOpenChange: (open: boolean) => void;
+  onLeave: (kind: "archive" | "delete") => Promise<string | null>;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const removing = kind === "delete";
+  return (
+    <Dialog open={kind !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{removing ? "Supprimer le fil" : "Archiver le fil"}</DialogTitle>
+          <DialogDescription>
+            {removing
+              ? `« ${title} » et ses messages sont retirés. Le dossier, les pièces et les autres fils restent.`
+              : `« ${title} » quitte cette liste. Ses messages restent enregistrés.`}
+          </DialogDescription>
+        </DialogHeader>
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+        <Button
+          type="button"
+          variant={removing ? "destructive" : "default"}
+          disabled={pending || !kind}
+          className="w-fit"
+          onClick={() => {
+            if (!kind) return;
+            setError(null);
+            start(async () => {
+              const failure = await onLeave(kind);
+              if (failure) setError(failure);
+            });
+          }}
+        >
+          {pending ? "Enregistrement…" : removing ? "Supprimer le fil" : "Archiver le fil"}
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -25,7 +25,7 @@ export const SHOWN_MESSAGES = THREAD_MESSAGE_LIMIT;
 
 export async function projectConversations(projectId: string): Promise<ThreadSummary[]> {
   const rows = await prisma.conversation.findMany({
-    where: { projectId },
+    where: { projectId, archivedAt: null },
     orderBy: { updatedAt: "desc" },
     take: 20,
     select: {
@@ -152,7 +152,7 @@ export async function latestProjectConversation(projectId: string): Promise<{
   hidden: number;
 } | null> {
   const row = await prisma.conversation.findFirst({
-    where: { projectId },
+    where: { projectId, archivedAt: null },
     orderBy: { updatedAt: "desc" },
     include: {
       project: { select: { name: true } },
@@ -170,6 +170,7 @@ export async function latestConversation(): Promise<{
   hidden: number;
 } | null> {
   const row = await prisma.conversation.findFirst({
+    where: { archivedAt: null },
     orderBy: { updatedAt: "desc" },
     include: {
       project: { select: { name: true } },

@@ -20,3 +20,20 @@ export async function renameThreadAction(id: string, raw: string): Promise<{ tit
   await prisma.conversation.update({ where: { id }, data: { title: cleaned.title } });
   return { title: cleaned.title };
 }
+
+export async function archiveThreadAction(id: string): Promise<{ ok: true } | { error: string }> {
+  if (!isConversationId(id)) return { error: "Ce fil est introuvable." };
+  const existing = await prisma.conversation.findUnique({ where: { id }, select: { id: true, archivedAt: true } });
+  if (!existing) return { error: "Ce fil n’a pas encore de message." };
+  if (existing.archivedAt) return { ok: true };
+  await prisma.conversation.update({ where: { id }, data: { archivedAt: new Date() } });
+  return { ok: true };
+}
+
+export async function deleteThreadAction(id: string): Promise<{ ok: true } | { error: string }> {
+  if (!isConversationId(id)) return { error: "Ce fil est introuvable." };
+  const existing = await prisma.conversation.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) return { error: "Ce fil n’a pas encore de message." };
+  await prisma.conversation.delete({ where: { id } });
+  return { ok: true };
+}

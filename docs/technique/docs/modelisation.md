@@ -485,6 +485,7 @@ Retour ou remplacement confirmé. La liste « en cours et sous garantie » n’e
 Fil de discussion.
 
 - `title`, `projectId` vers `Project` (lien vidé si le projet disparaît).
+- `archivedAt` : moment où le fil quitte la liste. Vide tant qu’il est affiché. Les messages restent.
 - `createdAt`, `updatedAt`.
 - Enfants : `ConversationMessage`. Au plus une `AssistantTask`.
 
