@@ -416,26 +416,6 @@ Préciser :
 
 Donner également l'état des deux chantiers.
 
-## Chat
-
-La référence est :
-
-`docs/technique/docs/plan-chat.md`
-
-Afficher :
-
-`N sur 11, soit P %`
-
-## Ingestion
-
-La référence est :
-
-`docs/technique/docs/plan-ingestion.md`
-
-Afficher :
-
-`N sur 8, soit P %`
-
 Lorsqu'un lot change d'état, mettre à jour la phrase d'avancement dans le même cycle.
 
 Ne jamais :
