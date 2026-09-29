@@ -6,6 +6,7 @@ export type ThreadSummary = {
   suggested: string;
   updatedAt: string;
   count: number;
+  projectId: string;
   projectName: string;
 };
 
@@ -53,4 +54,10 @@ export function threadAddress(pathname: string, id: string, search = ""): string
   params.set("fil", id);
   const query = params.toString();
   return query ? `${pathname}?${query}` : pathname;
+}
+
+/** Dossier rattaché au fil, avec le même fil ouvert. */
+export function threadProjectHref(projectId: string, threadId: string): string {
+  if (!projectId || !THREAD_ID_RE.test(threadId)) return "";
+  return `/projets/${projectId}?fil=${encodeURIComponent(threadId)}`;
 }

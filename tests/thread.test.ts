@@ -8,6 +8,7 @@ import {
   restoreThread,
   threadAddress,
   threadIsFull,
+  threadProjectHref,
 } from "../src/domain/thread.ts";
 import { proposedThreadTitle } from "../src/domain/thread-title.ts";
 
@@ -64,4 +65,13 @@ test("l’adresse garde le fil choisi et retire le marqueur de nouveau fil", () 
   assert.equal(requestedThreadId(null), "");
   assert.equal(threadAddress("/", "fil-accueil-01", "nouveau=1&autre=1"), "/?autre=1&fil=fil-accueil-01");
   assert.equal(threadAddress("/projets/seed-lampes-nord", "fil-dossier-01"), "/projets/seed-lampes-nord?fil=fil-dossier-01");
+});
+
+test("le nom du dossier dans la liste mène au dossier avec le même fil", () => {
+  assert.equal(
+    threadProjectHref("seed-lampes-nord", "fil-accueil-01"),
+    "/projets/seed-lampes-nord?fil=fil-accueil-01",
+  );
+  assert.equal(threadProjectHref("", "fil-accueil-01"), "");
+  assert.equal(threadProjectHref("seed-lampes-nord", "x"), "");
 });

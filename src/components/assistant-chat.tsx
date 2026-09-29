@@ -32,7 +32,7 @@ import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import type { AnswerPacket } from "@/domain/answer-packet";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { provenanceLabel } from "@/domain/provenance";
-import { THREAD_MESSAGE_LIMIT, threadIsFull, type ThreadSummary } from "@/domain/thread";
+import { THREAD_MESSAGE_LIMIT, threadIsFull, threadProjectHref, type ThreadSummary } from "@/domain/thread";
 import type { StoredTurn } from "@/lib/conversations";
 import { cn } from "cn";
 
@@ -214,6 +214,15 @@ export function AssistantChat({
     if (failure) setPickerError(failure);
     else router.refresh();
   }
+
+  function openProject(thread: ThreadSummary, event: React.SyntheticEvent) {
+    const href = threadProjectHref(thread.projectId, thread.id);
+    if (!href) return;
+    event.preventDefault();
+    event.stopPropagation();
+    router.push(href);
+  }
+
   const full = threadIsFull(messages.length);
   const canSend = !full && (draft.trim().length > 0 || files.length > 0);
 
@@ -315,10 +324,7 @@ export function AssistantChat({
                         aria-hidden="true"
                         className={cn("mt-0.5 size-3.5 shrink-0", thread.id === conversationId ? "text-primary" : "invisible")}
                       />
-                      <span className="grid min-w-0">
-                        <span className="truncate text-sm">{thread.title}</span>
-                        <span className="text-xs text-muted-foreground tabular-nums">{threadMeta(thread, !panel)}</span>
-                      </span>
+                      <ThreadPickLine thread={thread} withProject={!panel} onOpenProject={openProject} />
                     </DropdownMenuItem>
                   ))}
                   {archivedThreads.length > 0 && onRestoreThread ? (
@@ -332,10 +338,7 @@ export function AssistantChat({
                           onClick={() => restoreArchived(thread.id)}
                           className="items-start"
                         >
-                          <span className="grid min-w-0">
-                            <span className="truncate text-sm">{thread.title}</span>
-                            <span className="text-xs text-muted-foreground tabular-nums">{threadMeta(thread, !panel)}</span>
-                          </span>
+                          <ThreadPickLine thread={thread} withProject={!panel} onOpenProject={openProject} />
                         </DropdownMenuItem>
                       ))}
                     </>
@@ -648,10 +651,43 @@ function ThreadRenameDialog({
   );
 }
 
-function threadMeta(thread: ThreadSummary, withProject: boolean): string {
+function ThreadPickLine({
+  thread,
+  withProject,
+  onOpenProject,
+}: {
+  thread: ThreadSummary;
+  withProject: boolean;
+  onOpenProject: (thread: ThreadSummary, event: React.SyntheticEvent) => void;
+}) {
   const count = `${thread.count} message${thread.count > 1 ? "s" : ""}`;
-  if (withProject && thread.projectName) return `${thread.updatedAt} · ${count} · ${thread.projectName}`;
-  return `${thread.updatedAt} · ${count}`;
+  const href = withProject ? threadProjectHref(thread.projectId, thread.id) : "";
+  return (
+    <span className="grid min-w-0">
+      <span className="truncate text-sm">{thread.title}</span>
+      <span className="text-xs text-muted-foreground tabular-nums">
+        {thread.updatedAt} · {count}
+        {href && thread.projectName ? (
+          <>
+            {" · "}
+            <span
+              role="link"
+              tabIndex={0}
+              title={`Ouvrir le dossier ${thread.projectName}`}
+              className="font-medium text-primary underline-offset-2 hover:underline"
+              onClick={(event) => onOpenProject(thread, event)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                onOpenProject(thread, event);
+              }}
+            >
+              {thread.projectName}
+            </span>
+          </>
+        ) : null}
+      </span>
+    </span>
+  );
 }
 
 function NewThreadButton({ onNewThread, labelled = false }: { onNewThread?: () => void; labelled?: boolean }) {

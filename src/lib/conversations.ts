@@ -28,6 +28,7 @@ const threadListSelect = {
   title: true,
   archivedAt: true,
   updatedAt: true,
+  projectId: true,
   project: { select: { name: true } },
   _count: { select: { messages: true } },
   messages: {
@@ -43,6 +44,7 @@ function summarizeThread(row: {
   title: string;
   archivedAt: Date | null;
   updatedAt: Date;
+  projectId: string | null;
   project: { name: string } | null;
   _count: { messages: number };
   messages: Array<{ content: string }>;
@@ -56,6 +58,7 @@ function summarizeThread(row: {
     suggested: suggested && suggested !== title ? suggested : "",
     updatedAt: when.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }),
     count: row._count.messages,
+    projectId: row.projectId ?? "",
     projectName: row.project?.name ?? "",
   };
 }
