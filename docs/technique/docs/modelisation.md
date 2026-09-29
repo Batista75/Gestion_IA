@@ -40,11 +40,22 @@ StoredFile 1 ── * Quote
 StoredFile 1 ── * DocumentProposal
 StoredFile 1 ── * Demand
 
+Conversation 1 ── * ClientProposal
+Conversation 1 ── * CatalogProposal
+Conversation 1 ── * ContractProposal
+Conversation 1 ── * InterventionProposal
+Conversation 1 ── * InstalledEquipmentProposal
+Conversation 1 ── * PurchaseFollowUpProposal
+Conversation 1 ── * SupplierTermsProposal
+Conversation 1 ── * ClaimProposal
+Conversation 1 ── * ReturnRequestProposal
+Conversation 1 ── * BusinessPlanProposal
+
 Sans clé étrangère : Account, AppSetting, CompanyProfile, DocumentMemory,
-CatalogProposal, ClientProposal, ContractProposal, InterventionProposal, InstalledEquipmentProposal, PurchaseFollowUpProposal, SupplierTermsProposal, ClaimProposal, ReturnRequestProposal, RecordEvent, KnowledgeChunk
+RecordEvent, KnowledgeChunk
 ```
 
-Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, produit d’un équipement installé, dossier d’un achat, fichier d’une demande. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une boîte retire ses `StoredFile`.
+Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, produit d’un équipement installé, dossier d’un achat, fichier d’une demande, et le fil d’une proposition. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une boîte retire ses `StoredFile`. Supprimer un fil laisse les propositions : `conversationId` devient vide, l’état reste. Une proposition `en_attente` sans fil n’est pas confirmable depuis un autre fil.
 
 ## Réglages
 
@@ -300,6 +311,8 @@ Devis ou offre reçue, pas une pièce de vente du dossier. Les totaux sont recop
 
 Tant que le statut est `en_attente`, rien n’est écrit dans le répertoire ni dans le dossier. Les outils du modèle sont en lecture seule.
 
+`ClientProposal`, `CatalogProposal`, `ContractProposal`, `InterventionProposal`, `InstalledEquipmentProposal`, `PurchaseFollowUpProposal`, `SupplierTermsProposal`, `ClaimProposal`, `ReturnRequestProposal` et `BusinessPlanProposal` ont `conversationId` vers `Conversation`, indexé avec `status`. Retirer le fil vide cette colonne et conserve la ligne. Une confirmation ou un rejet ne lit qu’une ligne `en_attente` dont `conversationId` est le fil courant. Une valeur vide n’est pas un repli. Passer une ligne à `remplacee` ne concerne que ce fil. Les lignes `en_attente` déjà présentes sans fil passent à `expiree`. `DocumentProposal` n’a pas cette colonne.
+
 ### DocumentProposal
 
 Proposition tirée d’un fichier.
@@ -327,9 +340,22 @@ Commande de catalogue encore à confirmer.
 Fiche client encore à confirmer.
 
 - `status` : `en_attente`, `remplacee`, `confirmee`.
+- `conversationId` vers `Conversation`, facultatif pour les lignes anciennes.
 - `payload` : `ClientDraft` (mode `create` ou `update`, `kind`, `scope`, identité, adresse, immatriculation, contact, `notes`, `missing`).
 - `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.
+
+### BusinessPlanProposal
+
+Plan parlé ou tableau collé, encore à confirmer dans le fil. Supprimer le fil laisse cette ligne.
+
+- `conversationId` vers `Conversation`, facultatif. Vide si le fil a été retiré.
+- `status` : `en_attente`, `en_cours` (claim, pas un succès), `confirmee`, `echec`, `remplacee`, `rejetee`.
+- `payload` : le plan parsé (`clients`, `articles`, `projects`, `quotes`) et, s’il y a des pièces jointes, `fileIds` vers `StoredFile`. Le binaire et le texte extrait restent sur le fichier.
+- `failureNote` : court texte si le statut est `echec`. Vide sinon.
+- `modelVersion` : `regle`. `confidence` comme sur `DocumentProposal`.
+- `validatedAt` : moment du succès seulement. Vide tant que l’exécution n’a pas réussi.
+- `createdAt`. La confirmation passe la ligne à `en_cours`, puis appelle `applyBusinessPlan` une seule fois. Le succès met `confirmee`. Une exception ou un résultat refusé met `echec`, sans retour à `en_attente`.
 
 ### ContractProposal
 

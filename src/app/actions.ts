@@ -9,6 +9,7 @@ import { saveInboxPieces } from "@/lib/pieces";
 
 export type ActionState = {
   message: string | null;
+  fileIds?: string[];
 };
 
 export async function createProjectAction(
@@ -62,7 +63,7 @@ export async function createInboxItemAction(
   revalidatePath("/");
   revalidatePath("/produits");
   revalidatePath("/fournisseurs");
-  return { message: result.message };
+  return { message: result.message, fileIds: result.fileIds };
 }
 
 export async function recordExchangeAction(input: {

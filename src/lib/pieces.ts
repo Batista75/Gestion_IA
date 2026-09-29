@@ -28,6 +28,7 @@ export type IncomingFile = {
 export type PieceIntakeResult = {
   ok: boolean;
   message: string;
+  fileIds?: string[];
 };
 
 export async function saveInboxPieces(
@@ -111,17 +112,14 @@ export async function saveInboxPieces(
 
   const { parseBusinessBrief, planIsEmpty } = await import("@/domain/business-brief");
   const plan = parseBusinessBrief(note);
+  const fileIds = stored.map((file) => file.id);
   if (!planIsEmpty(plan)) {
-    const { applyBusinessPlan } = await import("@/lib/business-records");
-    const { withChangeSource } = await import("@/lib/change-source");
-    const applied = await withChangeSource("assistant", () =>
-      applyBusinessPlan(
-        plan,
-        stored.map((file) => ({ id: file.id, originalName: file.originalName, text: file.text })),
-      ),
-    );
     const fileNote = files.length === 1 ? "1 fichier enregistré." : `${files.length} fichiers enregistrés.`;
-    return { ok: true, message: `${fileNote} ${applied.summary}` };
+    return {
+      ok: true,
+      message: `${fileNote} Le plan sera proposé dans le fil. Rien n’est enregistré avant confirmation.`,
+      fileIds,
+    };
   }
 
   const { queueDocumentProposals } = await import("@/lib/document-proposals");

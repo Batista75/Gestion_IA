@@ -16,6 +16,7 @@ import {
 } from "@/domain/contracts";
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { stampProvenance } from "@/domain/provenance";
+import { pendingInThread } from "@/domain/proposal-scope";
 import { withChangeSource } from "@/lib/change-source";
 import { prisma } from "@/lib/db";
 
@@ -26,7 +27,7 @@ export type ContractReply = {
   proposal?: { fields: Array<{ label: string; value: string }> };
 };
 
-export async function resolveContract(text: string, now = new Date()): Promise<ContractReply | null> {
+export async function resolveContract(text: string, conversationId: string, now = new Date()): Promise<ContractReply | null> {
   const question = readContractQuestion(text);
   if (question) {
     const [rows, pending] = await Promise.all([
@@ -61,21 +62,28 @@ export async function resolveContract(text: string, now = new Date()): Promise<C
   const draft: ContractPayload = { ...entry.draft, clientId: client.id, clientName: client.name };
   const packet = contractProposalPacket(draft);
   const fields = contractFields(draft);
+  const scope = pendingInThread(conversationId);
+  if (!scope) {
+    const packet = contractGapPacket("Le fil est inconnu. Le contrat n’est pas proposé.");
+    return { reply: safeReply(packet), packet, source: "regle-metier" };
+  }
   await prisma.contractProposal.updateMany({
-    where: { status: "en_attente" },
+    where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
   });
   await prisma.contractProposal.create({
-    data: { status: "en_attente", payload: draft, ...stampProvenance("regle", fields) },
+    data: {
+      status: "en_attente",
+      conversationId: scope.conversationId,
+      payload: draft,
+      ...stampProvenance("regle", fields),
+    },
   });
   return { reply: safeReply(packet), packet, source: "proposition", proposal: { fields } };
 }
 
-export async function confirmContractProposal(): Promise<{ ok: boolean; summary: string }> {
-  const row = await prisma.contractProposal.findFirst({
-    where: { status: "en_attente" },
-    orderBy: { createdAt: "desc" },
-  });
+export async function confirmContractProposal(conversationId: string): Promise<{ ok: boolean; summary: string }> {
+  const row = await pendingContractProposal(conversationId);
   if (!row) return { ok: false, summary: "Il n’y a pas de contrat en attente." };
   const draft = contractPayload(row.payload);
   if (!draft) return { ok: false, summary: "Cette proposition de contrat est illisible." };
@@ -105,11 +113,8 @@ export async function confirmContractProposal(): Promise<{ ok: boolean; summary:
   };
 }
 
-export async function rejectContractProposal(): Promise<{ reply: string } | null> {
-  const row = await prisma.contractProposal.findFirst({
-    where: { status: "en_attente" },
-    orderBy: { createdAt: "desc" },
-  });
+export async function rejectContractProposal(conversationId: string): Promise<{ reply: string } | null> {
+  const row = await pendingContractProposal(conversationId);
   if (!row) return null;
   await prisma.contractProposal.update({
     where: { id: row.id },
@@ -119,9 +124,11 @@ export async function rejectContractProposal(): Promise<{ reply: string } | null
   return { reply: "Le contrat n’est pas enregistré." };
 }
 
-export async function pendingContractProposal() {
+export async function pendingContractProposal(conversationId: string) {
+  const scope = pendingInThread(conversationId);
+  if (!scope) return null;
   return prisma.contractProposal.findFirst({
-    where: { status: "en_attente" },
+    where: { status: "en_attente", conversationId: scope.conversationId },
     orderBy: { createdAt: "desc" },
   });
 }

@@ -14,8 +14,8 @@ import {
   MONEY_RULE_REPLY,
 } from "@/domain/ollama-endpoint";
 import { parseBusinessBrief, planIsEmpty } from "@/domain/business-brief";
-import { applyBusinessPlan } from "@/lib/business-records";
-import { withChangeSource } from "@/lib/change-source";
+import { readPieceIds } from "@/domain/proposal-scope";
+import { openBusinessPlanProposal } from "@/lib/business-plan-proposals";
 import { confirmLatestWrite, openCatalogProposal, rejectLatestWrite } from "@/lib/catalog-proposals";
 import {
   currentProposal,
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
   }
 
   if (!correction) {
-    const direct = await answerDirectly(parsed.text);
+    const direct = await answerDirectly(parsed.text, conversationId, readPieceIds(payload && typeof payload === "object" && "pieceIds" in payload ? payload.pieceIds : []));
     if (direct) {
       return streamDirect({
         conversationId,
@@ -284,11 +284,14 @@ function stepFor(source: DirectReply["source"]): string {
   return "Réponse";
 }
 
-async function answerDirectly(text: string): Promise<DirectReply | null> {
+async function answerDirectly(text: string, conversationId: string, pieceIds: string[]): Promise<DirectReply | null> {
   const plan = parseBusinessBrief(text);
   if (!planIsEmpty(plan)) {
-    const saved = await withChangeSource("assistant", () => applyBusinessPlan(plan));
-    return { reply: saved.summary, model: null, source: "action" as const };
+    const opened = await openBusinessPlanProposal(plan, conversationId, pieceIds);
+    if ("clarify" in opened) {
+      return { reply: opened.clarify, model: null, source: "dossier" as const };
+    }
+    return proposalResponse(opened);
   }
 
   const measured = await resolveMeasure(text);
@@ -296,7 +299,7 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
     return { reply: measured.reply, model: null, source: "regle-metier" as const, packet: measured.packet };
   }
 
-  const contract = await resolveContract(text);
+  const contract = await resolveContract(text, conversationId);
   if (contract) {
     return {
       reply: contract.reply,
@@ -307,7 +310,7 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
     };
   }
 
-  const intervention = await resolveIntervention(text);
+  const intervention = await resolveIntervention(text, conversationId);
   if (intervention) {
     return {
       reply: intervention.reply,
@@ -318,7 +321,7 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
     };
   }
 
-  const equipment = await resolveEquipment(text);
+  const equipment = await resolveEquipment(text, conversationId);
   if (equipment) {
     return {
       reply: equipment.reply,
@@ -334,7 +337,7 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
     return { reply: draft.reply, model: null, source: draft.source, packet: draft.packet };
   }
 
-  const purchase = await resolvePurchase(text);
+  const purchase = await resolvePurchase(text, conversationId);
   if (purchase) {
     return {
       reply: purchase.reply,
@@ -345,7 +348,7 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
     };
   }
 
-  const claim = await resolveClaim(text);
+  const claim = await resolveClaim(text, conversationId);
   if (claim) {
     return {
       reply: claim.reply,
@@ -372,9 +375,9 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
   }
 
   const verdict = readConfirmation(text);
-  const pending = await currentProposal();
+  const pending = await currentProposal(conversationId);
   if (verdict === "confirm") {
-    const saved = await confirmLatestWrite();
+    const saved = await confirmLatestWrite(conversationId);
     return {
       reply: saved.summary,
       model: null,
@@ -382,7 +385,7 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
     };
   }
   if (verdict === "reject") {
-    const rejected = await rejectLatestWrite();
+    const rejected = await rejectLatestWrite(conversationId);
     return {
       reply: rejected?.reply ?? "Il n’y a pas de fiche en attente.",
       model: null,
@@ -418,7 +421,7 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
   }
 
   if (asksToEnrichRecord(text) || intent === "change") {
-    const changed = await proposeChangeFromMessage(text);
+    const changed = await proposeChangeFromMessage(text, conversationId);
     if (changed) {
       return {
         reply: changed.reply,
@@ -432,15 +435,15 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
 
   if (clientCommand) {
     const identified = identifyClient(text);
-    if (identified) return proposalResponse(await openClientProposal(identified));
-    return proposalFromCommand(clientCommand);
+    if (identified) return proposalResponse(await openClientProposal(identified, conversationId));
+    return proposalFromCommand(clientCommand, conversationId);
   }
   if (!pending || isNewClientBrief(text)) {
     const identified = identifyClient(text);
-    if (identified) return proposalResponse(await openClientProposal(identified));
+    if (identified) return proposalResponse(await openClientProposal(identified, conversationId));
   }
   if (command) {
-    const opened = await openCatalogProposal(command);
+    const opened = await openCatalogProposal(command, conversationId);
     if ("clarify" in opened) {
       return { reply: opened.clarify, model: null, source: "dossier" as const };
     }
@@ -464,7 +467,7 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
         proposal: { fields: proposalFields(pending) },
       };
     }
-    return proposalResponse(await openClientProposal(revised.draft));
+    return proposalResponse(await openClientProposal(revised.draft, conversationId));
   }
 
   return null;
@@ -472,8 +475,9 @@ async function answerDirectly(text: string): Promise<DirectReply | null> {
 
 async function proposalFromCommand(
   command: Extract<CatalogCommand, { type: "create_client" | "update_client" }>,
+  conversationId: string,
 ) {
-  const opened = await proposeFromParty(command);
+  const opened = await proposeFromParty(command, conversationId);
   if ("clarify" in opened) {
     return { reply: opened.clarify, model: null, source: "dossier" as const };
   }

@@ -23,6 +23,7 @@ import { syncPrimaryAddress } from "@/lib/addresses";
 import { attachOrganization } from "@/lib/organizations";
 import { syncPrimaryContact } from "@/lib/contacts";
 import { stampProvenance } from "@/domain/provenance";
+import { pendingInThread } from "@/domain/proposal-scope";
 import { prisma } from "@/lib/db";
 
 const PATHS = [
@@ -40,7 +41,11 @@ export type ProposalView = {
   proposal: { fields: Array<{ label: string; value: string }> };
 };
 
-export async function openClientProposal(draft: ClientDraft): Promise<ProposalView> {
+export async function openClientProposal(draft: ClientDraft, conversationId: string): Promise<ProposalView> {
+  const scope = pendingInThread(conversationId);
+  if (!scope) {
+    return { reply: "Le fil est inconnu. Rien n’est enregistré.", proposal: { fields: [] } };
+  }
   const clients = await prisma.client.findMany({ take: 500 });
   const matchName = uniqueNameMatch(displayName(draft), clients.map((client) => client.name));
   const existing = matchName ? clients.find((client) => client.name === matchName) ?? null : null;
@@ -48,41 +53,55 @@ export async function openClientProposal(draft: ClientDraft): Promise<ProposalVi
     ? mergeKnownClient(clientToDraft(existing), draft)
     : qualifyDraft({ ...draft, mode: "create" });
   await prisma.clientProposal.updateMany({
-    where: { status: "en_attente" },
+    where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
   });
   await prisma.clientProposal.create({
-    data: { status: "en_attente", payload: ready, ...stampProvenance("regle", proposalFields(ready)) },
+    data: {
+      status: "en_attente",
+      conversationId: scope.conversationId,
+      payload: ready,
+      ...stampProvenance("regle", proposalFields(ready)),
+    },
   });
   return view(ready);
 }
 
-export async function currentProposal(): Promise<ClientDraft | null> {
+export async function currentProposal(conversationId: string): Promise<ClientDraft | null> {
+  const scope = pendingInThread(conversationId);
+  if (!scope) return null;
   const row = await prisma.clientProposal.findFirst({
-    where: { status: "en_attente" },
+    where: { status: "en_attente", conversationId: scope.conversationId },
     orderBy: { createdAt: "desc" },
   });
   return row ? asDraft(row.payload) : null;
 }
 
-export async function confirmCurrentProposal(): Promise<{
+export async function confirmCurrentProposal(conversationId: string): Promise<{
   ok: boolean;
   summary: string;
 }> {
-  const draft = await currentProposal();
-  if (!draft) {
+  const scope = pendingInThread(conversationId);
+  if (!scope) return { ok: false, summary: "Il n’y a pas de fiche client en attente." };
+  const row = await prisma.clientProposal.findFirst({
+    where: { status: "en_attente", conversationId: scope.conversationId },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!row) {
     return { ok: false, summary: "Il n’y a pas de fiche client en attente." };
   }
+  const draft = asDraft(row.payload);
+  if (!draft) return { ok: false, summary: "Cette proposition est illisible. Rien n’est enregistré." };
   const saved = await withChangeSource("assistant", () => saveClientDraft(draft, { allowUpdate: true }));
   if (!saved.ok) return saved;
   await prisma.clientProposal.updateMany({
-    where: { status: "en_attente" },
+    where: { id: row.id, status: "en_attente", conversationId: scope.conversationId },
     data: { status: "confirmee", validatedAt: new Date() },
   });
   return saved;
 }
 
-export async function proposeChangeFromMessage(text: string): Promise<{
+export async function proposeChangeFromMessage(text: string, conversationId: string): Promise<{
   reply: string;
   proposal?: ProposalView["proposal"];
   sources: Array<{ label: string; title: string }>;
@@ -109,7 +128,7 @@ export async function proposeChangeFromMessage(text: string): Promise<{
       sources,
     };
   }
-  const opened = await openClientProposal(revised.draft);
+  const opened = await openClientProposal(revised.draft, conversationId);
   const delta = fieldChangeSummary(clientFieldMap(before), clientFieldMap(revised.draft), CLIENT_FIELD_LABELS);
   return {
     reply: [`D’après la fiche enregistrée.`, delta, opened.reply].filter(Boolean).join("\n"),
@@ -118,10 +137,13 @@ export async function proposeChangeFromMessage(text: string): Promise<{
   };
 }
 
-export async function proposeFromParty(command: {
-  type: "create_client" | "update_client";
-  party: PartyInput;
-}): Promise<ProposalView | { clarify: string }> {
+export async function proposeFromParty(
+  command: {
+    type: "create_client" | "update_client";
+    party: PartyInput;
+  },
+  conversationId: string,
+): Promise<ProposalView | { clarify: string }> {
   if (command.type === "update_client") {
     const clients = await prisma.client.findMany({ take: 500 });
     const exact = clients.find((client) => nameKey(client.name) === nameKey(command.party.name));
@@ -138,11 +160,11 @@ export async function proposeFromParty(command: {
       draft.notes = [draft.notes, "Aucun compte de ce nom : proposition de création."]
         .filter(Boolean)
         .join(" ");
-      return openClientProposal(draft);
+      return openClientProposal(draft, conversationId);
     }
-    return openClientProposal(overlay(clientToDraft(existing), command.party));
+    return openClientProposal(overlay(clientToDraft(existing), command.party), conversationId);
   }
-  return openClientProposal(draftFromKnownFields(command.party, "create"));
+  return openClientProposal(draftFromKnownFields(command.party, "create"), conversationId);
 }
 
 export async function saveClientDraft(

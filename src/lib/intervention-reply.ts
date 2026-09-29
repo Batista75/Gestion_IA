@@ -20,6 +20,7 @@ import {
 } from "@/domain/interventions";
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { stampProvenance } from "@/domain/provenance";
+import { pendingInThread } from "@/domain/proposal-scope";
 import { withChangeSource } from "@/lib/change-source";
 import { prisma } from "@/lib/db";
 
@@ -30,7 +31,7 @@ export type InterventionReply = {
   proposal?: { fields: Array<{ label: string; value: string }> };
 };
 
-export async function resolveIntervention(text: string, now = new Date()): Promise<InterventionReply | null> {
+export async function resolveIntervention(text: string, conversationId: string, now = new Date()): Promise<InterventionReply | null> {
   const question = readTimeQuestion(text);
   if (question) return answerQuestion(question, text, now);
   const entry = readInterventionEntry(text);
@@ -78,18 +79,28 @@ export async function resolveIntervention(text: string, now = new Date()): Promi
   };
   const packet = interventionProposalPacket(draft);
   const fields = interventionFields(draft);
+  const scope = pendingInThread(conversationId);
+  if (!scope) {
+    const packet = timeGapPacket("Intervention à confirmer", "Le fil est inconnu. L’intervention n’est pas proposée.");
+    return { reply: safeReply(packet), packet, source: "regle-metier" };
+  }
   await prisma.interventionProposal.updateMany({
-    where: { status: "en_attente" },
+    where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
   });
   await prisma.interventionProposal.create({
-    data: { status: "en_attente", payload: draft, ...stampProvenance("regle", fields) },
+    data: {
+      status: "en_attente",
+      conversationId: scope.conversationId,
+      payload: draft,
+      ...stampProvenance("regle", fields),
+    },
   });
   return { reply: safeReply(packet), packet, source: "proposition", proposal: { fields } };
 }
 
-export async function confirmInterventionProposal(): Promise<{ ok: boolean; summary: string }> {
-  const row = await pendingInterventionProposal();
+export async function confirmInterventionProposal(conversationId: string): Promise<{ ok: boolean; summary: string }> {
+  const row = await pendingInterventionProposal(conversationId);
   if (!row) return { ok: false, summary: "Il n’y a pas d’intervention en attente." };
   const draft = interventionPayload(row.payload);
   if (!draft) return { ok: false, summary: "Cette proposition d’intervention est illisible." };
@@ -129,8 +140,8 @@ export async function confirmInterventionProposal(): Promise<{ ok: boolean; summ
   };
 }
 
-export async function rejectInterventionProposal(): Promise<{ reply: string } | null> {
-  const row = await pendingInterventionProposal();
+export async function rejectInterventionProposal(conversationId: string): Promise<{ reply: string } | null> {
+  const row = await pendingInterventionProposal(conversationId);
   if (!row) return null;
   await prisma.interventionProposal.update({
     where: { id: row.id },
@@ -140,9 +151,11 @@ export async function rejectInterventionProposal(): Promise<{ reply: string } | 
   return { reply: "L’intervention n’est pas enregistrée." };
 }
 
-export async function pendingInterventionProposal() {
+export async function pendingInterventionProposal(conversationId: string) {
+  const scope = pendingInThread(conversationId);
+  if (!scope) return null;
   return prisma.interventionProposal.findFirst({
-    where: { status: "en_attente" },
+    where: { status: "en_attente", conversationId: scope.conversationId },
     orderBy: { createdAt: "desc" },
   });
 }

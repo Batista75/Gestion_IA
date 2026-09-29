@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { safeReply, type AnswerPacket } from "@/domain/answer-packet";
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { stampProvenance } from "@/domain/provenance";
+import { pendingInThread } from "@/domain/proposal-scope";
 import {
   DELIVERIES,
   PURCHASE_FAMILIES,
@@ -47,11 +48,11 @@ export type PurchaseReply = {
   proposal?: { fields: Array<{ label: string; value: string }> };
 };
 
-export async function resolvePurchase(text: string, now = new Date()): Promise<PurchaseReply | null> {
+export async function resolvePurchase(text: string, conversationId: string, now = new Date()): Promise<PurchaseReply | null> {
   const question = readPurchaseQuestion(text);
   if (question) return answerQuestion(question, text, now);
   const terms = readSupplierTerms(text);
-  if (terms) return proposeTerms(text, terms);
+  if (terms) return proposeTerms(text, terms, conversationId);
   const sketch = readPurchaseEntry(text);
   if (!sketch) return null;
   const missing = purchaseGapMessage(sketch, hasDollars(text));
@@ -91,17 +92,31 @@ export async function resolvePurchase(text: string, now = new Date()): Promise<P
   };
   const packet = purchaseProposalPacket(draft);
   const fields = purchaseFields(draft);
+  const scope = pendingInThread(conversationId);
+  if (!scope) {
+    const packet = purchaseGapPacket("Le fil est inconnu. L’achat n’est pas proposé.");
+    return { reply: safeReply(packet), packet, source: "regle-metier" };
+  }
   await prisma.purchaseFollowUpProposal.updateMany({
-    where: { status: "en_attente" },
+    where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
   });
   await prisma.purchaseFollowUpProposal.create({
-    data: { status: "en_attente", payload: draft, ...stampProvenance("regle", fields) },
+    data: {
+      status: "en_attente",
+      conversationId: scope.conversationId,
+      payload: draft,
+      ...stampProvenance("regle", fields),
+    },
   });
   return { reply: safeReply(packet), packet, source: "proposition", proposal: { fields } };
 }
 
-async function proposeTerms(text: string, sketch: NonNullable<ReturnType<typeof readSupplierTerms>>): Promise<PurchaseReply> {
+async function proposeTerms(
+  text: string,
+  sketch: NonNullable<ReturnType<typeof readSupplierTerms>>,
+  conversationId: string,
+): Promise<PurchaseReply> {
   const missing = termsGapMessage(sketch, hasDollars(text));
   if (missing || sketch.outstandingCents === null || sketch.paymentDays === null) {
     const packet = termsGapPacket(missing ?? "Indiquez le montant de l’encours.");
@@ -126,18 +141,28 @@ async function proposeTerms(text: string, sketch: NonNullable<ReturnType<typeof 
   };
   const packet = termsProposalPacket(draft);
   const fields = termsFields(draft);
+  const scope = pendingInThread(conversationId);
+  if (!scope) {
+    const packet = termsGapPacket("Le fil est inconnu. L’encours n’est pas proposé.");
+    return { reply: safeReply(packet), packet, source: "regle-metier" };
+  }
   await prisma.supplierTermsProposal.updateMany({
-    where: { status: "en_attente" },
+    where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
   });
   await prisma.supplierTermsProposal.create({
-    data: { status: "en_attente", payload: draft, ...stampProvenance("regle", fields) },
+    data: {
+      status: "en_attente",
+      conversationId: scope.conversationId,
+      payload: draft,
+      ...stampProvenance("regle", fields),
+    },
   });
   return { reply: safeReply(packet), packet, source: "proposition", proposal: { fields } };
 }
 
-export async function confirmPurchaseProposal(): Promise<{ ok: boolean; summary: string }> {
-  const row = await pendingPurchaseProposal();
+export async function confirmPurchaseProposal(conversationId: string): Promise<{ ok: boolean; summary: string }> {
+  const row = await pendingPurchaseProposal(conversationId);
   if (!row) return { ok: false, summary: "Il n’y a pas d’achat en attente." };
   const draft = purchasePayload(row.payload);
   if (!draft) return { ok: false, summary: "Cette proposition d’achat est illisible." };
@@ -175,8 +200,8 @@ export async function confirmPurchaseProposal(): Promise<{ ok: boolean; summary:
   return { ok: true, summary: `${draft.designation} pour ${supplier.name} enregistré. Validation enregistrée.` };
 }
 
-export async function confirmSupplierTermsProposal(): Promise<{ ok: boolean; summary: string }> {
-  const row = await pendingSupplierTermsProposal();
+export async function confirmSupplierTermsProposal(conversationId: string): Promise<{ ok: boolean; summary: string }> {
+  const row = await pendingSupplierTermsProposal(conversationId);
   if (!row) return { ok: false, summary: "Il n’y a pas d’encours en attente." };
   const draft = termsPayload(row.payload);
   if (!draft) return { ok: false, summary: "Cette proposition d’encours est illisible." };
@@ -196,8 +221,8 @@ export async function confirmSupplierTermsProposal(): Promise<{ ok: boolean; sum
   return { ok: true, summary: `Encours de ${supplier.name} enregistré. Validation enregistrée.` };
 }
 
-export async function rejectPurchaseProposal(): Promise<{ reply: string } | null> {
-  const row = await pendingPurchaseProposal();
+export async function rejectPurchaseProposal(conversationId: string): Promise<{ reply: string } | null> {
+  const row = await pendingPurchaseProposal(conversationId);
   if (!row) return null;
   await prisma.purchaseFollowUpProposal.update({
     where: { id: row.id },
@@ -207,8 +232,8 @@ export async function rejectPurchaseProposal(): Promise<{ reply: string } | null
   return { reply: "L’achat n’est pas enregistré." };
 }
 
-export async function rejectSupplierTermsProposal(): Promise<{ reply: string } | null> {
-  const row = await pendingSupplierTermsProposal();
+export async function rejectSupplierTermsProposal(conversationId: string): Promise<{ reply: string } | null> {
+  const row = await pendingSupplierTermsProposal(conversationId);
   if (!row) return null;
   await prisma.supplierTermsProposal.update({
     where: { id: row.id },
@@ -218,16 +243,20 @@ export async function rejectSupplierTermsProposal(): Promise<{ reply: string } |
   return { reply: "L’encours n’est pas enregistré." };
 }
 
-export async function pendingPurchaseProposal() {
+export async function pendingPurchaseProposal(conversationId: string) {
+  const scope = pendingInThread(conversationId);
+  if (!scope) return null;
   return prisma.purchaseFollowUpProposal.findFirst({
-    where: { status: "en_attente" },
+    where: { status: "en_attente", conversationId: scope.conversationId },
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function pendingSupplierTermsProposal() {
+export async function pendingSupplierTermsProposal(conversationId: string) {
+  const scope = pendingInThread(conversationId);
+  if (!scope) return null;
   return prisma.supplierTermsProposal.findFirst({
-    where: { status: "en_attente" },
+    where: { status: "en_attente", conversationId: scope.conversationId },
     orderBy: { createdAt: "desc" },
   });
 }

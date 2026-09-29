@@ -85,7 +85,7 @@ export function AssistantChat({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const hint = useRef({ view: "/", attachments: [] as string[] });
+  const hint = useRef({ view: "/", attachments: [] as string[], pieceIds: [] as string[] });
   // Lu au moment de l’envoi, avec la page et les pièces de cet instant.
   // eslint-disable-next-line react-hooks/refs -- la valeur sert à la requête, pas au rendu
   hint.current.view = pathname || "/";
@@ -94,16 +94,21 @@ export function AssistantChat({
     () =>
       new DefaultChatTransport<ChatMessage>({
         api: "/api/assistant",
-        prepareSendMessagesRequest: ({ id, messages }) => ({
-          body: {
-            id,
-            messages,
-            context: {
-              view: hint.current.view,
-              attachments: hint.current.attachments,
+        prepareSendMessagesRequest: ({ id, messages }) => {
+          const pieceIds = hint.current.pieceIds;
+          hint.current.pieceIds = [];
+          return {
+            body: {
+              id,
+              messages,
+              pieceIds,
+              context: {
+                view: hint.current.view,
+                attachments: hint.current.attachments,
+              },
             },
-          },
-        }),
+          };
+        },
       }),
     [],
   );
@@ -187,6 +192,7 @@ export function AssistantChat({
         return;
       }
       const userText = text || attached.map((file) => file.name).join(", ");
+      hint.current.pieceIds = saved.fileIds ?? [];
       hint.current.attachments = attached.map((file) => file.name);
       await sendMessage({ text: userText });
       hint.current.attachments = [];

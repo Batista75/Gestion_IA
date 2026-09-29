@@ -161,8 +161,18 @@ model Conversation {
   archivedAt DateTime?
   createdAt  DateTime              @default(now())
   updatedAt  DateTime              @updatedAt
-  messages  ConversationMessage[]
-  task      AssistantTask?
+  messages                     ConversationMessage[]
+  task                         AssistantTask?
+  clientProposals              ClientProposal[]
+  catalogProposals             CatalogProposal[]
+  contractProposals            ContractProposal[]
+  interventionProposals        InterventionProposal[]
+  installedEquipmentProposals  InstalledEquipmentProposal[]
+  purchaseFollowUpProposals    PurchaseFollowUpProposal[]
+  supplierTermsProposals       SupplierTermsProposal[]
+  claimProposals               ClaimProposal[]
+  returnRequestProposals       ReturnRequestProposal[]
+  businessPlanProposals        BusinessPlanProposal[]
 
   @@index([projectId])
 }
@@ -205,40 +215,65 @@ model ConversationMessage {
 }
 
 model CatalogProposal {
-  id           String    @id @default(cuid())
-  status       String    @default("en_attente")
-  payload      Json
-  modelVersion String    @default("")
-  confidence   Json      @default("[]")
-  validatedAt  DateTime?
-  createdAt    DateTime  @default(now())
+  id             String        @id @default(cuid())
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status         String        @default("en_attente")
+  payload        Json
+  modelVersion   String        @default("")
+  confidence     Json          @default("[]")
+  validatedAt    DateTime?
+  createdAt      DateTime      @default(now())
 
   @@index([status])
+  @@index([conversationId, status])
 }
 
 model ClientProposal {
-  id           String    @id @default(cuid())
-  status       String    @default("en_attente")
-  payload      Json
-  modelVersion String    @default("")
-  confidence   Json      @default("[]")
-  validatedAt  DateTime?
-  createdAt    DateTime  @default(now())
+  id             String        @id @default(cuid())
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status         String        @default("en_attente")
+  payload        Json
+  modelVersion   String        @default("")
+  confidence     Json          @default("[]")
+  validatedAt    DateTime?
+  createdAt      DateTime      @default(now())
 
   @@index([status])
+  @@index([conversationId, status])
+}
+
+/** Plan parlé ou tableau collé. Le fil est une interface : le supprimer laisse la proposition. */
+model BusinessPlanProposal {
+  id             String        @id @default(cuid())
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status         String        @default("en_attente")
+  payload        Json
+  failureNote    String        @default("")
+  modelVersion   String        @default("")
+  confidence     Json          @default("[]")
+  validatedAt    DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([conversationId, status])
 }
 
 /** Contrat encore à confirmer. La fiche `Contract` n’existe qu’après validation. */
 model ContractProposal {
-  id           String    @id @default(cuid())
-  status       String    @default("en_attente")
-  payload      Json
-  modelVersion String    @default("")
-  confidence   Json      @default("[]")
-  validatedAt  DateTime?
-  createdAt    DateTime  @default(now())
+  id             String        @id @default(cuid())
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status         String        @default("en_attente")
+  payload        Json
+  modelVersion   String        @default("")
+  confidence     Json          @default("[]")
+  validatedAt    DateTime?
+  createdAt      DateTime      @default(now())
 
   @@index([status])
+  @@index([conversationId, status])
 }
 
 /** Contrat confirmé. Le montant est celui de la période, en centimes. Le mensuel n’est pas stocké. */
@@ -260,15 +295,18 @@ model Contract {
 
 /** Intervention encore à confirmer. La fiche `Intervention` n’existe qu’après validation. */
 model InterventionProposal {
-  id           String    @id @default(cuid())
-  status       String    @default("en_attente")
-  payload      Json
-  modelVersion String    @default("")
-  confidence   Json      @default("[]")
-  validatedAt  DateTime?
-  createdAt    DateTime  @default(now())
+  id             String        @id @default(cuid())
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status         String        @default("en_attente")
+  payload        Json
+  modelVersion   String        @default("")
+  confidence     Json          @default("[]")
+  validatedAt    DateTime?
+  createdAt      DateTime      @default(now())
 
   @@index([status])
+  @@index([conversationId, status])
 }
 
 /** Intervention confirmée. La durée est en minutes, le taux en centimes. Les moyennes ne sont pas stockées. */
@@ -299,15 +337,18 @@ model Intervention {
 
 /** Équipement installé encore à confirmer. La fiche `InstalledEquipment` n’existe qu’après validation. */
 model InstalledEquipmentProposal {
-  id           String    @id @default(cuid())
-  status       String    @default("en_attente")
-  payload      Json
-  modelVersion String    @default("")
-  confidence   Json      @default("[]")
-  validatedAt  DateTime?
-  createdAt    DateTime  @default(now())
+  id             String        @id @default(cuid())
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status         String        @default("en_attente")
+  payload        Json
+  modelVersion   String        @default("")
+  confidence     Json          @default("[]")
+  validatedAt    DateTime?
+  createdAt      DateTime      @default(now())
 
   @@index([status])
+  @@index([conversationId, status])
 }
 
 /** Équipement installé confirmé. L’âge et le filtre « an dernier » ne sont pas des colonnes. */
@@ -331,28 +372,34 @@ model InstalledEquipment {
 
 /** Achat encore à confirmer. La fiche `PurchaseFollowUp` n’existe qu’après validation. */
 model PurchaseFollowUpProposal {
-  id           String    @id @default(cuid())
-  status       String    @default("en_attente")
-  payload      Json
-  modelVersion String    @default("")
-  confidence   Json      @default("[]")
-  validatedAt  DateTime?
-  createdAt    DateTime  @default(now())
+  id             String        @id @default(cuid())
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status         String        @default("en_attente")
+  payload        Json
+  modelVersion   String        @default("")
+  confidence     Json          @default("[]")
+  validatedAt    DateTime?
+  createdAt      DateTime      @default(now())
 
   @@index([status])
+  @@index([conversationId, status])
 }
 
 /** Encours et délai encore à confirmer. Les colonnes du fournisseur ne changent qu’après validation. */
 model SupplierTermsProposal {
-  id           String    @id @default(cuid())
-  status       String    @default("en_attente")
-  payload      Json
-  modelVersion String    @default("")
-  confidence   Json      @default("[]")
-  validatedAt  DateTime?
-  createdAt    DateTime  @default(now())
+  id             String        @id @default(cuid())
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status         String        @default("en_attente")
+  payload        Json
+  modelVersion   String        @default("")
+  confidence     Json          @default("[]")
+  validatedAt    DateTime?
+  createdAt      DateTime      @default(now())
 
   @@index([status])
+  @@index([conversationId, status])
 }
 
 /** Ligne d’achat confirmée. L’écart, le volume et le total de sous-traitance ne sont pas des colonnes. */
@@ -383,15 +430,18 @@ model PurchaseFollowUp {
 
 /** Réclamation encore à confirmer. La fiche `Claim` n’existe qu’après validation. */
 model ClaimProposal {
-  id           String    @id @default(cuid())
-  status       String    @default("en_attente")
-  payload      Json
-  modelVersion String    @default("")
-  confidence   Json      @default("[]")
-  validatedAt  DateTime?
-  createdAt    DateTime  @default(now())
+  id             String        @id @default(cuid())
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status         String        @default("en_attente")
+  payload        Json
+  modelVersion   String        @default("")
+  confidence     Json          @default("[]")
+  validatedAt    DateTime?
+  createdAt      DateTime      @default(now())
 
   @@index([status])
+  @@index([conversationId, status])
 }
 
 /** Réclamation confirmée. Le texte est recopié. Le résumé ne le réécrit pas. */
@@ -412,15 +462,18 @@ model Claim {
 
 /** Retour encore à confirmer. La fiche `ReturnRequest` n’existe qu’après validation. */
 model ReturnRequestProposal {
-  id           String    @id @default(cuid())
-  status       String    @default("en_attente")
-  payload      Json
-  modelVersion String    @default("")
-  confidence   Json      @default("[]")
-  validatedAt  DateTime?
-  createdAt    DateTime  @default(now())
+  id             String        @id @default(cuid())
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status         String        @default("en_attente")
+  payload        Json
+  modelVersion   String        @default("")
+  confidence     Json          @default("[]")
+  validatedAt    DateTime?
+  createdAt      DateTime      @default(now())
 
   @@index([status])
+  @@index([conversationId, status])
 }
 
 /** Retour ou remplacement confirmé. Le texte est recopié. */

@@ -2,7 +2,7 @@
 
 Ce manuel décrit Gestion IA tel qu’il s’utilise aujourd’hui. Il est affiché dans l’application. La cible de revue est la [spécification V2](/documentation/v2). Le PDF d’origine reste la [spécification fonctionnelle](/documentation/specification), conservée. L’architecture du socle est le [DAT](/documentation/technique/dat). La conception est le [DCT](/documentation/technique/dct). L’ensemble est la [spécification technique](/documentation/technique).
 
-Dernière mise à jour : 28 septembre 2026. Le menu Configuration règle le serveur, les modèles et la clé d’API.
+Dernière mise à jour : 30 septembre 2026. Le menu Configuration règle le serveur, les modèles et la clé d’API.
 
 ## Ouvrir l’application
 
@@ -28,9 +28,9 @@ Pendant la réponse, l’étape en cours s’affiche : lecture des fiches, règl
 
 Il reconnaît la nature sur le nom du fichier ou les premières lignes : demande de chiffrage, devis (aussi une soumission, une offre ou une quotation), commande, facture, tarif, avoir, bon de livraison, contrat, documentation technique, relevé bancaire. Une facture d’acompte reste une facture : **Détail** indique le rôle acompte. Une mention de devis, de banque ou de compte sur cette facture ne change pas la nature. Un relevé est reconnu, sans rapprocher de paiement. Une pièce sans texte reste Autre. **Détail** recopie la devise, les totaux, les taxes et la validité tels qu’ils sont écrits. Deux taxes restent deux mentions. Le mensuel et l’annuel restent deux montants. Les lignes ne sont pas additionnées et aucune devise n’est convertie. Un acompte écrit est recopié, sans calcul. Une fin de validité n’est calculée que si la pièce écrit à la fois une date et une durée en jours. Les coordonnées de compte ne sont pas affichées. Il situe l’étape dans le fil, relève le client, le fournisseur et les produits, et les compare aux fiches déjà enregistrées. Si le message cite un projet déjà ouvert, il le nomme. La pièce n’y est pas rattachée, et aucun projet n’est créé, tant que vous ne le demandez pas.
 
-Une phrase explicite est enregistrée tout de suite. Exemple : `Créer le projet : Cartes et kits de développement pour le client grid solutions. Le projet consiste à fournir un kit de développement.` Le dossier s’ouvre, l’objet est repris, et un événement d’ouverture est enregistré. Si le client est déjà au répertoire, son nom est repris. Sinon la fiche client attend une description, puis une confirmation. Une fiche technique jointe au même envoi, par exemple un kit de développement, est rattachée à ce projet. Elle ne porte pas de prix si la fiche n’en indique pas.
+Une phrase explicite ouvre une proposition dans le fil. Exemple : `Créer le projet : Cartes et kits de développement pour le client grid solutions. Le projet consiste à fournir un kit de développement.` La carte montre le projet, le client et l’objet. Rien n’est enregistré avant **Confirmer** ou `Je confirme.` dans ce fil. Si le client est déjà au répertoire, son nom est repris à la confirmation. Une pièce jointe au même envoi est d’abord déposée. Le plan, s’il y en a un, reste une proposition du fil : il n’est enregistré qu’une fois, à la confirmation. Si l’enregistrement échoue, la proposition n’est pas présentée comme confirmée.
 
-Un tableau collé de clients, de produits, de services, de projets ou de devis est lu de la même façon. Les prix, les devises et les mentions de TVA sont conservés tels qu’ils sont écrits. Le contrôle des lignes confirme ou non les totaux indiqués, sans les remplacer. Un montant en dollars reste en dollars tant qu’un taux vers l’euro n’est pas indiqué. La marge brute d’une affaire n’est calculée que si un coût de revient est indiqué.
+Un tableau collé de clients, de produits, de services, de projets ou de devis est proposé de la même façon. Les prix, les devises et les mentions de TVA sont conservés tels qu’ils sont écrits. Le contrôle des lignes confirme ou non les totaux indiqués, sans les remplacer. Un montant en dollars reste en dollars tant qu’un taux vers l’euro n’est pas indiqué. La marge brute d’une affaire n’est calculée que si un coût de revient est indiqué. L’enregistrement attend la confirmation du fil.
 
 **À traiter** propose de créer un client, un fournisseur ou un produit, d’ouvrir une demande, d’ajouter une version de devis, ou de marquer une demande comme offre reçue. **Confirmer** écrit ces fiches. **Ignorer** laisse le fichier dans Pièces reçues.
 
@@ -155,7 +155,7 @@ Il distingue cinq demandes :
 
 Pour un client, il commence par l’analyse de l’action demandée (création ou mise à jour), puis sépare le nom, la forme, l’adresse, le pays et les identifiants. Un bloc collé sur plusieurs lignes est lu de la même façon. Exemple : `ajoute le client : Grid Solutions Oy`, puis la rue, le code postal, la ville, le pays, le Business ID et le VAT ID. La proposition affiche **Action demandée** et **Analyse**. Rien n’est écrit tant que vous n’avez pas confirmé. Les champs encore absents, comme l’e-mail ou le contact, sont listés à part.
 
-- **Confirmer**, ou écrire `Je confirme.`, enregistre la fiche la plus récente encore en attente, client ou autre.
+- **Confirmer**, ou écrire `Je confirme.`, enregistre la proposition en attente de ce fil, client, plan parlé ou autre. Un autre fil n’est pas concerné. Sans proposition dans ce fil, rien n’est écrit.
 - `non` n’enregistre rien. Pour un client, la proposition reste affichée afin de la corriger. Pour un fournisseur, un produit, un projet ou un devis, elle est écartée.
 - Un commentaire sur un client, par exemple `le téléphone est le 06 98 76 54 32`, produit une nouvelle proposition.
 - Un nouveau texte commençant par `Nouveau client` remplace la proposition de client en cours.
@@ -167,7 +167,7 @@ Ces phrases préparent une fiche, sans l’enregistrer et sans passer par le mod
 - `créer projet Atlas, client Atelier Nord`
 - `devis Offre mars, produit Vis à bois, référence VIS-01, produit Charnière`
 
-Deux cas s’enregistrent tout de suite, avant cette confirmation : la phrase parlée `Créer le projet : Cartes et kits de développement pour le client grid solutions. Le projet consiste à fournir un kit de développement.` et un tableau collé de clients, de produits, de services, de projets ou de devis.
+La phrase parlée `Créer le projet : Cartes et kits de développement pour le client grid solutions. Le projet consiste à fournir un kit de développement.` et un tableau collé de clients, de produits, de services, de projets ou de devis attendent la même confirmation, dans le fil où ils ont été proposés.
 
 `créer client Atelier Nord, email contact@atelier.fr` et `mettre à jour le client Atelier Nord, adresse 12 rue des Lilas, Paris` ouvrent une proposition, ils n’enregistrent pas tout seuls.
 
