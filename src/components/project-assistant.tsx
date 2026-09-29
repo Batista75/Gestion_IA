@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useTransition } from "react";
+import { Suspense, useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { archiveThreadAction, deleteThreadAction, loadThreadAction, renameThreadAction, restoreThreadAction } from "@/app/assistant/thread-actions";
 import { AssistantChat } from "@/components/assistant-chat";
@@ -63,6 +63,7 @@ function ProjectAssistantInner({
   const [lead, setLead] = useState<string[]>([]);
   const [booted, setBooted] = useState(!requested || requested === (current?.id ?? fallbackId));
   const [loading, startLoading] = useTransition();
+  const pendingFil = useRef<string | null>(null);
   const shown = chosen ?? current ?? { id: fallbackId, messages: [], hidden: 0, projectName };
   const known = [...threads, ...archived.filter((thread) => !threads.some((open) => open.id === thread.id))];
 
@@ -101,6 +102,7 @@ function ProjectAssistantInner({
 
   function remember(thread: Thread) {
     setChosen(thread);
+    pendingFil.current = thread.id;
     const next = threadAddress(pathname, thread.id, searchParams.toString());
     if (`${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}` !== next) {
       router.replace(next, { scroll: false });
@@ -149,7 +151,12 @@ function ProjectAssistantInner({
   }, [booted, shown.id, pathname, router, searchParams, requested]);
 
   useEffect(() => {
-    if (!booted || !requested || requested === shown.id) return;
+    if (!booted) return;
+    if (pendingFil.current) {
+      if (requested === pendingFil.current) pendingFil.current = null;
+      else return;
+    }
+    if (!requested || requested === shown.id) return;
     let cancelled = false;
     startLoading(async () => {
       const failure = await adopt(requested);
