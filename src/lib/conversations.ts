@@ -162,12 +162,15 @@ async function linkConversation(conversationId: string, text: string): Promise<v
   });
 }
 
-export async function loadConversation(id: string): Promise<{
+export type LoadedConversation = {
   id: string;
+  projectId: string;
   projectName: string;
   messages: StoredTurn[];
   hidden: number;
-} | null> {
+};
+
+export async function loadConversation(id: string): Promise<LoadedConversation | null> {
   if (!isConversationId(id)) return null;
   const row = await prisma.conversation.findUnique({
     where: { id },
@@ -180,12 +183,21 @@ export async function loadConversation(id: string): Promise<{
   return row ? presentConversation(row) : null;
 }
 
-export async function latestProjectConversation(projectId: string): Promise<{
-  id: string;
-  projectName: string;
-  messages: StoredTurn[];
-  hidden: number;
-} | null> {
+/** Ouvre un fil demandé par l’adresse. S’il était archivé, il reprend la liste ouverte. */
+export async function openConversation(id: string): Promise<LoadedConversation | null> {
+  const thread = await loadConversation(id);
+  if (!thread) return null;
+  const archived = await prisma.conversation.findUnique({
+    where: { id },
+    select: { archivedAt: true },
+  });
+  if (archived?.archivedAt) {
+    await prisma.conversation.update({ where: { id }, data: { archivedAt: null } });
+  }
+  return thread;
+}
+
+export async function latestProjectConversation(projectId: string): Promise<LoadedConversation | null> {
   const row = await prisma.conversation.findFirst({
     where: { projectId, archivedAt: null },
     orderBy: { updatedAt: "desc" },
@@ -198,12 +210,7 @@ export async function latestProjectConversation(projectId: string): Promise<{
   return row ? presentConversation(row) : null;
 }
 
-export async function latestConversation(): Promise<{
-  id: string;
-  projectName: string;
-  messages: StoredTurn[];
-  hidden: number;
-} | null> {
+export async function latestConversation(): Promise<LoadedConversation | null> {
   const row = await prisma.conversation.findFirst({
     where: { archivedAt: null },
     orderBy: { updatedAt: "desc" },
@@ -219,6 +226,7 @@ export async function latestConversation(): Promise<{
 
 function presentConversation(row: {
   id: string;
+  projectId: string | null;
   project: { name: string } | null;
   _count: { messages: number };
   messages: Array<{
@@ -231,10 +239,11 @@ function presentConversation(row: {
     sources: unknown;
     modelVersion: string;
   }>;
-}): { id: string; projectName: string; messages: StoredTurn[]; hidden: number } {
+}): LoadedConversation {
   const latest = [...row.messages].reverse();
   return {
     id: row.id,
+    projectId: row.projectId ?? "",
     projectName: row.project?.name ?? "",
     hidden: Math.max(0, row._count.messages - latest.length),
     messages: latest.map((message) => ({

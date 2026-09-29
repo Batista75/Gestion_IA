@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { THREAD_MESSAGE_LIMIT, cleanThreadTitle, nextOpenThread, restoreThread, threadIsFull } from "../src/domain/thread.ts";
+import {
+  THREAD_MESSAGE_LIMIT,
+  cleanThreadTitle,
+  nextOpenThread,
+  requestedThreadId,
+  restoreThread,
+  threadAddress,
+  threadIsFull,
+} from "../src/domain/thread.ts";
 import { proposedThreadTitle } from "../src/domain/thread-title.ts";
 
 test("un fil accepte des messages jusqu’à la limite, puis demande un nouveau fil", () => {
@@ -48,4 +56,12 @@ test("un titre de fil se limite à 80 caractères", () => {
   assert.deepEqual(cleanThreadTitle("  Achat   Nord  "), { title: "Achat Nord" });
   assert.deepEqual(cleanThreadTitle(" "), { error: "Le titre doit contenir au moins 2 caractères." });
   assert.equal("error" in cleanThreadTitle("a".repeat(81)), true);
+});
+
+test("l’adresse garde le fil choisi et retire le marqueur de nouveau fil", () => {
+  assert.equal(requestedThreadId("fil-accueil-01"), "fil-accueil-01");
+  assert.equal(requestedThreadId("court"), "");
+  assert.equal(requestedThreadId(null), "");
+  assert.equal(threadAddress("/", "fil-accueil-01", "nouveau=1&autre=1"), "/?autre=1&fil=fil-accueil-01");
+  assert.equal(threadAddress("/projets/seed-lampes-nord", "fil-dossier-01"), "/projets/seed-lampes-nord?fil=fil-dossier-01");
 });

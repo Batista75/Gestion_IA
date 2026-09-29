@@ -37,7 +37,7 @@ Chaque appel porte une enveloppe construite par l’application, dans `resolveCo
 
 ## Fil et confirmation
 
-Chaque échange est une conversation dans PostgreSQL. **Nouveau fil** crée une autre conversation. Il n’efface pas la précédente. L’accueil liste les fils récents. Un clic en rouvre un. Sans choix, il rouvre la plus récente, sauf si l’adresse demande un fil précis. Un fil archivé se rouvre depuis **Archivés**.
+Chaque échange est une conversation dans PostgreSQL. **Nouveau fil** crée une autre conversation. Il n’efface pas la précédente. L’accueil et le dossier listent les fils. Un clic en rouvre un et écrit `fil` dans l’adresse. Sans choix, l’accueil rouvre la plus récente. Un rechargement relit `fil`. Un fil archivé se rouvre depuis **Archivés**, ou depuis l’adresse s’il y figure encore.
 
 La réponse est un flux. L’étape visible précède le texte. Le navigateur lit ce flux avec le SDK `ai` vers l’API compatible OpenAI d’Ollama, sous `/v1`.
 

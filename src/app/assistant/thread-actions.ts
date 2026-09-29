@@ -6,10 +6,16 @@ import { prisma } from "@/lib/db";
 
 export async function loadThreadAction(
   id: string,
-): Promise<{ id: string; messages: StoredTurn[]; hidden: number; projectName: string } | null> {
+): Promise<{ id: string; messages: StoredTurn[]; hidden: number; projectId: string; projectName: string } | null> {
   const thread = await loadConversation(id);
   return thread
-    ? { id: thread.id, messages: thread.messages, hidden: thread.hidden, projectName: thread.projectName }
+    ? {
+        id: thread.id,
+        messages: thread.messages,
+        hidden: thread.hidden,
+        projectId: thread.projectId,
+        projectName: thread.projectName,
+      }
     : null;
 }
 

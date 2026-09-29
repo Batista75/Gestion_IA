@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { kindLabel } from "@/domain/offer-versions";
 import { homeAlerts, recentProjectCards } from "@/lib/home-board";
-import { archivedConversations, isConversationId, latestConversation, loadConversation, recentConversations } from "@/lib/conversations";
+import { archivedConversations, isConversationId, latestConversation, openConversation, recentConversations } from "@/lib/conversations";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +58,7 @@ export default async function HomePage({
   const thread = fresh
     ? null
     : requested
-      ? await loadConversation(requested)
+      ? await openConversation(requested)
       : await latestConversation();
   const conversationId = thread?.id ?? (requested && !fresh ? requested : crypto.randomUUID());
   await fillDocumentProvenance();

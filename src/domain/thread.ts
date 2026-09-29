@@ -38,3 +38,19 @@ export function cleanThreadTitle(raw: string): { title: string } | { error: stri
   if (title.length > 80) return { error: "Le titre tient en 80 caractères." };
   return { title };
 }
+
+const THREAD_ID_RE = /^[\w-]{8,80}$/;
+
+/** Identifiant de fil lu dans l’adresse, ou chaîne vide s’il est invalide. */
+export function requestedThreadId(value: string | null | undefined): string {
+  return typeof value === "string" && THREAD_ID_RE.test(value) ? value : "";
+}
+
+/** Adresse de la page avec le fil choisi, sans le paramètre de nouveau fil. */
+export function threadAddress(pathname: string, id: string, search = ""): string {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  params.delete("nouveau");
+  params.set("fil", id);
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}

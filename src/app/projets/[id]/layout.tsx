@@ -29,6 +29,7 @@ export default async function ProjectSectionLayout({
       >
         <ProjectAssistant
           key={id}
+          projectId={id}
           projectName={project.name}
           projectStatus={project.status}
           current={thread ? { id: thread.id, messages: thread.messages, hidden: thread.hidden, projectName: thread.projectName } : null}

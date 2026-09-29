@@ -1,22 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Suspense, useEffect, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { archiveThreadAction, deleteThreadAction, loadThreadAction, renameThreadAction, restoreThreadAction } from "@/app/assistant/thread-actions";
 import { AssistantChat } from "@/components/assistant-chat";
-import { nextOpenThread, type ThreadSummary } from "@/domain/thread";
+import { nextOpenThread, requestedThreadId, threadAddress, type ThreadSummary } from "@/domain/thread";
 import type { StoredTurn } from "@/lib/conversations";
 
 type Thread = { id: string; messages: StoredTurn[]; hidden: number; projectName: string };
 
-export function ProjectAssistant({
-  projectName,
-  projectStatus,
-  current,
-  fallbackId,
-  threads,
-  archived = [],
-  panel = true,
-}: {
+type Props = {
   projectName: string;
   projectStatus: string;
   current: Thread | null;
@@ -24,15 +17,55 @@ export function ProjectAssistant({
   threads: ThreadSummary[];
   archived?: ThreadSummary[];
   panel?: boolean;
-}) {
+  projectId?: string;
+};
+
+export function ProjectAssistant(props: Props) {
+  return (
+    <Suspense
+      fallback={
+        <AssistantChat
+          fill
+          panel={props.panel}
+          conversationId={props.current?.id ?? props.fallbackId}
+          projectName={props.current?.projectName || props.projectName}
+          projectStatus={props.panel ? props.projectStatus : ""}
+          initialMessages={props.current?.messages ?? []}
+          hidden={props.current?.hidden ?? 0}
+          threads={props.threads}
+          archivedThreads={props.archived}
+        />
+      }
+    >
+      <ProjectAssistantInner {...props} />
+    </Suspense>
+  );
+}
+
+function ProjectAssistantInner({
+  projectName,
+  projectStatus,
+  current,
+  fallbackId,
+  threads,
+  archived = [],
+  panel = true,
+  projectId = "",
+}: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requested = requestedThreadId(searchParams.get("fil"));
   const [chosen, setChosen] = useState<Thread | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [aside, setAside] = useState<Record<string, "open" | "archived" | "gone">>({});
   const [lead, setLead] = useState<string[]>([]);
+  const [loadedFil, setLoadedFil] = useState("");
   const [loading, startLoading] = useTransition();
   const shown = chosen ?? current ?? { id: fallbackId, messages: [], hidden: 0, projectName };
   const known = [...threads, ...archived.filter((thread) => !threads.some((open) => open.id === thread.id))];
+  const holdUrl = Boolean(requested && requested !== shown.id && loadedFil !== requested);
 
   function status(id: string): "open" | "archived" | "gone" {
     return aside[id] ?? (archived.some((thread) => thread.id === id) ? "archived" : "open");
@@ -53,8 +86,8 @@ export function ProjectAssistant({
   );
   const archivedThreads = present(known.filter((thread) => status(thread.id) === "archived"));
 
-  function emptyThread(): Thread {
-    return { id: crypto.randomUUID(), messages: [], hidden: 0, projectName: panel ? projectName : "" };
+  function emptyThread(id = crypto.randomUUID()): Thread {
+    return { id, messages: [], hidden: 0, projectName: panel ? projectName : "" };
   }
 
   function fromLoaded(thread: Awaited<ReturnType<typeof loadThreadAction>>): Thread {
@@ -66,6 +99,47 @@ export function ProjectAssistant({
       projectName: thread.projectName || (panel ? projectName : ""),
     };
   }
+
+  useEffect(() => {
+    if (!requested || requested === shown.id || loadedFil === requested) return;
+    let cancelled = false;
+    startLoading(async () => {
+      const thread = await loadThreadAction(requested);
+      if (cancelled) return;
+      if (!thread) {
+        setChosen({ id: requested, messages: [], hidden: 0, projectName: panel ? projectName : "" });
+      } else if (panel && projectId && thread.projectId && thread.projectId !== projectId) {
+        setFailed("Ce fil appartient à un autre dossier.");
+      } else {
+        if (archived.some((item) => item.id === requested)) {
+          const restored = await restoreThreadAction(requested);
+          if ("error" in restored) {
+            setFailed(restored.error);
+            setLoadedFil(requested);
+            return;
+          }
+          setAside((places) => ({ ...places, [requested]: "open" }));
+          setLead((ids) => [requested, ...ids.filter((item) => item !== requested)]);
+        }
+        setChosen({
+          id: thread.id,
+          messages: thread.messages,
+          hidden: thread.hidden,
+          projectName: thread.projectName || (panel ? projectName : ""),
+        });
+      }
+      setLoadedFil(requested);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [requested, shown.id, loadedFil, panel, projectId, projectName, archived]);
+
+  useEffect(() => {
+    if (holdUrl) return;
+    if (searchParams.get("fil") === shown.id && !searchParams.has("nouveau")) return;
+    router.replace(threadAddress(pathname, shown.id, searchParams.toString()), { scroll: false });
+  }, [shown.id, holdUrl, pathname, router, searchParams]);
 
   function openNext(id: string) {
     const next = nextOpenThread(namedThreads, id);
