@@ -61,3 +61,9 @@ export function threadProjectHref(projectId: string, threadId: string): string {
   if (!projectId || !THREAD_ID_RE.test(threadId)) return "";
   return `/projets/${projectId}?fil=${encodeURIComponent(threadId)}`;
 }
+
+/** Libellé du fil ouvert dans l’en-tête : le titre, ou Nouveau fil s’il est vide. */
+export function openThreadLabel(title: string | null | undefined): string {
+  const value = typeof title === "string" ? title.trim() : "";
+  return value || "Nouveau fil";
+}

@@ -32,7 +32,7 @@ import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import type { AnswerPacket } from "@/domain/answer-packet";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { provenanceLabel } from "@/domain/provenance";
-import { THREAD_MESSAGE_LIMIT, threadIsFull, threadProjectHref, type ThreadSummary } from "@/domain/thread";
+import { THREAD_MESSAGE_LIMIT, openThreadLabel, threadIsFull, threadProjectHref, type ThreadSummary } from "@/domain/thread";
 import type { StoredTurn } from "@/lib/conversations";
 import { cn } from "cn";
 
@@ -204,6 +204,7 @@ export function AssistantChat({
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
   const currentThread = threads.find((thread) => thread.id === conversationId) ?? null;
+  const threadLabel = openThreadLabel(currentThread?.title);
 
   async function restoreArchived(id: string) {
     if (!onRestoreThread || restoring) return;
@@ -284,15 +285,22 @@ export function AssistantChat({
             </span>
           ) : null}
           <div className="grid min-w-0">
-            <p className="truncate text-sm font-semibold">{panel ? "Assistant" : projectName || "Assistant"}</p>
-            {panel && projectName ? (
-              <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground" title={`Contexte : dossier ${projectName}`}>
-                <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" />
+            <p className="truncate text-sm font-semibold" title={threadLabel}>
+              {threadLabel}
+            </p>
+            {projectName ? (
+              <p
+                className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
+                title={`Contexte : dossier ${projectName}${projectStatus ? ` · ${projectStatus}` : ""}`}
+              >
+                {panel ? <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" /> : null}
                 <span className="truncate">
                   Dossier {projectName}
-                  {projectStatus ? ` · ${projectStatus}` : ""}
+                  {panel && projectStatus ? ` · ${projectStatus}` : ""}
                 </span>
               </p>
+            ) : panel ? (
+              <p className="truncate text-xs text-muted-foreground">Assistant</p>
             ) : null}
           </div>
         </div>

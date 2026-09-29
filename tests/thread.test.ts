@@ -4,6 +4,7 @@ import {
   THREAD_MESSAGE_LIMIT,
   cleanThreadTitle,
   nextOpenThread,
+  openThreadLabel,
   requestedThreadId,
   restoreThread,
   threadAddress,
@@ -74,4 +75,11 @@ test("le nom du dossier dans la liste mène au dossier avec le même fil", () =>
   );
   assert.equal(threadProjectHref("", "fil-accueil-01"), "");
   assert.equal(threadProjectHref("seed-lampes-nord", "x"), "");
+});
+
+test("l’en-tête porte le titre du fil, ou Nouveau fil s’il est vide", () => {
+  assert.equal(openThreadLabel("Rentabilité · Lampes Nord"), "Rentabilité · Lampes Nord");
+  assert.equal(openThreadLabel("  "), "Nouveau fil");
+  assert.equal(openThreadLabel(null), "Nouveau fil");
+  assert.equal(openThreadLabel(undefined), "Nouveau fil");
 });
