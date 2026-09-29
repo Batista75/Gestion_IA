@@ -61,11 +61,10 @@ function ProjectAssistantInner({
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [aside, setAside] = useState<Record<string, "open" | "archived" | "gone">>({});
   const [lead, setLead] = useState<string[]>([]);
-  const [loadedFil, setLoadedFil] = useState("");
+  const [booted, setBooted] = useState(!requested || requested === (current?.id ?? fallbackId));
   const [loading, startLoading] = useTransition();
   const shown = chosen ?? current ?? { id: fallbackId, messages: [], hidden: 0, projectName };
   const known = [...threads, ...archived.filter((thread) => !threads.some((open) => open.id === thread.id))];
-  const holdUrl = Boolean(requested && requested !== shown.id && loadedFil !== requested);
 
   function status(id: string): "open" | "archived" | "gone" {
     return aside[id] ?? (archived.some((thread) => thread.id === id) ? "archived" : "open");
@@ -100,57 +99,78 @@ function ProjectAssistantInner({
     };
   }
 
+  function remember(thread: Thread) {
+    setChosen(thread);
+    const next = threadAddress(pathname, thread.id, searchParams.toString());
+    if (`${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}` !== next) {
+      router.replace(next, { scroll: false });
+    }
+  }
+
+  async function adopt(id: string): Promise<string | null> {
+    const thread = await loadThreadAction(id);
+    if (!thread) {
+      remember(emptyThread(id));
+      return null;
+    }
+    if (panel && projectId && thread.projectId && thread.projectId !== projectId) {
+      return "Ce fil appartient à un autre dossier.";
+    }
+    if (archived.some((item) => item.id === id)) {
+      const restored = await restoreThreadAction(id);
+      if ("error" in restored) return restored.error;
+      setAside((places) => ({ ...places, [id]: "open" }));
+      setLead((ids) => [id, ...ids.filter((item) => item !== id)]);
+    }
+    remember(fromLoaded(thread));
+    return null;
+  }
+
   useEffect(() => {
-    if (!requested || requested === shown.id || loadedFil === requested) return;
+    if (booted) return;
     let cancelled = false;
     startLoading(async () => {
-      const thread = await loadThreadAction(requested);
+      const failure = await adopt(requested);
       if (cancelled) return;
-      if (!thread) {
-        setChosen({ id: requested, messages: [], hidden: 0, projectName: panel ? projectName : "" });
-      } else if (panel && projectId && thread.projectId && thread.projectId !== projectId) {
-        setFailed("Ce fil appartient à un autre dossier.");
-      } else {
-        if (archived.some((item) => item.id === requested)) {
-          const restored = await restoreThreadAction(requested);
-          if ("error" in restored) {
-            setFailed(restored.error);
-            setLoadedFil(requested);
-            return;
-          }
-          setAside((places) => ({ ...places, [requested]: "open" }));
-          setLead((ids) => [requested, ...ids.filter((item) => item !== requested)]);
-        }
-        setChosen({
-          id: thread.id,
-          messages: thread.messages,
-          hidden: thread.hidden,
-          projectName: thread.projectName || (panel ? projectName : ""),
-        });
-      }
-      setLoadedFil(requested);
+      if (failure) setFailed(failure);
+      setBooted(true);
     });
     return () => {
       cancelled = true;
     };
-  }, [requested, shown.id, loadedFil, panel, projectId, projectName, archived]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- démarrage unique depuis l’adresse
+  }, [booted]);
 
   useEffect(() => {
-    if (holdUrl) return;
+    if (!booted) return;
     if (searchParams.get("fil") === shown.id && !searchParams.has("nouveau")) return;
+    if (requested && requested !== shown.id) return;
     router.replace(threadAddress(pathname, shown.id, searchParams.toString()), { scroll: false });
-  }, [shown.id, holdUrl, pathname, router, searchParams]);
+  }, [booted, shown.id, pathname, router, searchParams, requested]);
+
+  useEffect(() => {
+    if (!booted || !requested || requested === shown.id) return;
+    let cancelled = false;
+    startLoading(async () => {
+      const failure = await adopt(requested);
+      if (!cancelled && failure) setFailed(failure);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- navigation arrière / avant
+  }, [booted, requested, shown.id]);
 
   function openNext(id: string) {
     const next = nextOpenThread(namedThreads, id);
     setAside((places) => ({ ...places, [id]: "archived" }));
     setLead((ids) => ids.filter((item) => item !== id));
     if (!next) {
-      setChosen(emptyThread());
+      remember(emptyThread());
       return;
     }
     startLoading(async () => {
-      setChosen(fromLoaded(await loadThreadAction(next.id)));
+      remember(fromLoaded(await loadThreadAction(next.id)));
     });
   }
 
@@ -159,7 +179,7 @@ function ProjectAssistantInner({
     setFailed(null);
     startLoading(async () => {
       const thread = await loadThreadAction(id);
-      if (thread) setChosen(fromLoaded(thread));
+      if (thread) remember(fromLoaded(thread));
       else setFailed("Ce fil n’a pas pu être rouvert.");
     });
   }
@@ -191,8 +211,8 @@ function ProjectAssistantInner({
           setAside((places) => ({ ...places, [id]: "gone" }));
           setLead((ids) => ids.filter((item) => item !== id));
           const next = nextOpenThread(namedThreads, id);
-          if (!next) setChosen(emptyThread());
-          else setChosen(fromLoaded(await loadThreadAction(next.id)));
+          if (!next) remember(emptyThread());
+          else remember(fromLoaded(await loadThreadAction(next.id)));
           return null;
         }
         openNext(id);
@@ -205,12 +225,12 @@ function ProjectAssistantInner({
         setLead((ids) => [id, ...ids.filter((item) => item !== id)]);
         const thread = await loadThreadAction(id);
         if (!thread) return "Ce fil n’a pas pu être rouvert.";
-        setChosen(fromLoaded(thread));
+        remember(fromLoaded(thread));
         return null;
       }}
       onNewThread={() => {
         setFailed(null);
-        setChosen(emptyThread());
+        remember(emptyThread());
       }}
       onSelectThread={openThread}
     />
