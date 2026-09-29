@@ -3,6 +3,7 @@ import { readUnderstanding, type UnderstandingCard } from "@/domain/completeness
 import { stampProvenance } from "@/domain/provenance";
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { prisma } from "@/lib/db";
+import { THREAD_MESSAGE_LIMIT, type ThreadSummary } from "@/domain/thread";
 
 export type StoredTurn = {
   id: string;
@@ -18,6 +19,23 @@ export type StoredTurn = {
 };
 
 const ID_RE = /^[\w-]{8,80}$/;
+
+export const SHOWN_MESSAGES = THREAD_MESSAGE_LIMIT;
+
+export async function projectConversations(projectId: string): Promise<ThreadSummary[]> {
+  const rows = await prisma.conversation.findMany({
+    where: { projectId },
+    orderBy: { updatedAt: "desc" },
+    take: 20,
+    select: { id: true, title: true, updatedAt: true, _count: { select: { messages: true } } },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title.trim() || "Fil sans titre",
+    updatedAt: row.updatedAt.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }),
+    count: row._count.messages,
+  }));
+}
 
 export function isConversationId(value: string): boolean {
   return ID_RE.test(value);
@@ -96,13 +114,15 @@ export async function loadConversation(id: string): Promise<{
   id: string;
   projectName: string;
   messages: StoredTurn[];
+  hidden: number;
 } | null> {
   if (!isConversationId(id)) return null;
   const row = await prisma.conversation.findUnique({
     where: { id },
     include: {
       project: { select: { name: true } },
-      messages: { orderBy: { createdAt: "asc" }, take: 40 },
+      messages: { orderBy: { createdAt: "desc" }, take: SHOWN_MESSAGES },
+      _count: { select: { messages: true } },
     },
   });
   return row ? presentConversation(row) : null;
@@ -112,13 +132,15 @@ export async function latestProjectConversation(projectId: string): Promise<{
   id: string;
   projectName: string;
   messages: StoredTurn[];
+  hidden: number;
 } | null> {
   const row = await prisma.conversation.findFirst({
     where: { projectId },
     orderBy: { updatedAt: "desc" },
     include: {
       project: { select: { name: true } },
-      messages: { orderBy: { createdAt: "asc" }, take: 40 },
+      messages: { orderBy: { createdAt: "desc" }, take: SHOWN_MESSAGES },
+      _count: { select: { messages: true } },
     },
   });
   return row ? presentConversation(row) : null;
@@ -128,12 +150,14 @@ export async function latestConversation(): Promise<{
   id: string;
   projectName: string;
   messages: StoredTurn[];
+  hidden: number;
 } | null> {
   const row = await prisma.conversation.findFirst({
     orderBy: { updatedAt: "desc" },
     include: {
       project: { select: { name: true } },
-      messages: { orderBy: { createdAt: "asc" }, take: 40 },
+      messages: { orderBy: { createdAt: "desc" }, take: SHOWN_MESSAGES },
+      _count: { select: { messages: true } },
     },
   });
   if (!row) return null;
@@ -143,6 +167,7 @@ export async function latestConversation(): Promise<{
 function presentConversation(row: {
   id: string;
   project: { name: string } | null;
+  _count: { messages: number };
   messages: Array<{
     id: string;
     role: string;
@@ -153,11 +178,13 @@ function presentConversation(row: {
     sources: unknown;
     modelVersion: string;
   }>;
-}): { id: string; projectName: string; messages: StoredTurn[] } {
+}): { id: string; projectName: string; messages: StoredTurn[]; hidden: number } {
+  const latest = [...row.messages].reverse();
   return {
     id: row.id,
     projectName: row.project?.name ?? "",
-    messages: row.messages.map((message) => ({
+    hidden: Math.max(0, row._count.messages - latest.length),
+    messages: latest.map((message) => ({
       id: message.id,
       role: message.role === "assistant" ? "assistant" : "user",
       content: message.content,

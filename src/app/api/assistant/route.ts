@@ -25,7 +25,7 @@ import {
   type ProposalView,
 } from "@/lib/client-proposals";
 import { streamDirect, streamModel } from "@/lib/assistant-stream";
-import { conversationIdOrNew, rememberTurn } from "@/lib/conversations";
+import { SHOWN_MESSAGES, conversationIdOrNew, rememberTurn } from "@/lib/conversations";
 import type { UIMessage } from "ai";
 import { withGpuLane } from "@/lib/gpu-lane";
 import { mentionedNames } from "@/domain/knowledge";
@@ -82,7 +82,7 @@ import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-const MAX_MESSAGES = 40;
+const MAX_MESSAGES = SHOWN_MESSAGES;
 const MAX_CHARS = 12_000;
 
 type SourceRef = { label: string; title: string };

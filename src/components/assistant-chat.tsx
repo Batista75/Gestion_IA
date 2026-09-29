@@ -2,20 +2,29 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { ArrowUp, CircleAlert, CircleCheck, MessageSquarePlus, Paperclip, Sparkles, Square, X } from "lucide-react";
+import { ArrowUp, Check, CircleAlert, CircleCheck, History, MessageSquarePlus, Paperclip, Sparkles, Square, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createInboxItemAction } from "@/app/actions";
 import { AssistantProposalCard, type ProposalState } from "@/components/assistant-proposal-card";
 import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import type { AnswerPacket } from "@/domain/answer-packet";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { provenanceLabel } from "@/domain/provenance";
+import { THREAD_MESSAGE_LIMIT, threadIsFull, type ThreadSummary } from "@/domain/thread";
 import type { StoredTurn } from "@/lib/conversations";
 import { cn } from "cn";
 
@@ -39,6 +48,11 @@ export function AssistantChat({
   proposals = [],
   fill = false,
   panel = false,
+  hidden = 0,
+  threads = [],
+  threadNotice = null,
+  onNewThread,
+  onSelectThread,
 }: {
   conversationId: string;
   projectName?: string;
@@ -47,6 +61,11 @@ export function AssistantChat({
   proposals?: PendingProposal[];
   fill?: boolean;
   panel?: boolean;
+  hidden?: number;
+  threads?: ThreadSummary[];
+  threadNotice?: string | null;
+  onNewThread?: () => void;
+  onSelectThread?: (id: string) => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -119,7 +138,7 @@ export function AssistantChat({
 
   async function send(content: string) {
     const text = content.trim();
-    if (!text || pending) return;
+    if (!text || pending || threadIsFull(messages.length)) return;
     setDraft("");
     setFileError(null);
     hint.current.attachments = [];
@@ -130,7 +149,7 @@ export function AssistantChat({
     event.preventDefault();
     const attached = files;
     const text = draft.trim();
-    if ((!text && attached.length === 0) || pending) return;
+    if ((!text && attached.length === 0) || pending || threadIsFull(messages.length)) return;
     if (attached.length === 0) {
       await send(text);
       return;
@@ -163,7 +182,8 @@ export function AssistantChat({
   }
 
   const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
-  const canSend = draft.trim().length > 0 || files.length > 0;
+  const full = threadIsFull(messages.length);
+  const canSend = !full && (draft.trim().length > 0 || files.length > 0);
 
   function renderMessage(message: ChatMessage, index: number) {
     return (
@@ -235,15 +255,45 @@ export function AssistantChat({
             ) : null}
           </div>
         </div>
-        <Link
-          href="/?nouveau=1"
-          aria-label="Nouveau fil"
-          title="Nouveau fil"
-          className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-surface-2 hover:text-foreground"
-        >
-          <MessageSquarePlus aria-hidden="true" className="size-4" />
-        </Link>
+        <div className="flex shrink-0 items-center">
+          {onSelectThread && threads.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label="Fils de ce dossier"
+                title="Fils de ce dossier"
+                className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "text-muted-foreground")}
+              >
+                <History aria-hidden="true" className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Fils de ce dossier</DropdownMenuLabel>
+                  {threads.map((thread) => (
+                    <DropdownMenuItem key={thread.id} onClick={() => onSelectThread(thread.id)} className="items-start gap-2">
+                      <Check
+                        aria-hidden="true"
+                        className={cn("mt-0.5 size-3.5 shrink-0", thread.id === conversationId ? "text-primary" : "invisible")}
+                      />
+                      <span className="grid min-w-0">
+                        <span className="truncate text-sm">{thread.title}</span>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {thread.updatedAt} · {thread.count} message{thread.count > 1 ? "s" : ""}
+                        </span>
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+          <NewThreadButton onNewThread={onNewThread} />
+        </div>
       </div>
+      {threadNotice ? (
+        <p role="status" className="shrink-0 border-b border-border bg-surface-2/60 px-3 py-1.5 text-xs text-muted-foreground">
+          {threadNotice}
+        </p>
+      ) : null}
       <div
         ref={threadRef}
         className="min-h-0 flex-1 overflow-y-auto"
@@ -285,6 +335,11 @@ export function AssistantChat({
           </div>
         ) : (
           <ol className={cn("mx-auto grid w-full gap-4", panel ? "px-3 py-3" : "max-w-3xl px-1 py-4")}>
+            {hidden > 0 ? (
+              <li className="text-center text-xs text-muted-foreground">
+                {hidden} message{hidden > 1 ? "s" : ""} plus ancien{hidden > 1 ? "s" : ""} de ce fil {hidden > 1 ? "ne sont" : "n’est"} pas affiché{hidden > 1 ? "s" : ""}.
+              </li>
+            ) : null}
             {messages.map((message, index) => renderMessage(message, index))}
           </ol>
         )}
@@ -300,6 +355,12 @@ export function AssistantChat({
         aria-busy={pending}
         className={cn("mx-auto grid w-full shrink-0 gap-1.5", panel ? "border-t border-border px-3 pt-2 pb-2.5" : "max-w-3xl pt-2")}
       >
+        {full ? (
+          <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-warning-soft px-2.5 py-2 text-xs leading-5 text-warning">
+            <span>Ce fil atteint {THREAD_MESSAGE_LIMIT} messages. Ouvrez un nouveau fil pour continuer.</span>
+            <NewThreadButton onNewThread={onNewThread} labelled />
+          </div>
+        ) : null}
         {files.length > 0 ? (
           <ul className="flex flex-wrap gap-1.5">
             {files.map((file, index) => (
@@ -329,9 +390,10 @@ export function AssistantChat({
           />
           <button
             type="button"
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-surface-2 hover:text-foreground"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-surface-2 hover:text-foreground disabled:opacity-40"
             aria-label="Joindre une pièce"
             title="Joindre une pièce"
+            disabled={full}
             onClick={() => fileRef.current?.click()}
           >
             <Paperclip aria-hidden="true" className="size-4" />
@@ -350,7 +412,8 @@ export function AssistantChat({
               event.preventDefault();
               event.currentTarget.form?.requestSubmit();
             }}
-            placeholder={projectName ? "Question ou demande sur ce dossier…" : "Écrire un message"}
+            placeholder={full ? "Ouvrez un nouveau fil pour continuer" : projectName ? "Question ou demande sur ce dossier…" : "Écrire un message"}
+            disabled={full}
             maxLength={4000}
             className="max-h-40 min-h-8 flex-1 resize-none bg-transparent px-1 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
           />
@@ -389,6 +452,30 @@ export function AssistantChat({
         ) : null}
       </form>
     </div>
+  );
+}
+
+function NewThreadButton({ onNewThread, labelled = false }: { onNewThread?: () => void; labelled?: boolean }) {
+  const className = labelled
+    ? buttonVariants({ variant: "outline", size: "sm" })
+    : "inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-surface-2 hover:text-foreground";
+  const content = (
+    <>
+      <MessageSquarePlus aria-hidden="true" className={labelled ? "size-3.5" : "size-4"} />
+      {labelled ? "Nouveau fil" : null}
+    </>
+  );
+  if (onNewThread) {
+    return (
+      <button type="button" aria-label="Nouveau fil" title="Nouveau fil" className={className} onClick={onNewThread}>
+        {content}
+      </button>
+    );
+  }
+  return (
+    <Link href="/?nouveau=1" aria-label="Nouveau fil" title="Nouveau fil" className={className}>
+      {content}
+    </Link>
   );
 }
 

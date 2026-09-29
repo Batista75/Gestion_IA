@@ -129,6 +129,7 @@ export default async function HomePage({
             conversationId={conversationId}
             projectName={thread?.projectName ?? ""}
             initialMessages={thread?.messages ?? []}
+            hidden={thread?.hidden ?? 0}
           />
         </div>
       </section>
