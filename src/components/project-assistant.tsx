@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { loadThreadAction } from "@/app/assistant/thread-actions";
+import { loadThreadAction, renameThreadAction } from "@/app/assistant/thread-actions";
 import { AssistantChat } from "@/components/assistant-chat";
 import type { ThreadSummary } from "@/domain/thread";
 import type { StoredTurn } from "@/lib/conversations";
@@ -23,8 +23,14 @@ export function ProjectAssistant({
 }) {
   const [chosen, setChosen] = useState<Thread | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  const [titles, setTitles] = useState<Record<string, string>>({});
   const [loading, startLoading] = useTransition();
   const shown = chosen ?? current ?? { id: fallbackId, messages: [], hidden: 0 };
+  const namedThreads = threads.map((thread) => {
+    const title = titles[thread.id];
+    if (!title) return thread;
+    return { ...thread, title, suggested: thread.suggested === title ? "" : thread.suggested };
+  });
 
   function openThread(id: string) {
     if (id === shown.id) return;
@@ -46,8 +52,14 @@ export function ProjectAssistant({
       projectStatus={projectStatus}
       initialMessages={shown.messages}
       hidden={shown.hidden}
-      threads={threads}
+      threads={namedThreads}
       threadNotice={loading ? "Ouverture du fil…" : failed}
+      onRenameThread={async (title) => {
+        const result = await renameThreadAction(shown.id, title);
+        if ("error" in result) return result.error;
+        setTitles((currentTitles) => ({ ...currentTitles, [shown.id]: result.title }));
+        return null;
+      }}
       onNewThread={() => {
         setFailed(null);
         setChosen({ id: crypto.randomUUID(), messages: [], hidden: 0 });

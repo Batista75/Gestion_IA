@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { THREAD_MESSAGE_LIMIT, threadIsFull } from "../src/domain/thread.ts";
+import { THREAD_MESSAGE_LIMIT, cleanThreadTitle, threadIsFull } from "../src/domain/thread.ts";
+import { proposedThreadTitle } from "../src/domain/thread-title.ts";
 
 test("un fil accepte des messages jusqu’à la limite, puis demande un nouveau fil", () => {
   assert.equal(THREAD_MESSAGE_LIMIT, 40);
@@ -8,4 +9,30 @@ test("un fil accepte des messages jusqu’à la limite, puis demande un nouveau 
   assert.equal(threadIsFull(THREAD_MESSAGE_LIMIT - 1), false);
   assert.equal(threadIsFull(THREAD_MESSAGE_LIMIT), true);
   assert.equal(threadIsFull(THREAD_MESSAGE_LIMIT + 5), true);
+});
+
+test("le titre d’un fil reprend l’intention reconnue et le nom cité", () => {
+  assert.equal(
+    proposedThreadTitle(
+      "Enregistre un achat pour Quincaillerie Durand, désignation Switch spare, dossier Lampes Nord, famille réseau, commandé le 2026-09-01, bon de commande 200,00 €, reliquat clos, chez nous",
+    ),
+    "Achat · Switch spare · Lampes Nord",
+  );
+  assert.equal(
+    proposedThreadTitle("Enregistre une intégration réseau pour Atelier Nord, dossier Lampes Nord, le 2026-09-15, 4 heures, taux horaire 90,00 €"),
+    "Intervention · Atelier Nord · 2026-09-15",
+  );
+  assert.equal(proposedThreadTitle("Quelle est la rentabilité réelle du projet Lampes Nord ?"), "Rentabilité · Lampes Nord");
+  assert.equal(proposedThreadTitle("Quelle est la prochaine étape du projet Lampes Nord ?"), "Parcours · Lampes Nord");
+  assert.equal(
+    proposedThreadTitle("prépare un devis pour Atelier Nord, 10 portables, préparation en atelier"),
+    "Devis client · Atelier Nord",
+  );
+  assert.equal(proposedThreadTitle("bonjour"), "bonjour");
+});
+
+test("un titre de fil se limite à 80 caractères", () => {
+  assert.deepEqual(cleanThreadTitle("  Achat   Nord  "), { title: "Achat Nord" });
+  assert.deepEqual(cleanThreadTitle(" "), { error: "Le titre doit contenir au moins 2 caractères." });
+  assert.equal("error" in cleanThreadTitle("a".repeat(81)), true);
 });

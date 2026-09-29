@@ -4,6 +4,7 @@ import { stampProvenance } from "@/domain/provenance";
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { prisma } from "@/lib/db";
 import { THREAD_MESSAGE_LIMIT, type ThreadSummary } from "@/domain/thread";
+import { proposedThreadTitle } from "@/domain/thread-title";
 
 export type StoredTurn = {
   id: string;
@@ -27,14 +28,30 @@ export async function projectConversations(projectId: string): Promise<ThreadSum
     where: { projectId },
     orderBy: { updatedAt: "desc" },
     take: 20,
-    select: { id: true, title: true, updatedAt: true, _count: { select: { messages: true } } },
+    select: {
+      id: true,
+      title: true,
+      updatedAt: true,
+      _count: { select: { messages: true } },
+      messages: {
+        where: { role: "user" },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { content: true },
+      },
+    },
   });
-  return rows.map((row) => ({
-    id: row.id,
-    title: row.title.trim() || "Fil sans titre",
-    updatedAt: row.updatedAt.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }),
-    count: row._count.messages,
-  }));
+  return rows.map((row) => {
+    const title = row.title.trim() || "Fil sans titre";
+    const suggested = row.messages[0] ? proposedThreadTitle(row.messages[0].content) : "";
+    return {
+      id: row.id,
+      title,
+      suggested: suggested && suggested !== title ? suggested : "",
+      updatedAt: row.updatedAt.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }),
+      count: row._count.messages,
+    };
+  });
 }
 
 export function isConversationId(value: string): boolean {
@@ -60,7 +77,7 @@ export async function rememberTurn(input: {
 }): Promise<void> {
   const content = input.content.trim();
   if (!content && (input.steps?.length ?? 0) === 0) return;
-  const title = content.slice(0, 80);
+  const title = input.role === "user" ? proposedThreadTitle(content) : "";
   const existing = await prisma.conversation.findUnique({
     where: { id: input.conversationId },
     select: { title: true },

@@ -4,12 +4,19 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { ArrowUp, Check, CircleAlert, CircleCheck, History, MessageSquarePlus, Paperclip, Sparkles, Square, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createInboxItemAction } from "@/app/actions";
 import { AssistantProposalCard, type ProposalState } from "@/components/assistant-proposal-card";
 import { ProposalBoard, type PendingProposal } from "@/components/proposal-board";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +60,7 @@ export function AssistantChat({
   threadNotice = null,
   onNewThread,
   onSelectThread,
+  onRenameThread,
 }: {
   conversationId: string;
   projectName?: string;
@@ -66,6 +74,7 @@ export function AssistantChat({
   threadNotice?: string | null;
   onNewThread?: () => void;
   onSelectThread?: (id: string) => void;
+  onRenameThread?: (title: string) => Promise<string | null>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -182,6 +191,8 @@ export function AssistantChat({
   }
 
   const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+  const [renameOpen, setRenameOpen] = useState(false);
+  const currentThread = threads.find((thread) => thread.id === conversationId) ?? null;
   const full = threadIsFull(messages.length);
   const canSend = !full && (draft.trim().length > 0 || files.length > 0);
 
@@ -268,6 +279,9 @@ export function AssistantChat({
               <DropdownMenuContent align="end" className="w-72">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel>Fils de ce dossier</DropdownMenuLabel>
+                  {onRenameThread && currentThread ? (
+                    <DropdownMenuItem onClick={() => setRenameOpen(true)}>Renommer ce fil</DropdownMenuItem>
+                  ) : null}
                   {threads.map((thread) => (
                     <DropdownMenuItem key={thread.id} onClick={() => onSelectThread(thread.id)} className="items-start gap-2">
                       <Check
@@ -285,6 +299,15 @@ export function AssistantChat({
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
+          ) : null}
+          {onRenameThread && currentThread ? (
+            <ThreadRenameDialog
+              key={`${currentThread.id}-${renameOpen}`}
+              open={renameOpen}
+              thread={currentThread}
+              onOpenChange={setRenameOpen}
+              onRename={onRenameThread}
+            />
           ) : null}
           <NewThreadButton onNewThread={onNewThread} />
         </div>
@@ -452,6 +475,70 @@ export function AssistantChat({
         ) : null}
       </form>
     </div>
+  );
+}
+
+function ThreadRenameDialog({
+  open,
+  thread,
+  onOpenChange,
+  onRename,
+}: {
+  open: boolean;
+  thread: ThreadSummary;
+  onOpenChange: (open: boolean) => void;
+  onRename: (title: string) => Promise<string | null>;
+}) {
+  const [value, setValue] = useState(thread.title);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Renommer le fil</DialogTitle>
+          <DialogDescription>Le nouveau titre remplace celui proposé. Il n’est pas réécrit par les messages suivants.</DialogDescription>
+        </DialogHeader>
+        <form
+          className="grid gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setError(null);
+            start(async () => {
+              const failure = await onRename(value);
+              if (failure) {
+                setError(failure);
+                return;
+              }
+              onOpenChange(false);
+            });
+          }}
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="thread-title">Titre</Label>
+            <Input id="thread-title" value={value} maxLength={80} onChange={(event) => setValue(event.target.value)} />
+          </div>
+          {thread.suggested ? (
+            <button
+              type="button"
+              className="w-fit text-left text-xs text-primary underline-offset-4 hover:underline"
+              onClick={() => setValue(thread.suggested)}
+            >
+              Titre proposé : {thread.suggested}
+            </button>
+          ) : null}
+          {error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <Button type="submit" disabled={pending} className="w-fit">
+            {pending ? "Enregistrement…" : "Enregistrer le titre"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
