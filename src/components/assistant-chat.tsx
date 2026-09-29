@@ -211,6 +211,7 @@ export function AssistantChat({
     const failure = await onRestoreThread(id);
     setRestoring(false);
     if (failure) setPickerError(failure);
+    else router.refresh();
   }
   const full = threadIsFull(messages.length);
   const canSend = !full && (draft.trim().length > 0 || files.length > 0);
