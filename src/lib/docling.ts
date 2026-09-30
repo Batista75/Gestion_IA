@@ -17,7 +17,9 @@ export type DoclingConversion = {
 let ready: Promise<boolean> | null = null;
 
 export function doclingPython(): string {
-  const local = path.join(process.cwd(), ".venv-docling", "bin", "python");
+  // Joint à l'exécution. Un path.join(process.cwd(), ".venv-docling", "bin", "python")
+  // serait une ressource du graphe, et Turbopack suivrait le lien vers /usr/bin.
+  const local = [process.cwd(), ".venv-docling", "bin", "python"].join(path.sep);
   return existsSync(local) ? local : "python3";
 }
 
