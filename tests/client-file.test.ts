@@ -168,11 +168,40 @@ test("compléter une entreprise déjà déclarée", () => {
   assert.match(informed.draft.notes, /livraison le mardi/);
 });
 
-test("une fiche en attente absorbe la phrase de recette suivante", () => {
-  const current = qualifyDraft({ ...emptyDraft(), legalName: "Dupont", kind: "entreprise" });
-  const revised = reviseDraft(current, "Ouvre un projet Climatisation pour Dupont.");
+test("une correction de téléphone ne change ni le nom ni les notes", () => {
+  const current = qualifyDraft({
+    ...emptyDraft(),
+    legalName: "Dupont",
+    kind: "entreprise",
+    notes: "Déjà noté",
+  });
+  const revised = reviseDraft(current, "Son téléphone est 01 23 45 67 89.");
   assert.equal(revised.changed, true);
-  assert.match(revised.draft.notes, /Ouvre un projet Climatisation pour Dupont/);
+  assert.match(revised.draft.phone, /01 23 45 67 89/);
+  assert.equal(revised.draft.legalName, "Dupont");
+  assert.equal(revised.draft.notes, "Déjà noté");
+  const address = reviseDraft(current, "L'adresse est 12 rue des Lilas.");
+  assert.equal(address.draft.address, "12 rue des Lilas");
+  assert.equal(address.draft.legalName, "Dupont");
+  assert.equal(address.draft.notes, "Déjà noté");
+  const filled = qualifyDraft({
+    ...current,
+    address: "12 rue des Lilas",
+    email: "ancien@dupont.fr",
+    notes: "note existante",
+  });
+  const email = reviseDraft(filled, "Remplace l'email par a@b.fr");
+  assert.equal(email.draft.email, "a@b.fr");
+  assert.equal(email.draft.address, "12 rue des Lilas");
+  assert.equal(email.draft.notes, "note existante");
+  assert.equal(email.draft.legalName, "Dupont");
+  const phone = reviseDraft(filled, "Corrige le téléphone : 01 23 45 67 89");
+  assert.match(phone.draft.phone, /01 23 45 67 89/);
+  assert.equal(phone.draft.address, "12 rue des Lilas");
+  assert.equal(phone.draft.email, "ancien@dupont.fr");
+  assert.equal(phone.draft.legalName, "Dupont");
+  assert.equal(phone.draft.notes, "note existante");
+  assert.notEqual(phone.draft.legalName, "01 23 45 67 89");
 });
 
 test("une phrase libre ne devient pas le nom du client", () => {

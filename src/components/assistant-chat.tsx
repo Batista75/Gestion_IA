@@ -41,7 +41,7 @@ type SourceRef = { label: string; title: string };
 type ChatMeta = {
   source?: string;
   modelVersion?: string;
-  proposal?: { fields: Field[] } | null;
+  proposal?: { fields: Field[]; confirmable?: boolean } | null;
   sources?: SourceRef[];
   understanding?: UnderstandingCard | null;
   packet?: AnswerPacket | null;
@@ -759,6 +759,7 @@ function MessageRow({
     return title && title !== label ? [title] : [];
   });
   const proposal = message.metadata?.proposal?.fields ?? [];
+  const allowConfirm = message.metadata?.proposal?.confirmable !== false;
   const sources = message.metadata?.sources ?? [];
   const understanding = message.metadata?.understanding ?? null;
   const packet = message.metadata?.packet ?? null;
@@ -826,9 +827,11 @@ function MessageRow({
             actions={
               confirm ? (
                 <>
-                  <Button type="button" size="sm" disabled={pending} onClick={onConfirm}>
-                    Confirmer
-                  </Button>
+                  {allowConfirm ? (
+                    <Button type="button" size="sm" disabled={pending} onClick={onConfirm}>
+                      Confirmer
+                    </Button>
+                  ) : null}
                   <Button type="button" size="sm" variant="outline" disabled={pending} onClick={onAmend}>
                     Préciser la demande
                   </Button>

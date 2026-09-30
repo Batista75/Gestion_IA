@@ -6,6 +6,7 @@ import {
   pathLine,
   readStoredTask,
   resumeKind,
+  resumeSuspendedTask,
   taskSteps,
 } from "../src/domain/task-path.ts";
 
@@ -28,6 +29,9 @@ test("une fiche complète simule sans terminer l’écriture", () => {
 
 test("une réponse courte reprend, une commande ou une question non", () => {
   assert.equal(resumeKind("Durand"), "valeur");
+  assert.equal(resumeKind("Toiture"), "valeur");
+  assert.equal(resumeKind("Ouvre le dossier Toiture pour Martin."), null);
+  assert.equal(resumeKind("Ajoute Bernard comme client."), null);
   assert.equal(resumeKind("oui"), "oui");
   assert.equal(resumeKind("non"), "non");
   assert.equal(resumeKind("Comment classe-t-on un devis ?"), null);
@@ -35,6 +39,14 @@ test("une réponse courte reprend, une commande ou une question non", () => {
   assert.equal(resumeKind("Fiche : fournisseur Durand"), null);
   assert.equal(resumeKind("que sait-on de Marie Dupont"), null);
   assert.equal(resumeKind("Enregistre ça"), null);
+});
+
+test("une proposition en attente prend la confirmation devant la tâche", () => {
+  assert.equal(resumeKind("Je confirme."), "oui");
+  assert.equal(resumeSuspendedTask("Je confirme.", true), null);
+  assert.equal(resumeSuspendedTask("Non, annule.", true), null);
+  assert.equal(resumeSuspendedTask("oui", false), "oui");
+  assert.equal(resumeKind("oui"), "oui");
 });
 
 test("la réponse nourrit le champ suspendu, un oui sans hypothèse ne compte pas", () => {

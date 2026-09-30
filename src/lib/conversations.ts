@@ -12,7 +12,7 @@ export type StoredTurn = {
   content: string;
   source: string;
   steps: string[];
-  proposal: { fields: Array<{ label: string; value: string }> } | null;
+  proposal: { fields: Array<{ label: string; value: string }>; confirmable?: boolean } | null;
   sources: Array<{ label: string; title: string }>;
   understanding: UnderstandingCard | null;
   packet: AnswerPacket | null;
@@ -106,7 +106,7 @@ export async function rememberTurn(input: {
   content: string;
   source?: string;
   steps?: string[];
-  proposal?: { fields: Array<{ label: string; value: string }> } | null;
+  proposal?: { fields: Array<{ label: string; value: string }>; confirmable?: boolean } | null;
   sources?: Array<{ label: string; title: string }>;
   understanding?: UnderstandingCard | null;
   packet?: AnswerPacket | null;
@@ -276,13 +276,23 @@ function messageVersion(input: { role: string; source?: string; modelVersion?: s
 }
 
 function storedProposal(
-  proposal: { fields: Array<{ label: string; value: string }> } | null | undefined,
+  proposal: { fields: Array<{ label: string; value: string }>; confirmable?: boolean } | null | undefined,
   understanding: UnderstandingCard | null | undefined,
   packet: AnswerPacket | null | undefined,
-): { fields?: Array<{ label: string; value: string }>; understanding?: UnderstandingCard; packet?: AnswerPacket } | undefined {
+): {
+  fields?: Array<{ label: string; value: string }>;
+  confirmable?: boolean;
+  understanding?: UnderstandingCard;
+  packet?: AnswerPacket;
+} | undefined {
   if (!proposal && !understanding && !packet) return undefined;
   return {
-    ...(proposal ? { fields: proposal.fields } : {}),
+    ...(proposal
+      ? {
+          fields: proposal.fields,
+          ...(proposal.confirmable === false ? { confirmable: false } : {}),
+        }
+      : {}),
     ...(understanding ? { understanding } : {}),
     ...(packet ? { packet } : {}),
   };
@@ -299,7 +309,9 @@ function proposalOf(value: unknown): StoredTurn["proposal"] {
       ? [{ label: row.label, value: row.value }]
       : [];
   });
-  return rows.length > 0 ? { fields: rows } : null;
+  if (rows.length === 0) return null;
+  const confirmable = (value as { confirmable?: unknown }).confirmable;
+  return confirmable === false ? { fields: rows, confirmable: false } : { fields: rows };
 }
 
 function sourceList(value: unknown): Array<{ label: string; title: string }> {

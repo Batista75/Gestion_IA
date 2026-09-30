@@ -19,7 +19,7 @@ import { SYSTEM_PROMPT } from "@/lib/ollama";
 import { readTradeInstruction } from "@/lib/trade-steps";
 import { loadTechnicalConfig } from "@/lib/technical-settings";
 
-type FieldList = { fields: Array<{ label: string; value: string }> };
+type FieldList = { fields: Array<{ label: string; value: string }>; confirmable?: boolean };
 
 type Meta = {
   source: string;

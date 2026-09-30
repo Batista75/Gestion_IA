@@ -249,3 +249,31 @@ function candidate(
 function choosePending(rows: Array<PendingCandidate | null>, conversationId: string): PendingCandidate | null {
   return selectablePending(rows.filter((row): row is PendingCandidate => row !== null), conversationId);
 }
+
+/** Identifiants en attente du fil. Lecture seule : rien n’est confirmé. */
+export async function pendingProposalRoster(conversationId: string): Promise<{
+  clientId: string | null;
+  ids: string[];
+}> {
+  const scope = pendingInThread(conversationId);
+  if (!scope) return { clientId: null, ids: [] };
+  const where = { status: "en_attente" as const, conversationId: scope.conversationId };
+  const orderBy = { createdAt: "desc" as const };
+  const [client, catalog, contract, intervention, equipment, purchase, terms, claim, returnRequest, businessPlan] =
+    await Promise.all([
+      prisma.clientProposal.findFirst({ where, orderBy, select: { id: true } }),
+      prisma.catalogProposal.findFirst({ where, orderBy, select: { id: true } }),
+      pendingContractProposal(conversationId),
+      pendingInterventionProposal(conversationId),
+      pendingEquipmentProposal(conversationId),
+      pendingPurchaseProposal(conversationId),
+      pendingSupplierTermsProposal(conversationId),
+      pendingClaimProposal(conversationId),
+      pendingReturnProposal(conversationId),
+      pendingBusinessPlanProposal(conversationId),
+    ]);
+  const ids = [client, catalog, contract, intervention, equipment, purchase, terms, claim, returnRequest, businessPlan].flatMap(
+    (row) => (row ? [row.id] : []),
+  );
+  return { clientId: client?.id ?? null, ids };
+}

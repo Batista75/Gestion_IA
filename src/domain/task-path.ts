@@ -1,3 +1,6 @@
+import { classifyPendingTurn, confirmationBelongsToProposal } from "./conversation-turn.ts";
+import { structuredPlanEligible } from "./structured-plan.ts";
+
 export type StepState = "en_attente" | "en_cours" | "terminee" | "suspendue";
 
 export type TaskStep = {
@@ -54,11 +57,19 @@ export function resumeKind(text: string): ResumeKind | null {
   if (!raw || raw.length > 160) return null;
   if (/^fiche\s*:/i.test(raw)) return null;
   if (raw.endsWith("?")) return null;
-  if (QUESTION.test(raw) || NEW_WRITE.test(raw)) return null;
-  const folded = fold(raw.replace(/[.!]+$/g, ""));
-  if (/^(oui|ok|okay|d accord|dac|c est bon|confirme|je confirme|valide|je valide|yes)$/.test(folded)) return "oui";
-  if (/^(non|no|annule|annuler|pas ca|pas bon)$/.test(folded)) return "non";
+  if (QUESTION.test(raw) || NEW_WRITE.test(raw) || structuredPlanEligible(raw)) return null;
+  if (/\b(ouvr\w*|nouveau\s+clients?|nouvelle\s+cliente|nouveau\s+projets?|nouveau\s+dossiers?)\b/i.test(raw)) return null;
+  const turn = classifyPendingTurn(raw);
+  if (turn === "confirm") return "oui";
+  if (turn === "reject") return "non";
+  if (turn === "new_intent" || turn === "correction") return null;
   return "valeur";
+}
+
+/** Une proposition en attente prend la confirmation. Sans proposition, le parcours reprend. */
+export function resumeSuspendedTask(text: string, proposalPending: boolean): ResumeKind | null {
+  if (confirmationBelongsToProposal(text, proposalPending)) return null;
+  return resumeKind(text);
 }
 
 export function cleanAnswer(text: string): string {

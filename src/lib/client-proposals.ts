@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { nameKey, type PartyInput } from "@/domain/catalog";
+import { resolveRecordTarget, storedClientForDraft } from "@/domain/conversation-turn";
 import { CLIENT_FIELD_LABELS, fieldChangeSummary } from "@/domain/record-journal";
 import {
   displayName,
@@ -17,7 +18,7 @@ import {
   type ClientDraft,
   type ClientKind,
 } from "@/domain/client-file";
-import { mentionedNames, sourceLabel, uniqueNameMatch } from "@/domain/knowledge";
+import { sourceLabel } from "@/domain/knowledge";
 import { withChangeSource } from "@/lib/change-source";
 import { syncPrimaryAddress } from "@/lib/addresses";
 import { attachOrganization } from "@/lib/organizations";
@@ -38,24 +39,30 @@ const PATHS = [
 
 export type ProposalView = {
   reply: string;
-  proposal: { fields: Array<{ label: string; value: string }> };
+  proposal: { fields: Array<{ label: string; value: string }>; confirmable?: boolean };
 };
 
-export async function openClientProposal(draft: ClientDraft, conversationId: string): Promise<ProposalView> {
+export async function openClientProposal(
+  draft: ClientDraft,
+  conversationId: string,
+  options?: { replacePending?: boolean },
+): Promise<ProposalView> {
   const scope = pendingInThread(conversationId);
   if (!scope) {
     return { reply: "Le fil est inconnu. Rien n’est enregistré.", proposal: { fields: [] } };
   }
   const clients = await prisma.client.findMany({ take: 500 });
-  const matchName = uniqueNameMatch(displayName(draft), clients.map((client) => client.name));
+  const matchName = storedClientForDraft(displayName(draft), clients.map((client) => client.name));
   const existing = matchName ? clients.find((client) => client.name === matchName) ?? null : null;
   const ready = existing
     ? mergeKnownClient(clientToDraft(existing), draft)
     : qualifyDraft({ ...draft, mode: "create" });
-  await prisma.clientProposal.updateMany({
-    where: { status: "en_attente", conversationId: scope.conversationId },
-    data: { status: "remplacee" },
-  });
+  if (options?.replacePending !== false) {
+    await prisma.clientProposal.updateMany({
+      where: { status: "en_attente", conversationId: scope.conversationId },
+      data: { status: "remplacee" },
+    });
+  }
   await prisma.clientProposal.create({
     data: {
       status: "en_attente",
@@ -98,6 +105,12 @@ export async function confirmCurrentProposal(conversationId: string): Promise<{
     where: { id: row.id, status: "en_attente", conversationId: scope.conversationId },
     data: { status: "confirmee", validatedAt: new Date() },
   });
+  const left = await prisma.clientProposal.count({
+    where: { status: "en_attente", conversationId: scope.conversationId },
+  });
+  if (left > 0) {
+    return { ok: true, summary: `${saved.summary} Une autre proposition reste en attente.` };
+  }
   return saved;
 }
 
@@ -107,15 +120,15 @@ export async function proposeChangeFromMessage(text: string, conversationId: str
   sources: Array<{ label: string; title: string }>;
 } | null> {
   const clients = await prisma.client.findMany({ take: 500, orderBy: { name: "asc" } });
-  const names = mentionedNames(text, clients.map((client) => client.name));
-  if (names.length === 0) return null;
-  if (names.length > 1) {
+  const target = resolveRecordTarget(text, clients.map((client) => client.name));
+  if (target.status === "none") return null;
+  if (target.status === "ambiguous") {
     return {
-      reply: `Plusieurs fiches correspondent : ${names.join(", ")}. Précisez le nom complet. Rien n’est enregistré.`,
-      sources: names.map((name) => ({ label: sourceLabel("client"), title: name })),
+      reply: `Plusieurs fiches correspondent : ${target.names.join(", ")}. Précisez le nom complet. Rien n’est enregistré.`,
+      sources: target.names.map((name) => ({ label: sourceLabel("client"), title: name })),
     };
   }
-  const client = clients.find((item) => item.name === names[0]);
+  const client = clients.find((item) => item.name === target.name);
   if (!client) return null;
   const before = clientToDraft(client);
   const revised = reviseDraft(before, text);
@@ -128,7 +141,11 @@ export async function proposeChangeFromMessage(text: string, conversationId: str
       sources,
     };
   }
-  const opened = await openClientProposal(revised.draft, conversationId);
+  const pending = await currentProposal(conversationId);
+  const pendingName = pending ? displayName(pending) : "";
+  const opened = await openClientProposal(revised.draft, conversationId, {
+    replacePending: !pendingName || nameKey(pendingName) === nameKey(client.name),
+  });
   const delta = fieldChangeSummary(clientFieldMap(before), clientFieldMap(revised.draft), CLIENT_FIELD_LABELS);
   return {
     reply: [`D’après la fiche enregistrée.`, delta, opened.reply].filter(Boolean).join("\n"),
@@ -146,14 +163,14 @@ export async function proposeFromParty(
 ): Promise<ProposalView | { clarify: string }> {
   if (command.type === "update_client") {
     const clients = await prisma.client.findMany({ take: 500 });
-    const exact = clients.find((client) => nameKey(client.name) === nameKey(command.party.name));
-    const hits = mentionedNames(command.party.name, clients.map((client) => client.name));
-    if (!exact && hits.length > 1) {
+    const exact = storedClientForDraft(command.party.name, clients.map((client) => client.name));
+    const hits = resolveRecordTarget(command.party.name, clients.map((client) => client.name));
+    if (!exact && hits.status === "ambiguous") {
       return {
-        clarify: `Plusieurs fiches correspondent : ${hits.join(", ")}. Précisez le nom complet. Rien n’est enregistré.`,
+        clarify: `Plusieurs fiches correspondent : ${hits.names.join(", ")}. Précisez le nom complet. Rien n’est enregistré.`,
       };
     }
-    const matchName = exact?.name ?? (hits.length === 1 ? hits[0] : null);
+    const matchName = exact ?? (hits.status === "one" ? hits.name : null);
     const existing = matchName ? clients.find((client) => client.name === matchName) ?? null : null;
     if (!existing) {
       const draft = draftFromKnownFields(command.party, "create");

@@ -1,6 +1,12 @@
 import { isEmbedOnlyModel, isRerankModel } from "@/domain/agent";
 import { nameKey, parseCatalogCommand, type CatalogCommand } from "@/domain/catalog";
 import {
+  clarificationMayConfirm,
+  classifyPendingTurn,
+  PENDING_TURN_CLARIFICATION,
+  revisesPendingDraft,
+} from "@/domain/conversation-turn";
+import {
   enrichmentOwnsTurn,
   identifyClient,
   isNewClientBrief,
@@ -26,7 +32,7 @@ import {
 } from "@/domain/structured-plan";
 import { openBusinessPlanProposal } from "@/lib/business-plan-proposals";
 import { claimInboxItem } from "@/lib/inbox-entry";
-import { confirmLatestWrite, openCatalogProposal, rejectLatestWrite } from "@/lib/catalog-proposals";
+import { confirmLatestWrite, openCatalogProposal, pendingProposalRoster, rejectLatestWrite } from "@/lib/catalog-proposals";
 import {
   currentProposal,
   openClientProposal,
@@ -59,7 +65,7 @@ import { absentReply, decideFree, intentCatalog, type IntentDecision, type Inten
 import {
   nextOverrides,
   pathLine,
-  resumeKind,
+  resumeSuspendedTask,
   taskSteps,
   type StoredTask,
 } from "@/domain/task-path";
@@ -144,7 +150,8 @@ export async function POST(request: Request) {
 
   const stored = await loadTask(conversationId);
   if (!correction && stored?.status === "suspendue" && intentCatalog.some((item) => item.id === stored.intent)) {
-    const kind = resumeKind(parsed.text);
+    const roster = await pendingProposalRoster(conversationId);
+    const kind = resumeSuspendedTask(parsed.text, roster.ids.length > 0);
     const moved = kind ? nextOverrides(stored.overrides, stored.valeurs, stored.field, kind, parsed.text, stored.proposed) : null;
     const accept = Boolean(moved?.kept);
     const refuse = kind === "non" && Boolean(stored.proposed);
@@ -657,21 +664,34 @@ async function answerDirectly(text: string, conversationId: string, inboxItemId:
     return { reply: question, model: null, source: "dossier" as const };
   }
 
-  if (pending && !isNewClientBrief(text)) {
-    const revised = reviseDraft(pending, text);
-    if (!revised.changed) {
-      return {
-        reply:
-          "Je n’ai pas identifié de champ à corriger. Précisez-le, par exemple « le téléphone est le 06 98 76 54 32 ».",
-        model: null,
-        source: "proposition" as const,
-        proposal: { fields: proposalFields(pending) },
-      };
+  if (pending) {
+    const turn = classifyPendingTurn(text);
+    if (revisesPendingDraft(turn)) {
+      const revised = reviseDraft(pending, text);
+      if (!revised.changed) return pendingClarification(pending, conversationId);
+      return proposalResponse(await openClientProposal(revised.draft, conversationId));
     }
-    return proposalResponse(await openClientProposal(revised.draft, conversationId));
+    if (turn === "new_intent") return null;
+    return pendingClarification(pending, conversationId);
   }
 
   return null;
+}
+
+async function pendingClarification(
+  pending: NonNullable<Awaited<ReturnType<typeof currentProposal>>>,
+  conversationId: string,
+): Promise<DirectReply> {
+  const roster = await pendingProposalRoster(conversationId);
+  return {
+    reply: PENDING_TURN_CLARIFICATION,
+    model: null,
+    source: "proposition",
+    proposal: {
+      fields: proposalFields(pending),
+      confirmable: clarificationMayConfirm(roster.clientId, roster.ids),
+    },
+  };
 }
 
 async function proposalFromCommand(

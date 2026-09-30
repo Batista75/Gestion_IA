@@ -1,4 +1,5 @@
 import { plainLabel } from "./catalog.ts";
+import { classifyPendingTurn } from "./conversation-turn.ts";
 import { explicitClientCreation } from "./structured-plan.ts";
 import type { AgentIntent } from "./knowledge.ts";
 
@@ -214,6 +215,43 @@ export function identifyClient(text: string): ClientDraft | null {
   return draft;
 }
 
+function correctionTargets(comment: string): Set<string> {
+  const folded = fold(comment);
+  const targets = new Set<string>();
+  if (/\b(telephone|tel)\b/.test(folded)) targets.add("phone");
+  if (/\b(e-?mail|courriel|mail)\b/.test(folded)) targets.add("email");
+  const street = /\b\d{1,5}\s+(?:bis\s+|ter\s+)?(?:rue|avenue|boulevard|bd|chemin|impasse|place|allee|route)\b/.test(folded);
+  if (/\badresse\b/.test(folded) || (/\bplutot\b/.test(folded) && street)) {
+    targets.add("address");
+    targets.add("postalCode");
+    targets.add("city");
+  }
+  if (/\bcontacts?\b/.test(folded)) {
+    targets.add("contactName");
+    targets.add("contactRole");
+  }
+  if (/(?:informations?|pr[eé]cision|notes?)\s*(?:sur [^,:]{0,80})?\s*[:：]/i.test(comment)) {
+    targets.add("notes");
+  }
+  if (
+    /\bparticuliers?\b|\bmadame\b|\bmme\b|\bmonsieur\b|\bentreprises?\b|\bsociete\b|\bcompany\b|\bgmbh\b|\bsas\b|\bsarl\b|\bsasu\b|\bltd\b|\bllc\b|\boyj?\b/.test(
+      folded,
+    )
+  ) {
+    targets.add("kind");
+  }
+  if (/\benseigne\b/.test(folded)) targets.add("tradeName");
+  if (/\bpays\b/.test(folded)) targets.add("country");
+  if (/\bsiret\b/.test(folded)) {
+    targets.add("siret");
+    targets.add("siren");
+  } else if (/\bsiren\b/.test(folded)) {
+    targets.add("siren");
+  }
+  if (/\b(tva|vat)\b/.test(folded)) targets.add("vatNumber");
+  return targets;
+}
+
 export function reviseDraft(
   current: ClientDraft,
   comment: string,
@@ -242,9 +280,11 @@ export function reviseDraft(
     "registration",
     "notes",
   ] as const;
+  const targets = correctionTargets(comment);
   let changed = false;
   for (const key of keys) {
-    if (key === "kind") continue;
+    if (!targets.has(key)) continue;
+    if (key === "kind" || key === "legalName" || key === "firstName" || key === "lastName" || key === "civility") continue;
     const value = found[key];
     if (typeof value === "string" && value && value !== current[key]) {
       if (
@@ -260,7 +300,7 @@ export function reviseDraft(
       changed = true;
     }
   }
-  if (found.kind && found.kind !== current.kind) {
+  if (targets.has("kind") && found.kind && found.kind !== current.kind) {
     next.kind = found.kind;
     changed = true;
   }
@@ -270,15 +310,9 @@ export function reviseDraft(
 export function readConfirmation(
   text: string,
 ): "confirm" | "reject" | "comment" {
-  const folded = fold(text.trim().replace(/[.!]+$/g, ""));
-  if (
-    /^(oui|ok|okay|d accord|dac|c est bon|c est ok|confirme|je confirme|enregistrer|enregistre|valide|je valide|parfait|yes)$/.test(
-      folded,
-    )
-  ) {
-    return "confirm";
-  }
-  if (/^(non|no|annule|annuler|pas ca|pas bon)$/.test(folded)) return "reject";
+  const turn = classifyPendingTurn(text);
+  if (turn === "confirm") return "confirm";
+  if (turn === "reject") return "reject";
   return "comment";
 }
 
@@ -467,6 +501,10 @@ function applyCountry(source: string, draft: ClientDraft) {
 }
 
 function applyIdentity(source: string, draft: ClientDraft) {
+  const head = source.split(/[:：]/)[0] ?? source;
+  if (/[:：]/.test(source) && /\b(t[ée]l[ée]phones?|tel|adresses?|e-?mails?|courriels?|mails?)\b/i.test(head)) {
+    return;
+  }
   const trade = source.match(/enseigne\s+([^,]+)/i);
   if (trade) draft.tradeName = clean(trade[1] ?? "");
   if (!isNewClientBrief(source) && !/^[^:]{0,40}:/.test(source)) return;
@@ -487,6 +525,15 @@ function applyIdentity(source: string, draft: ClientDraft) {
 }
 
 function applyAddress(source: string, draft: ClientDraft) {
+  const street = source.match(
+    /\b(\d{1,5}\s+(?:bis\s+|ter\s+)?(?:rue|avenue|boulevard|bd|chemin|impasse|place|all[ée]e|route|quai|cours|voie|sentier|street|road|lane)\b[^,.;\n]*)/i,
+  );
+  if (street) {
+    draft.address = clean(street[1] ?? "");
+    const after = source.slice((street.index ?? 0) + street[0].length);
+    const city = after.match(/^\s*,\s*([A-Za-zÀ-ÿ][^,.;\n]{1,40})/);
+    if (city && !/^\d/.test(city[1] ?? "") && !draft.city) draft.city = titleWord(clean(city[1] ?? ""));
+  }
   const parts = source.split(/[,\n]/);
   for (const part of parts) {
     const segment = part.trim().replace(/^si[èe]ge\s+/i, "");
@@ -498,7 +545,7 @@ function applyAddress(source: string, draft: ClientDraft) {
       continue;
     }
     if (
-      /rue|avenue|boulevard|impasse|chemin|street|stra(?:ss|ß)e|strasse|route|place|all[ée]e|katu|tie|kuja|polku|gatan|vej|straat|road|lane/i.test(
+      /(?:\b(?:rue|avenue|boulevard|impasse|chemin|street|route|place|all[ée]e|road|lane)\b|stra(?:ss|ß)e|katu|tie|kuja|polku|gatan|vej|straat)/i.test(
         segment,
       )
     ) {
