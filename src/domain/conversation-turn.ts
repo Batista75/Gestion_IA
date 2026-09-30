@@ -80,6 +80,8 @@ export function readFieldFocus(text: string): FieldFocus | null {
     if (!subject || isGenericSubject(subject)) return { kind: "draft", subject: null, value };
     return { kind: "named", subject, value };
   }
+  const positioned = readPositionedFocus(raw);
+  if (positioned) return positioned;
   const supplied = raw.match(
     new RegExp(
       `\\b(?:ajoute\\w*|compl[eè]te\\w*)\\s+(?:(?:aussi|également|egalement|encore|avec)\\s+)?(?:l['’]|le\\s+|la\\s+)?${FIELD}\\b(?:\\s+avec)?\\s+(.+)$`,
@@ -114,6 +116,14 @@ export function resolveUpdateTarget(text: string, names: string[]): RecordTarget
   if (focus?.kind === "draft") return { status: "none" };
   if (focus?.kind === "named") return resolveRecordTarget(focus.subject ?? "", names);
   return resolveRecordTarget(textWithoutStructuredValues(text), names);
+}
+
+/** Un sujet nommé qui ne correspond à aucune fiche. Le brouillon courant n’est pas repris. */
+export function unresolvedNamedTarget(text: string, names: string[]): string | null {
+  const focus = readFieldFocus(text);
+  if (focus?.kind !== "named" || !focus.subject) return null;
+  if (resolveUpdateTarget(text, names).status !== "none") return null;
+  return `Je ne trouve pas ${focus.subject}. Rien n’a été modifié.`;
 }
 
 /** Une correction qui nomme une fiche en attente ne vise qu’elle. */
@@ -233,6 +243,58 @@ const MARK = "(?::|=|est|c['’]est|devient|par)";
 
 function namesAnotherParty(text: string): boolean {
   return readFieldFocus(text)?.kind === "named";
+}
+
+const UPDATE_VERB = "(?:ajoute\\w*|compl[eè]te\\w*|change\\w*|corrige\\w*|remplace\\w*|mets|mettez)";
+const UPDATE_FILLER = "(?:(?:aussi|également|egalement|encore|avec)\\s+)?";
+const UPDATE_ARTICLE = "(?:l['’]|le\\s+|la\\s+)?";
+
+/** `<verbe> <champ> <valeur> à <cible>` ou `<verbe> <champ> de <cible> <valeur>`. */
+function readPositionedFocus(raw: string): FieldFocus | null {
+  const head = raw.match(
+    new RegExp(`\\b${UPDATE_VERB}\\s+${UPDATE_FILLER}${UPDATE_ARTICLE}${FIELD}\\b\\s*(.*)$`, "i"),
+  );
+  if (!head) return null;
+  const tail = (head[1] ?? "").trim();
+  if (!tail) return null;
+  const trailing = tail.match(/^(.+?)\s+(?:à|a)\s+(.+)$/i);
+  if (trailing) {
+    const value = cleanValue(trailing[1] ?? "");
+    const subject = cleanValue(trailing[2] ?? "");
+    if (value && subject && isStructuredValue(value) && !isGenericSubject(subject)) {
+      return { kind: "named", subject, value };
+    }
+  }
+  const leading = tail.match(/^(?:de|du|des|d['’])\s+(.+)$/i);
+  if (!leading) return null;
+  const split = splitSubjectAndValue(leading[1] ?? "");
+  if (!split) return null;
+  if (isGenericSubject(split.subject)) return { kind: "draft", subject: null, value: split.value };
+  return { kind: "named", subject: split.subject, value: split.value };
+}
+
+function splitSubjectAndValue(rest: string): { subject: string; value: string } | null {
+  const patterns = [
+    /^(.*?)(?:\s+avec\s+|\s*[:：=]\s*|\s+)(\+?\d(?:[\s./-]*\d){9,})$/i,
+    /^(.*?)(?:\s+avec\s+|\s*[:：=]\s*|\s+)([^\s@]+@[^\s@]+\.[^\s@]+)$/i,
+    /^(.*?)(?:\s+avec\s+|\s*[:：=]\s*|\s+)(\d{1,5}\s+\S.*)$/i,
+  ];
+  for (const pattern of patterns) {
+    const match = rest.trim().match(pattern);
+    if (!match) continue;
+    const subject = cleanValue(match[1] ?? "");
+    const value = cleanValue(match[2] ?? "");
+    if (!subject || !isStructuredValue(value)) continue;
+    return { subject, value };
+  }
+  return null;
+}
+
+function isStructuredValue(value: string): boolean {
+  if (/^\+?\d(?:[\s./-]*\d){9,}$/.test(value)) return true;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return true;
+  const spans = addressValueSpans(value);
+  return spans.length === 1 && cleanValue(spans[0] ?? "") === cleanValue(value);
 }
 
 function isGenericSubject(subject: string): boolean {

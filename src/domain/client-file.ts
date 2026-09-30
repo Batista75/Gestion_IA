@@ -1,5 +1,5 @@
 import { plainLabel } from "./catalog.ts";
-import { classifyPendingTurn } from "./conversation-turn.ts";
+import { classifyPendingTurn, readFieldFocus } from "./conversation-turn.ts";
 import { explicitClientCreation } from "./structured-plan.ts";
 import type { AgentIntent } from "./knowledge.ts";
 
@@ -257,7 +257,8 @@ export function reviseDraft(
   comment: string,
 ): { draft: ClientDraft; changed: boolean } {
   const next = { ...current, missing: [], vatDeduced: false };
-  const found = extractDraft(comment);
+  const focus = readFieldFocus(comment);
+  const found = extractDraft(focus?.kind === "named" && focus.value ? focus.value : comment);
   const keys = [
     "kind",
     "civility",

@@ -7,6 +7,7 @@ import {
   pendingDraftsClarification,
   pendingNamedRevision,
   readFieldFocus,
+  unresolvedNamedTarget,
   PENDING_TURN_CLARIFICATION,
   revisesPendingDraft,
 } from "@/domain/conversation-turn";
@@ -710,12 +711,16 @@ async function answerDirectly(text: string, conversationId: string, inboxItemId:
           }
         }
       }
+      if (named.status === "skip") {
+        const missed = await unresolvedClientTarget(text);
+        if (missed) return missed;
+      }
     }
     if (turn === "new_intent") return null;
     return pendingClarification(pending, conversationId);
   }
 
-  return null;
+  return unresolvedClientTarget(text);
 }
 
 async function pendingClarification(
@@ -999,6 +1004,14 @@ function prefixFacts(reply: string, facts: string): string {
   if (!facts.trim()) return reply;
   if (reply.includes("lus sans la phrase") || reply.includes("Aucun fait n’est tiré de la phrase")) return reply;
   return `${facts}\n${reply}`;
+}
+
+async function unresolvedClientTarget(text: string): Promise<DirectReply | null> {
+  if (readFieldFocus(text)?.kind !== "named") return null;
+  const clients = await prisma.client.findMany({ select: { name: true }, take: 500 });
+  const reply = unresolvedNamedTarget(text, clients.map((row) => row.name));
+  if (!reply) return null;
+  return { reply, model: null, source: "dossier" };
 }
 
 async function directoryNames(): Promise<string[]> {

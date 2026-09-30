@@ -14,6 +14,7 @@ import {
   resolveUpdateTarget,
   revisesPendingDraft,
   storedClientForDraft,
+  unresolvedNamedTarget,
 } from "../src/domain/conversation-turn.ts";
 import { emptyDraft, qualifyDraft, readConfirmation, reviseDraft } from "../src/domain/client-file.ts";
 import { structuredPlanEligible, structuredPlanGate } from "../src/domain/structured-plan.ts";
@@ -298,6 +299,103 @@ test("pour Martin vise Martin", () => {
   const target = resolveUpdateTarget(text, ["Martin", "Dupont", "Paris"]);
   assert.equal(target.status, "one");
   if (target.status === "one") assert.equal(target.name, "Martin");
+});
+
+test("une cible après la valeur vise ce nom", () => {
+  const names = ["Martin", "Dupont", "Paris"];
+  const cases = [
+    ["Ajoute l'adresse 12 rue de Paris à Martin", "12 rue de Paris", "", ""],
+    ["Ajoute l'adresse 12 rue Haute, Paris à Martin", "12 rue Haute", "Paris", ""],
+    ["Ajoute l'adresse 12 rue Haute, 75001 Paris à Martin", "12 rue Haute", "Paris", "75001"],
+  ] as const;
+  for (const [text, address, city, postalCode] of cases) {
+    const focus = readFieldFocus(text);
+    const expectedValue = postalCode ? `${address}, ${postalCode} ${city}` : city ? `${address}, ${city}` : address;
+    assert.equal(focus?.kind, "named", text);
+    assert.equal(focus?.subject, "Martin", text);
+    assert.equal(focus?.value, expectedValue, text);
+    const target = resolveUpdateTarget(text, names);
+    assert.equal(target.status, "one", text);
+    if (target.status === "one") assert.equal(target.name, "Martin");
+    const revised = reviseDraft(pending(), text);
+    assert.equal(revised.draft.legalName, "Dupont");
+    assert.equal(revised.draft.address, address);
+    assert.equal(revised.draft.city, city);
+    assert.equal(revised.draft.postalCode, postalCode);
+    assert.equal(pendingCorrectionDecision(["Dupont"], text), "skip");
+  }
+});
+
+test("une cible entre le champ et la valeur vise ce nom", () => {
+  const names = ["Martin", "Dupont", "Paris"];
+  const phone = "Ajoute le téléphone de Martin 0612345678";
+  const phoneFocus = readFieldFocus(phone);
+  assert.equal(phoneFocus?.kind, "named");
+  assert.equal(phoneFocus?.subject, "Martin");
+  assert.equal(phoneFocus?.value, "0612345678");
+  const phoneTarget = resolveUpdateTarget(phone, names);
+  assert.equal(phoneTarget.status, "one");
+  if (phoneTarget.status === "one") assert.equal(phoneTarget.name, "Martin");
+  assert.match(reviseDraft(pending(), phone).draft.phone, /0612345678/);
+  assert.equal(reviseDraft(pending(), phone).draft.legalName, "Dupont");
+
+  const completed = "Complète le téléphone de Martin avec 0612345678";
+  assert.equal(readFieldFocus(completed)?.subject, "Martin");
+  assert.equal(resolveUpdateTarget(completed, names).status, "one");
+  const changed = "Change le téléphone de Martin : 0612345678";
+  assert.equal(readFieldFocus(changed)?.subject, "Martin");
+  assert.equal(resolveUpdateTarget(changed, names).status, "one");
+
+  const email = "Ajoute l'email de Martin martin@example.fr";
+  const emailFocus = readFieldFocus(email);
+  assert.equal(emailFocus?.kind, "named");
+  assert.equal(emailFocus?.subject, "Martin");
+  assert.equal(emailFocus?.value, "martin@example.fr");
+  const emailTarget = resolveUpdateTarget(email, names);
+  assert.equal(emailTarget.status, "one");
+  if (emailTarget.status === "one") assert.equal(emailTarget.name, "Martin");
+  assert.equal(reviseDraft(pending(), email).draft.email, "martin@example.fr");
+  assert.equal(reviseDraft(pending(), email).draft.legalName, "Dupont");
+});
+
+test("un champ sans cible explicite corrige le brouillon", () => {
+  const current = pending();
+  const phone = "Ajoute le téléphone 0612345678";
+  assert.equal(classifyPendingTurn(phone), "correction");
+  assert.equal(readFieldFocus(phone)?.kind, "draft");
+  assert.equal(resolveUpdateTarget(phone, ["Martin", "Dupont"]).status, "none");
+  assert.match(reviseDraft(current, phone).draft.phone, /0612345678/);
+  assert.equal(reviseDraft(current, phone).draft.legalName, "Dupont");
+  const address = "Ajoute l'adresse 12 rue de Paris";
+  assert.equal(classifyPendingTurn(address), "correction");
+  assert.equal(resolveUpdateTarget(address, ["Paris", "Martin", "Dupont"]).status, "none");
+  assert.equal(reviseDraft(current, address).draft.address, "12 rue de Paris");
+  assert.equal(reviseDraft(current, address).draft.legalName, "Dupont");
+});
+
+test("une cible absente ou ambiguë ne choisit pas le brouillon", () => {
+  const phone = "Ajoute le téléphone de Martin 0612345678";
+  assert.equal(resolveUpdateTarget(phone, ["Dupont"]).status, "none");
+  assert.equal(pendingNamedRevision(["Dupont"], phone).status, "skip");
+  assert.equal(pendingCorrectionDecision(["Dupont"], phone), "skip");
+  assert.equal(unresolvedNamedTarget(phone, ["Dupont"]), "Je ne trouve pas Martin. Rien n’a été modifié.");
+  assert.equal(unresolvedNamedTarget(phone, ["Martin", "Dupont"]), null);
+  assert.equal(resolveUpdateTarget(phone, ["Jean Martin", "Paul Martin", "Dupont"]).status, "none");
+  const both = "Ajoute le téléphone de Martin et Dupont 0612345678";
+  const ambiguous = resolveUpdateTarget(both, ["Martin", "Dupont", "Paris"]);
+  assert.equal(ambiguous.status, "ambiguous");
+  if (ambiguous.status === "ambiguous") assert.deepEqual(ambiguous.names, ["Martin", "Dupont"]);
+});
+
+test("une création avec contact ne devient pas une mise à jour", () => {
+  for (const text of [
+    "Ajoute Bernard comme client, adresse 12 rue de Paris",
+    "Ajoute Bernard comme client, téléphone 0612345678",
+  ]) {
+    assert.equal(readFieldFocus(text), null);
+    assert.equal(classifyPendingTurn(text), "new_intent");
+    assert.equal(structuredPlanEligible(text), true);
+  }
 });
 
 test("l’adresse d’une autre fiche vise le sujet", () => {
