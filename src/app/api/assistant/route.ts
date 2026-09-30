@@ -3,10 +3,15 @@ import { nameKey, parseCatalogCommand, type CatalogCommand } from "@/domain/cata
 import {
   clarificationMayConfirm,
   classifyPendingTurn,
+  pendingCorrectionDecision,
+  pendingDraftsClarification,
+  pendingNamedRevision,
+  readFieldFocus,
   PENDING_TURN_CLARIFICATION,
   revisesPendingDraft,
 } from "@/domain/conversation-turn";
 import {
+  displayName,
   enrichmentOwnsTurn,
   identifyClient,
   isNewClientBrief,
@@ -35,6 +40,7 @@ import { claimInboxItem } from "@/lib/inbox-entry";
 import { confirmLatestWrite, openCatalogProposal, pendingProposalRoster, rejectLatestWrite } from "@/lib/catalog-proposals";
 import {
   currentProposal,
+  listPendingClientProposals,
   openClientProposal,
   proposeChangeFromMessage,
   proposeFromParty,
@@ -667,9 +673,43 @@ async function answerDirectly(text: string, conversationId: string, inboxItemId:
   if (pending) {
     const turn = classifyPendingTurn(text);
     if (revisesPendingDraft(turn)) {
-      const revised = reviseDraft(pending, text);
+      const rows = await listPendingClientProposals(conversationId);
+      const names = rows.map((row) => displayName(row.draft));
+      if (pendingCorrectionDecision(names, text) === "clarify") {
+        return {
+          reply: pendingDraftsClarification(names),
+          model: null,
+          source: "proposition" as const,
+        };
+      }
+      const current = rows.length === 1 ? rows[0] : null;
+      const revised = reviseDraft(current?.draft ?? pending, text);
       if (!revised.changed) return pendingClarification(pending, conversationId);
-      return proposalResponse(await openClientProposal(revised.draft, conversationId));
+      return proposalResponse(
+        await openClientProposal(revised.draft, conversationId, current ? { replaceId: current.id } : undefined),
+      );
+    }
+    if (readFieldFocus(text)?.kind === "named") {
+      const rows = await listPendingClientProposals(conversationId);
+      const named = pendingNamedRevision(rows.map((row) => displayName(row.draft)), text);
+      if (named.status === "clarify") {
+        return {
+          reply: pendingDraftsClarification(named.names),
+          model: null,
+          source: "proposition" as const,
+        };
+      }
+      if (named.status === "revise") {
+        const row = rows.find((item) => displayName(item.draft) === named.name);
+        if (row) {
+          const revised = reviseDraft(row.draft, text);
+          if (revised.changed) {
+            return proposalResponse(
+              await openClientProposal(revised.draft, conversationId, { replaceId: row.id }),
+            );
+          }
+        }
+      }
     }
     if (turn === "new_intent") return null;
     return pendingClarification(pending, conversationId);

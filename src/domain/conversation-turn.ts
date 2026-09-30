@@ -1,6 +1,6 @@
 import { nameKey } from "./catalog.ts";
 import { understandIntent } from "./knowledge.ts";
-import { structuredPlanEligible } from "./structured-plan.ts";
+import { addressSegments, addressValueSpans, structuredPlanEligible } from "./structured-plan.ts";
 
 export type PendingTurn = "confirm" | "reject" | "correction" | "new_intent" | "unknown";
 
@@ -48,6 +48,127 @@ export function clarificationMayConfirm(displayedId: string | null, pendingIds: 
   return pendingIds[0] === displayedId;
 }
 
+export type FieldFocus = {
+  kind: "draft" | "named";
+  subject: string | null;
+  value: string;
+};
+
+export type ProposalLife = {
+  status: string;
+  validatedAt: string | null;
+};
+
+/** Sépare le sujet d’une demande de champ et la valeur qui suit. */
+export function readFieldFocus(text: string): FieldFocus | null {
+  const raw = text.trim().replace(/[^\S\n]+/g, " ");
+  if (!raw) return null;
+  const introduced = raw.match(
+    new RegExp(`^Pour\\s+([^,\\n]+?)\\s*,\\s*(?:le |la |l['’])?${FIELD}\\b\\s*${MARK}\\s+(.+)$`, "i"),
+  );
+  if (introduced) {
+    const subject = cleanValue(introduced[1] ?? "");
+    const value = cleanValue(introduced[2] ?? "");
+    if (subject && !isGenericSubject(subject)) return { kind: "named", subject, value };
+  }
+  const pronoun = raw.match(new RegExp(`\\b(?:son|sa|ses)\\s+${FIELD}\\b(?:\\s*${MARK})?\\s*(.*)$`, "i"));
+  if (pronoun) return { kind: "draft", subject: null, value: cleanValue(pronoun[1] ?? "") };
+  const named = raw.match(new RegExp(`\\b${FIELD}\\b\\s+(?:de|du|des|d['’])\\s*(.+?)\\s+${MARK}\\s+(.+)$`, "i"));
+  if (named) {
+    const subject = cleanValue(named[1] ?? "");
+    const value = cleanValue(named[2] ?? "");
+    if (!subject || isGenericSubject(subject)) return { kind: "draft", subject: null, value };
+    return { kind: "named", subject, value };
+  }
+  const supplied = raw.match(
+    new RegExp(
+      `\\b(?:ajoute\\w*|compl[eè]te\\w*)\\s+(?:(?:aussi|également|egalement|encore|avec)\\s+)?(?:l['’]|le\\s+|la\\s+)?${FIELD}\\b(?:\\s+avec)?\\s+(.+)$`,
+      "i",
+    ),
+  );
+  if (supplied) return { kind: "draft", subject: null, value: cleanValue(supplied[1] ?? "") };
+  const bare = raw.match(new RegExp(`\\b${FIELD}\\b\\s*${MARK}\\s+(.+)$`, "i"));
+  if (bare) return { kind: "draft", subject: null, value: cleanValue(bare[1] ?? "") };
+  const verb = raw.match(
+    new RegExp(
+      `\\b(?:corrige\\w*|remplace\\w*|change\\w*)\\b[\\s\\S]{0,40}?\\b${FIELD}\\b(?:\\s+(?:de|du|des|d['’])\\s*(.+?))?\\s*${MARK}\\s+(.+)$`,
+      "i",
+    ),
+  );
+  if (verb) {
+    const subject = cleanValue(verb[1] ?? "");
+    const value = cleanValue(verb[2] ?? "");
+    if (subject && !isGenericSubject(subject)) return { kind: "named", subject, value };
+    return { kind: "draft", subject: null, value };
+  }
+  const placed = raw.match(/\b(?:mets|mettez)\s+(?:l['’]|le\s+|la\s+)?adresse\s+(.+)$/i);
+  if (placed) return { kind: "draft", subject: null, value: cleanValue(placed[1] ?? "") };
+  const rather = raw.match(/\bplut[oô]t\b\s+(.+)$/i);
+  if (rather && hasStreet(rather[1] ?? "")) return { kind: "draft", subject: null, value: cleanValue(rather[1] ?? "") };
+  return null;
+}
+
+/** La cible d’une mise à jour est le sujet. Un nom dans la valeur n’est pas une cible. */
+export function resolveUpdateTarget(text: string, names: string[]): RecordTarget {
+  const focus = readFieldFocus(text);
+  if (focus?.kind === "draft") return { status: "none" };
+  if (focus?.kind === "named") return resolveRecordTarget(focus.subject ?? "", names);
+  return resolveRecordTarget(textWithoutStructuredValues(text), names);
+}
+
+/** Une correction qui nomme une fiche en attente ne vise qu’elle. */
+export function pendingNamedRevision(
+  names: string[],
+  text: string,
+): { status: "revise"; name: string } | { status: "clarify"; names: string[] } | { status: "skip" } {
+  const focus = readFieldFocus(text);
+  if (focus?.kind !== "named") return { status: "skip" };
+  const target = resolveRecordTarget(focus.subject ?? "", names);
+  if (target.status === "one") return { status: "revise", name: target.name };
+  if (target.status === "ambiguous") return { status: "clarify", names: target.names };
+  return { status: "skip" };
+}
+
+/** Une correction sans nom, face à plusieurs fiches, ne choisit pas. */
+export function pendingCorrectionDecision(names: string[], text: string): "revise" | "clarify" | "skip" {
+  if (!revisesPendingDraft(classifyPendingTurn(text))) return "skip";
+  if (names.length > 1) return "clarify";
+  if (names.length === 1) return "revise";
+  return "skip";
+}
+
+export function pendingDraftsClarification(names: string[]): string {
+  const clean = names.map((name) => name.trim()).filter(Boolean);
+  const head = clean.length === 2 ? "Deux" : String(clean.length);
+  return `${head} fiches sont en attente : ${joinNames(clean)}. Précisez celle que vous souhaitez corriger. Rien n’a été modifié.`;
+}
+
+/** Un refus ne réécrit une proposition que si elle est encore en attente. */
+export function rejectPendingProposal(row: ProposalLife, validatedAt: string): { row: ProposalLife; changed: boolean } {
+  if (row.status !== "en_attente") return { row, changed: false };
+  return { row: { status: "rejetee", validatedAt }, changed: true };
+}
+
+export function proposalCanBeConfirmed(status: string): boolean {
+  return status === "en_attente";
+}
+
+/** Remplace la proposition révisée, ou celle du même nom exact. Les autres restent. */
+export function proposalsReplacedBy(input: {
+  replaceId: string | null;
+  nextName: string;
+  pending: Array<{ id: string; name: string }>;
+}): string[] {
+  const key = nameKey(input.nextName);
+  const ids: string[] = [];
+  if (input.replaceId) ids.push(input.replaceId);
+  for (const row of input.pending) {
+    if (ids.includes(row.id)) continue;
+    if (key && nameKey(row.name) === key) ids.push(row.id);
+  }
+  return ids;
+}
+
 export function resolveRecordTarget(text: string, names: string[]): RecordTarget {
   const folded = fold(text);
   const whole = nameKey(text.replace(/[.!?,:;]+$/g, ""));
@@ -93,8 +214,11 @@ function isIndependentIntent(text: string): boolean {
 }
 
 function isDraftCorrection(text: string): boolean {
+  const focus = readFieldFocus(text);
+  if (focus?.kind === "named") return false;
+  if (focus?.kind === "draft") return true;
   const folded = fold(text);
-  if (namesAnotherParty(folded)) return false;
+  if (namesAnotherParty(text)) return false;
   if (/\b(son|sa|ses)\b/.test(folded) && hasFieldWord(folded)) return true;
   if (/\b(corrig\w*|remplac\w*|mets?\b|mettez|change\w*)\b/.test(folded) && hasFieldWord(folded)) return true;
   if (/\bplutot\b/.test(folded) && (hasFieldWord(folded) || hasStreet(text))) return true;
@@ -104,8 +228,27 @@ function isDraftCorrection(text: string): boolean {
   return false;
 }
 
-function namesAnotherParty(folded: string): boolean {
-  return /\b(?:telephone|tel|adresse|e-?mail|mail)\b[^.]{0,40}\b(?:de|du|d')\s+(?!son\b|sa\b|ses\b)/.test(folded);
+const FIELD = "(?:adresses?|t[eé]l[eé]phones?|t[eé]l|e-?mails?|courriels?|mails?)";
+const MARK = "(?::|=|est|c['’]est|devient|par)";
+
+function namesAnotherParty(text: string): boolean {
+  return readFieldFocus(text)?.kind === "named";
+}
+
+function isGenericSubject(subject: string): boolean {
+  const folded = fold(subject).replace(/['’]/g, " ").replace(/\s+/g, " ").trim();
+  return /^(?:le |la |ce |cette |son |sa |ses )?client$/.test(folded)
+    || /^(?:le |la |ce |cette |son |sa |ses )?fiche(?: client)?$/.test(folded);
+}
+
+function cleanValue(value: string): string {
+  return value.replace(/[.!?\s]+$/g, "").trim();
+}
+
+function joinNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  if (names.length === 2) return `${names[0]} et ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`;
 }
 
 function hasFieldWord(folded: string): boolean {
@@ -113,7 +256,18 @@ function hasFieldWord(folded: string): boolean {
 }
 
 function hasStreet(text: string): boolean {
-  return /\b\d{1,5}\s+(?:bis\s+|ter\s+)?(?:rue|avenue|boulevard|bd|chemin|impasse|place|allee|route)\b/i.test(text);
+  return addressSegments(text).length > 0 || /\b\d{1,5}\s+(?:bis\s+|ter\s+)?(?:rue|avenue|boulevard|bd|chemin|impasse|place|allee|route)\b/i.test(text);
+}
+
+/** Retire l’adresse complète, le téléphone et l’e-mail avant une recherche de nom sur la phrase entière. */
+function textWithoutStructuredValues(text: string): string {
+  let next = text;
+  for (const segment of addressValueSpans(text)) {
+    if (segment) next = next.replace(segment, " ");
+  }
+  next = next.replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, " ");
+  next = next.replace(/\+?\d(?:[\s./-]*\d){9,}/g, " ");
+  return next;
 }
 
 type NameSpan = { name: string; start: number; end: number };

@@ -192,12 +192,7 @@ export function detectStructuredContactHints(message: string): ContactHints {
   for (const number of phoneCandidates(message)) {
     if (!phones.includes(number)) phones.push(number);
   }
-  const addresses: string[] = [];
-  for (const segment of addressSegments(message)) {
-    const address = anchorText(segment);
-    if (address && !addresses.includes(address)) addresses.push(address);
-  }
-  return { emails, phones, addresses };
+  return { emails, phones, addresses: recognizedAddresses(message) };
 }
 
 export function findOmittedStructuredFields(message: string, plan: StructuredPlan): ContactField[] {
@@ -527,16 +522,39 @@ function phoneCandidates(message: string): string[] {
 function addressAnchored(message: string, value: string): boolean {
   const needle = anchorText(value);
   if (!needle) return false;
-  return addressSegments(message).some((segment) => anchorText(segment) === needle);
+  return recognizedAddresses(message).includes(needle);
 }
 
-function addressSegments(message: string): string[] {
-  const found: string[] = [];
-  const pattern =
-    /\b\d{1,5}\s+(?:bis\s+|ter\s+)?(?:rue|avenue|boulevard|bd|chemin|impasse|place|all[ée]e|route|quai|cours|voie|sentier)\b[^,.;\n]*/gi;
+function recognizedAddresses(message: string): string[] {
+  const addresses: string[] = [];
+  for (const span of addressValueSpans(message)) {
+    const address = anchorText(span);
+    if (address && !addresses.includes(address)) addresses.push(address);
+  }
+  return addresses;
+}
+
+const STREET =
+  /\b\d{1,5}\s+(?:bis\s+|ter\s+)?(?:rue|avenue|boulevard|bd|chemin|impasse|place|all[ée]e|route|quai|cours|voie|sentier)\b[^,.;\n]*/gi;
+
+export function addressSegments(message: string): string[] {
+  return streetMatches(message).map((item) => item.street);
+}
+
+/** Rue, puis code postal et ville qui suivent immédiatement. Sert à écarter toute la valeur. */
+export function addressValueSpans(message: string): string[] {
+  return streetMatches(message).map((item) => `${item.street}${item.tail}`);
+}
+
+function streetMatches(message: string): Array<{ street: string; tail: string }> {
+  const found: Array<{ street: string; tail: string }> = [];
+  const pattern = new RegExp(STREET.source, "gi");
   let match: RegExpExecArray | null = pattern.exec(message);
   while (match) {
-    found.push(match[0]);
+    const street = match[0] ?? "";
+    const after = message.slice(match.index + street.length);
+    const tail = after.match(/^\s*,\s*(?:\d{4,5}\s+)?[A-Za-zÀ-ÿ][^,.;\n]{0,40}/);
+    found.push({ street, tail: tail?.[0] ?? "" });
     match = pattern.exec(message);
   }
   return found;

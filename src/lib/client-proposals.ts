@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { nameKey, type PartyInput } from "@/domain/catalog";
-import { resolveRecordTarget, storedClientForDraft } from "@/domain/conversation-turn";
+import { proposalsReplacedBy, resolveRecordTarget, resolveUpdateTarget, storedClientForDraft } from "@/domain/conversation-turn";
 import { CLIENT_FIELD_LABELS, fieldChangeSummary } from "@/domain/record-journal";
 import {
   displayName,
@@ -45,7 +45,7 @@ export type ProposalView = {
 export async function openClientProposal(
   draft: ClientDraft,
   conversationId: string,
-  options?: { replacePending?: boolean },
+  options?: { replaceId?: string },
 ): Promise<ProposalView> {
   const scope = pendingInThread(conversationId);
   if (!scope) {
@@ -57,9 +57,21 @@ export async function openClientProposal(
   const ready = existing
     ? mergeKnownClient(clientToDraft(existing), draft)
     : qualifyDraft({ ...draft, mode: "create" });
-  if (options?.replacePending !== false) {
+  const waiting = await prisma.clientProposal.findMany({
+    where: { status: "en_attente", conversationId: scope.conversationId },
+    select: { id: true, payload: true },
+  });
+  const ids = proposalsReplacedBy({
+    replaceId: options?.replaceId ?? null,
+    nextName: displayName(ready),
+    pending: waiting.flatMap((row) => {
+      const stored = asDraft(row.payload);
+      return stored ? [{ id: row.id, name: displayName(stored) }] : [];
+    }),
+  });
+  if (ids.length > 0) {
     await prisma.clientProposal.updateMany({
-      where: { status: "en_attente", conversationId: scope.conversationId },
+      where: { id: { in: ids }, status: "en_attente", conversationId: scope.conversationId },
       data: { status: "remplacee" },
     });
   }
@@ -75,13 +87,36 @@ export async function openClientProposal(
 }
 
 export async function currentProposal(conversationId: string): Promise<ClientDraft | null> {
+  const row = await currentProposalRecord(conversationId);
+  return row?.draft ?? null;
+}
+
+export async function currentProposalRecord(
+  conversationId: string,
+): Promise<{ id: string; draft: ClientDraft } | null> {
   const scope = pendingInThread(conversationId);
   if (!scope) return null;
   const row = await prisma.clientProposal.findFirst({
     where: { status: "en_attente", conversationId: scope.conversationId },
     orderBy: { createdAt: "desc" },
   });
-  return row ? asDraft(row.payload) : null;
+  const draft = row ? asDraft(row.payload) : null;
+  return row && draft ? { id: row.id, draft } : null;
+}
+
+export async function listPendingClientProposals(
+  conversationId: string,
+): Promise<Array<{ id: string; draft: ClientDraft }>> {
+  const scope = pendingInThread(conversationId);
+  if (!scope) return [];
+  const rows = await prisma.clientProposal.findMany({
+    where: { status: "en_attente", conversationId: scope.conversationId },
+    orderBy: { createdAt: "asc" },
+  });
+  return rows.flatMap((row) => {
+    const draft = asDraft(row.payload);
+    return draft ? [{ id: row.id, draft }] : [];
+  });
 }
 
 export async function confirmCurrentProposal(conversationId: string): Promise<{
@@ -120,7 +155,7 @@ export async function proposeChangeFromMessage(text: string, conversationId: str
   sources: Array<{ label: string; title: string }>;
 } | null> {
   const clients = await prisma.client.findMany({ take: 500, orderBy: { name: "asc" } });
-  const target = resolveRecordTarget(text, clients.map((client) => client.name));
+  const target = resolveUpdateTarget(text, clients.map((client) => client.name));
   if (target.status === "none") return null;
   if (target.status === "ambiguous") {
     return {
@@ -141,11 +176,7 @@ export async function proposeChangeFromMessage(text: string, conversationId: str
       sources,
     };
   }
-  const pending = await currentProposal(conversationId);
-  const pendingName = pending ? displayName(pending) : "";
-  const opened = await openClientProposal(revised.draft, conversationId, {
-    replacePending: !pendingName || nameKey(pendingName) === nameKey(client.name),
-  });
+  const opened = await openClientProposal(revised.draft, conversationId);
   const delta = fieldChangeSummary(clientFieldMap(before), clientFieldMap(revised.draft), CLIENT_FIELD_LABELS);
   return {
     reply: [`D’après la fiche enregistrée.`, delta, opened.reply].filter(Boolean).join("\n"),

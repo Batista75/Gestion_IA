@@ -1,7 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { presentCommand, type CatalogCommand } from "@/domain/catalog";
 import { readProvenance, stampProvenance, type FieldConfidence } from "@/domain/provenance";
-import { proposalFields } from "@/domain/client-file";
 import { confirmContractProposal, pendingContractProposal, rejectContractProposal } from "@/lib/contract-reply";
 import {
   confirmInterventionProposal,
@@ -25,7 +24,8 @@ import {
   rejectClaimProposal,
   rejectReturnProposal,
 } from "@/lib/claim-reply";
-import { confirmCurrentProposal, currentProposal, proposeFromParty, type ProposalView } from "@/lib/client-proposals";
+import { rejectPendingProposal } from "@/domain/conversation-turn";
+import { confirmCurrentProposal, proposeFromParty, type ProposalView } from "@/lib/client-proposals";
 import {
   confirmBusinessPlanProposal,
   pendingBusinessPlanProposal,
@@ -163,12 +163,21 @@ export async function rejectLatestWrite(conversationId: string): Promise<{
     revalidatePath("/");
     return { reply: "Rien n’est enregistré. Reformulez la fiche si besoin." };
   }
-  const draft = await currentProposal(scope.conversationId);
-  return {
-    reply:
-      "La fiche n’est pas enregistrée. Indiquez ce qu’il faut changer, par exemple le téléphone, le pays ou la forme juridique.",
-    proposal: draft ? { fields: proposalFields(draft) } : undefined,
-  };
+  if (newest.kind === "client" && client) {
+    const decision = rejectPendingProposal(
+      { status: client.status, validatedAt: null },
+      new Date().toISOString(),
+    );
+    if (decision.changed && decision.row.validatedAt) {
+      await prisma.clientProposal.updateMany({
+        where: { id: client.id, conversationId: scope.conversationId, status: "en_attente" },
+        data: { status: decision.row.status, validatedAt: new Date(decision.row.validatedAt) },
+      });
+      revalidatePath("/");
+    }
+    return { reply: "La proposition a été annulée. Rien n’a été enregistré." };
+  }
+  return { reply: "Il n’y a pas de fiche en attente." };
 }
 
 export async function confirmLatestWrite(conversationId: string): Promise<{ ok: boolean; summary: string }> {

@@ -687,6 +687,57 @@ test("Bernard absent : le téléphone est porté ou signalé", () => {
   assert.deepEqual(omitted.fields, ["phone"]);
 });
 
+test("une adresse avec ville ou code postal est ancrée en entier", () => {
+  const cases = [
+    ["Ajoute DIAG-V3-004 Bernard comme client, adresse 12 rue Haute, Paris", "DIAG-V3-004 Bernard", "12 rue Haute, Paris"],
+    ["Ajoute Bernard comme client, adresse 12 rue Haute, 75001 Paris", "Bernard", "12 rue Haute, 75001 Paris"],
+    ["Ajoute Bernard comme client, adresse 8 avenue Victor Hugo, Lyon", "Bernard", "8 avenue Victor Hugo, Lyon"],
+    ["Ajoute Bernard comme client, adresse 3 chemin de la Gare, 91300 Massy", "Bernard", "3 chemin de la Gare, 91300 Massy"],
+    ["Ajoute Bernard comme client, adresse 12 rue Haute.", "Bernard", "12 rue Haute"],
+  ];
+  for (const [message, name, address] of cases) {
+    const parsed = parseStructuredPlan(
+      plan([{ type: "CREATE_CLIENT", args: { name, address } }]),
+      message,
+    );
+    assert.equal(parsed.ok, true, message);
+    if (!parsed.ok) continue;
+    const translated = translateStructuredPlan(parsed.plan, null, message);
+    assert.equal(translated.kind, "catalog", message);
+    if (translated.kind !== "catalog" || translated.command.type !== "create_client") continue;
+    assert.equal(translated.command.party.address, address);
+  }
+});
+
+test("une adresse avec ville omise reste signalée", () => {
+  const message = "Ajoute Bernard comme client, adresse 12 rue Haute, Paris";
+  const dropped = parseStructuredPlan(plan([{ type: "CREATE_CLIENT", args: { name: "Bernard" } }]), message);
+  assert.equal(dropped.ok, true);
+  if (!dropped.ok) return;
+  const missing = translateStructuredPlan(dropped.plan, null, message);
+  assert.equal(missing.kind, "omitted");
+  if (missing.kind !== "omitted") return;
+  assert.deepEqual(missing.fields, ["address"]);
+});
+
+test("une adresse qui n’est pas celle de la phrase est refusée", () => {
+  const withParis = "Ajoute Bernard comme client, adresse 12 rue Haute, Paris";
+  const streetOnly = "Ajoute Bernard comme client, adresse 12 rue Haute";
+  const refused = [
+    [withParis, "12 rue Haute, Lyon"],
+    [streetOnly, "12 rue Haute, Paris"],
+    [withParis, "15 rue Haute, Paris"],
+    [withParis, "12 rue Haute"],
+  ];
+  for (const [message, address] of refused) {
+    assert.equal(
+      parseStructuredPlan(plan([{ type: "CREATE_CLIENT", args: { name: "Bernard", address } }]), message).ok,
+      false,
+      address,
+    );
+  }
+});
+
 test("Alice absente : l’adresse est portée ou signalée", () => {
   const message = "Ajoute Alice comme client, adresse 12 rue des Lilas.";
   const kept = parseStructuredPlan(
