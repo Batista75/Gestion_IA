@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { structuredPlanEligible, structuredPlanGate } from "../src/domain/structured-plan.ts";
+import { understandIntent } from "../src/domain/knowledge.ts";
 import {
   CLIENT_EXAMPLES,
   asksToEnrichRecord,
+  enrichmentOwnsTurn,
   emptyDraft,
   frenchVat,
   identifyClient,
@@ -163,4 +166,88 @@ test("compléter une entreprise déjà déclarée", () => {
   assert.equal(informed.changed, true);
   assert.match(informed.draft.notes, /Livraison habituelle le jeudi/);
   assert.match(informed.draft.notes, /livraison le mardi/);
+});
+
+test("une fiche en attente absorbe la phrase de recette suivante", () => {
+  const current = qualifyDraft({ ...emptyDraft(), legalName: "Dupont", kind: "entreprise" });
+  const revised = reviseDraft(current, "Ouvre un projet Climatisation pour Dupont.");
+  assert.equal(revised.changed, true);
+  assert.match(revised.draft.notes, /Ouvre un projet Climatisation pour Dupont/);
+});
+
+test("une phrase libre ne devient pas le nom du client", () => {
+  for (const text of [
+    "J'ai un nouveau client Dupont.",
+    "J'ai un nouveau client RECETTE-V3-002 Dupont.",
+    "Ajoute Dupont comme client.",
+    "Je voudrais ajouter Dupont comme client.",
+    "Je voudrais enregistrer Dupont comme nouveau client.",
+  ]) {
+    const draft = identifyClient(text);
+    assert.equal(draft, null);
+    assert.equal(structuredPlanEligible(text), true);
+  }
+});
+
+test("un nom suivi d’une proposition n’est pas une fiche", () => {
+  for (const text of [
+    "Ajoute un client Dupont qui habite Lyon.",
+    "Nouveau client Dupont qui habite Lyon.",
+    "Ajoute le client Dupont avec son fils.",
+    "Crée le client Dupont, son téléphone est 01 23 45 67 89.",
+    "Ajoute un client RECETTE-V3-002 Dupont qui habite Lyon.",
+  ]) {
+    assert.equal(identifyClient(text), null);
+  }
+});
+
+test("Pour et SA restent des noms", () => {
+  const house = identifyClient("Nouveau client : Maison Pour Tous");
+  assert.ok(house);
+  assert.equal(house.legalName, "Maison Pour Tous");
+  const company = identifyClient("Nouveau client : Dupont SA");
+  assert.ok(company);
+  assert.equal(company.legalName, "Dupont SA");
+});
+
+test("un intitulé structuré reste une fiche client", () => {
+  const created = identifyClient("Créer le client : Dupont");
+  assert.ok(created);
+  assert.equal(created.legalName, "Dupont");
+  const labeled = identifyClient("Nouveau client : Atelier Nord");
+  assert.ok(labeled);
+  assert.equal(labeled.legalName, "Atelier Nord");
+  const spoken = identifyClient("Nouveau client Dupont");
+  assert.ok(spoken);
+  assert.equal(spoken.legalName, "Dupont");
+});
+
+test("une création de client avec une coordonnée n’est pas une mise à jour", () => {
+  for (const text of [
+    "Ajoute Bernard comme client, téléphone 01 98 76 54 32.",
+    "Ajoute Alice comme client, adresse 12 rue des Lilas.",
+    "Crée le client Bernard, téléphone 01 98 76 54 32.",
+    "J'ai un nouveau client Bernard, téléphone 01 98 76 54 32.",
+    "Ajoute RECETTE-V3-002 Bernard comme client, téléphone 01 98 76 54 32.",
+    "Ajoute RECETTE-V3-002 Alice comme client, adresse 12 rue des Lilas.",
+  ]) {
+    assert.equal(asksToEnrichRecord(text), false);
+    assert.equal(enrichmentOwnsTurn(text, understandIntent(text)), false);
+    assert.equal(structuredPlanGate(structuredPlanEligible(text), false), "plan");
+  }
+  assert.equal(asksToEnrichRecord("ajoute un contact chez Holzwerk"), true);
+  assert.equal(enrichmentOwnsTurn("ajoute un contact chez Holzwerk", "open"), true);
+});
+
+test("une correction explicite reste une mise à jour de fiche", () => {
+  const phone = "Le téléphone de Dupont est 01 23 45 67 89.";
+  const address = "Mets à jour l'adresse de Dupont : 12 rue des Lilas.";
+  const change = "Change le téléphone de Dupont.";
+  const fix = "Corrige l'adresse du client Dupont.";
+  assert.equal(understandIntent(phone), "change");
+  assert.equal(structuredPlanEligible(phone), false);
+  for (const text of [phone, address, change, fix]) {
+    assert.equal(enrichmentOwnsTurn(text, understandIntent(text)), true);
+    assert.equal(structuredPlanEligible(text), false);
+  }
 });

@@ -1,7 +1,7 @@
 import { isEmbedOnlyModel, isRerankModel } from "@/domain/agent";
-import { parseCatalogCommand, type CatalogCommand } from "@/domain/catalog";
+import { nameKey, parseCatalogCommand, type CatalogCommand } from "@/domain/catalog";
 import {
-  asksToEnrichRecord,
+  enrichmentOwnsTurn,
   identifyClient,
   isNewClientBrief,
   proposalFields,
@@ -15,6 +15,15 @@ import {
 } from "@/domain/ollama-endpoint";
 import { parseBusinessBrief, planIsEmpty } from "@/domain/business-brief";
 import { readInboxItemId } from "@/domain/inbox-entry";
+import {
+  parseStructuredPlan,
+  resolutionName,
+  structuredAttemptOutcome,
+  structuredPlanEligible,
+  structuredPlanGate,
+  translateStructuredPlan,
+  type ContactField,
+} from "@/domain/structured-plan";
 import { openBusinessPlanProposal } from "@/lib/business-plan-proposals";
 import { claimInboxItem } from "@/lib/inbox-entry";
 import { confirmLatestWrite, openCatalogProposal, rejectLatestWrite } from "@/lib/catalog-proposals";
@@ -44,6 +53,7 @@ import {
   type Interpretation,
 } from "@/domain/interpreter";
 import { readModelInterpretation } from "@/lib/interpreter";
+import { readStructuredPlan } from "@/lib/structured-plan-read";
 import { simulateWrite } from "@/domain/simulation";
 import { absentReply, decideFree, intentCatalog, type IntentDecision, type IntentId } from "@/domain/intent-catalog";
 import {
@@ -176,6 +186,21 @@ export async function POST(request: Request) {
   }
 
   const free = decideFree(baseText);
+  const planEligible =
+    !correction && structuredPlanGate(structuredPlanEligible(baseText), free.execution === "absente" && Boolean(free.id)) === "plan";
+  if (planEligible) {
+    const structured = await answerFromStructuredPlan(baseText, conversationId, snapshot, hint.view);
+    if (structuredAttemptOutcome(true, structured !== null) === "propose" && structured) return structured;
+    return streamDirect({
+      conversationId,
+      reply: prefixFacts(
+        `${absentReply({ id: null, execution: "absente", missing: [] })}\n${contextLine(snapshot)}`,
+        await pieceFacts(snapshot),
+      ),
+      source: "regle-metier",
+      step: "Catalogue",
+    });
+  }
   if (correction && free.execution !== "absente") {
     return streamDirect({
       conversationId,
@@ -286,6 +311,159 @@ function stepFor(source: DirectReply["source"]): string {
   if (source === "proposition") return "Proposition à confirmer";
   if (source === "action") return "Enregistrement";
   return "Réponse";
+}
+
+async function answerFromStructuredPlan(
+  text: string,
+  conversationId: string,
+  snapshot: ContextSnapshot,
+  view: string,
+): Promise<Response | null> {
+  const status = await getOllamaStatus();
+  if (!status.ok || !status.defaultModel) return null;
+  const raw = await readStructuredPlan({ model: status.defaultModel, text });
+  if (!raw) return null;
+  const parsed = parseStructuredPlan(raw, text);
+  if (!parsed.ok) return null;
+  const plan = parsed.plan;
+  const provenance = {
+    modelVersion: "ollama" as const,
+    confidence: (plan.confidence ?? []).map((item) => ({ field: item.field, confidence: item.value })),
+  };
+  if (plan.missing.length > 0) {
+    return publishBlocked({
+      conversationId,
+      request: text,
+      decision: {
+        id: plan.actions.some((action) => action.type === "CREATE_PROJECT") ? "import_brief" : "maintain_record",
+        execution: "absente",
+        missing: plan.missing,
+      },
+      snapshot,
+      view,
+      overrides: null,
+      preface: "Il manque une information. Rien n’est enregistré.",
+      prior: null,
+      learned: null,
+    });
+  }
+  const lookup = resolutionName(plan);
+  if (!lookup) {
+    return clarifyPlan(conversationId);
+  }
+  const found = await prisma.client.findUnique({
+    where: { nameKey: nameKey(lookup) },
+    select: { name: true, email: true, phone: true, address: true },
+  });
+  const translated = translateStructuredPlan(
+    plan,
+    found ? { name: found.name, email: found.email, phone: found.phone, address: found.address } : null,
+    text,
+  );
+  if (translated.kind === "already") {
+    return streamDirect({
+      conversationId,
+      reply: `Le client ${translated.name} existe déjà.`,
+      source: "dossier",
+      step: "Lecture des fiches",
+    });
+  }
+  if (translated.kind === "omitted") {
+    return streamDirect({
+      conversationId,
+      reply: omittedReply(translated.fields, translated.withProject),
+      source: "regle-metier",
+      step: "Règle métier",
+    });
+  }
+  if (translated.kind === "contact-differs") {
+    return streamDirect({
+      conversationId,
+      reply: contactDiffReply(translated.name, translated.fields, translated.withProject),
+      source: "regle-metier",
+      step: "Règle métier",
+    });
+  }
+  if (translated.kind === "unknown-client") {
+    return publishBlocked({
+      conversationId,
+      request: text,
+      decision: { id: "import_brief", execution: "absente", missing: ["client"] },
+      snapshot,
+      view,
+      overrides: null,
+      preface: `Aucun client « ${translated.clientName} » n’est au répertoire. Le dossier n’est pas proposé.`,
+      prior: null,
+      learned: null,
+    });
+  }
+  if (translated.kind === "clarify" || translated.kind === "missing") return clarifyPlan(conversationId);
+  if (translated.kind === "catalog") {
+    const opened = await openCatalogProposal(translated.command, conversationId, provenance);
+    if ("clarify" in opened) {
+      return streamDirect({ conversationId, reply: opened.clarify, source: "dossier", step: "Lecture des fiches" });
+    }
+    return streamDirect({
+      conversationId,
+      reply: opened.reply,
+      source: "proposition",
+      step: "Proposition à confirmer",
+      proposal: opened.proposal,
+    });
+  }
+  const opened = await openBusinessPlanProposal(translated.plan, conversationId, null, {
+    provenance,
+    inheritInboxItem: false,
+  });
+  if ("clarify" in opened) {
+    return streamDirect({ conversationId, reply: opened.clarify, source: "dossier", step: "Lecture des fiches" });
+  }
+  return streamDirect({
+    conversationId,
+    reply: opened.reply,
+    source: "proposition",
+    step: "Proposition à confirmer",
+    proposal: opened.proposal,
+  });
+}
+
+function omittedReply(fields: ContactField[], withProject: boolean): string {
+  const phrase = fields
+    .map((field) => {
+      if (field === "email") return "un e-mail";
+      if (field === "phone") return "un téléphone";
+      return "une adresse";
+    })
+    .join(" et ");
+  const notice = `Vous avez également indiqué ${phrase}. Cette information n’est pas prise en compte dans cette action.`;
+  if (withProject) {
+    return `${notice} Voulez-vous mettre à jour la fiche client avant de créer le dossier ? Rien n’est enregistré.`;
+  }
+  return `${notice} Rien n’est enregistré.`;
+}
+
+function contactDiffReply(name: string, fields: ContactField[], withProject: boolean): string {
+  const phrase = fields
+    .map((field) => {
+      if (field === "email") return "un nouvel e-mail";
+      if (field === "phone") return "un nouveau téléphone";
+      return "une nouvelle adresse";
+    })
+    .join(" et ");
+  if (withProject) {
+    return `Le client ${name} existe déjà. Vous avez aussi fourni ${phrase}. Voulez-vous mettre sa fiche à jour avant de créer le dossier ? Rien n’est enregistré.`;
+  }
+  return `Le client ${name} existe déjà. Vous avez aussi fourni ${phrase}, différent de la fiche. La fiche n’est pas modifiée. Rien n’est enregistré.`;
+}
+
+function clarifyPlan(conversationId: string): Response {
+  return streamDirect({
+    conversationId,
+    reply:
+      "Je ne peux préparer qu’une création de client, un dossier pour un client déjà connu, ou les deux dans cet ordre. Rien n’est enregistré.",
+    source: "regle-metier",
+    step: "Règle métier",
+  });
 }
 
 async function answerDirectly(text: string, conversationId: string, inboxItemId: string | null): Promise<DirectReply | null> {
@@ -443,7 +621,7 @@ async function answerDirectly(text: string, conversationId: string, inboxItemId:
     return withGpuLane(() => answerFromDossier(text, intent));
   }
 
-  if (asksToEnrichRecord(text) || intent === "change") {
+  if (enrichmentOwnsTurn(text, intent)) {
     const changed = await proposeChangeFromMessage(text, conversationId);
     if (changed) {
       return {

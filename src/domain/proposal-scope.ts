@@ -46,6 +46,21 @@ export function pendingInThread(
   return { conversationId: current, status: "en_attente" };
 }
 
+/**
+ * Lien documentaire d’une proposition de plan.
+ * Un remplacement legacy reprend l’entrée précédente.
+ * Un plan préparé depuis une phrase, sans dépôt, reste sans entrée.
+ */
+export function planInboxLink(
+  requested: string | null,
+  previous: string | null,
+  inheritInboxItem: boolean,
+): string | null {
+  if (requested) return requested;
+  if (!inheritInboxItem) return null;
+  return previous;
+}
+
 /** La plus récente du fil. Une ligne sans fil, ou d’un autre fil, n’est pas retenue. */
 export function selectablePending(
   rows: PendingCandidate[],

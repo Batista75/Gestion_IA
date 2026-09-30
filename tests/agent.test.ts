@@ -64,6 +64,12 @@ test("l’intention distingue une recherche, une liste et une correction", () =>
     understandIntent("le téléphone de Holzwerk Müller GmbH est le +49 89 000111"),
     "change",
   );
+  assert.equal(
+    understandIntent(
+      "Ouvre le dossier Support pour Dupont, son téléphone est 01 23 45 67 89.",
+    ),
+    "open",
+  );
   assert.equal(understandIntent(CLIENT_EXAMPLES[0].text), "open");
 });
 

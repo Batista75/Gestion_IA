@@ -2,12 +2,13 @@ import { revalidatePath } from "next/cache";
 import {
   businessPlanDecision,
   pendingInThread,
+  planInboxLink,
   presentBusinessPlan,
   readStoredPlan,
   settleBusinessPlan,
 } from "@/domain/proposal-scope";
 import type { BusinessPlan } from "@/domain/business-brief";
-import { stampProvenance } from "@/domain/provenance";
+import { readProvenance, stampProvenance, type FieldConfidence } from "@/domain/provenance";
 import { applyBusinessPlan, type AttachedPiece } from "@/lib/business-records";
 import { withChangeSource } from "@/lib/change-source";
 import { prisma } from "@/lib/db";
@@ -17,6 +18,10 @@ export async function openBusinessPlanProposal(
   plan: BusinessPlan,
   conversationId: string,
   inboxItemId: string | null = null,
+  options?: {
+    provenance?: { modelVersion: "ollama"; confidence: FieldConfidence[] };
+    inheritInboxItem?: boolean;
+  },
 ): Promise<{ reply: string; proposal: { fields: Array<{ label: string; value: string }> } } | { clarify: string }> {
   const scope = pendingInThread(conversationId);
   if (!scope) return { clarify: "Le fil est inconnu. Rien n’est enregistré." };
@@ -26,7 +31,7 @@ export async function openBusinessPlanProposal(
     orderBy: { createdAt: "desc" },
     select: { inboxItemId: true },
   });
-  const linked = inboxItemId ?? previous?.inboxItemId ?? null;
+  const linked = planInboxLink(inboxItemId, previous?.inboxItemId ?? null, options?.inheritInboxItem !== false);
   await prisma.businessPlanProposal.updateMany({
     where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
@@ -37,7 +42,7 @@ export async function openBusinessPlanProposal(
       conversationId: scope.conversationId,
       inboxItemId: linked,
       payload: plan,
-      ...stampProvenance("regle", presented.fields),
+      ...storedPlanProvenance(presented.fields, options?.provenance),
     },
   });
   await refreshInboxStatus(previous?.inboxItemId);
@@ -120,6 +125,16 @@ async function syncInboxAfterDecision(inboxItemId: string | null): Promise<void>
   } catch {
     // La proposition est déjà confirmee ou echec. Ce statut n’est pas réécrit.
   }
+}
+
+function storedPlanProvenance(
+  fields: Array<{ label: string; value: string }>,
+  provenance?: { modelVersion: "ollama"; confidence: FieldConfidence[] },
+): { modelVersion: string; confidence: FieldConfidence[] } {
+  if (!provenance) return stampProvenance("regle", fields);
+  const read = readProvenance({ modelVersion: provenance.modelVersion, fields: provenance.confidence });
+  if ("error" in read) return stampProvenance("regle", fields);
+  return read;
 }
 
 async function loadInboxFiles(inboxItemId: string): Promise<AttachedPiece[]> {

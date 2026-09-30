@@ -1,3 +1,7 @@
+import { plainLabel } from "./catalog.ts";
+import { explicitClientCreation } from "./structured-plan.ts";
+import type { AgentIntent } from "./knowledge.ts";
+
 export type ClientKind = "particulier" | "entreprise" | "";
 export type ClientScope = "france" | "international" | "";
 
@@ -206,7 +210,7 @@ export function identifyClient(text: string): ClientDraft | null {
   if (!raw || isOtherCatalogCommand(raw) || isProjectCommand(raw)) return null;
   if (!looksLikeClientBrief(raw)) return null;
   const draft = finalize(extractDraft(raw));
-  if (displayName(draft).length < 2) return null;
+  if (!reliableClientName(raw, draft)) return null;
   return draft;
 }
 
@@ -359,6 +363,16 @@ function isOtherCatalogCommand(text: string): boolean {
   ) && !/client/i.test(text);
 }
 
+function reliableClientName(message: string, draft: ClientDraft): boolean {
+  const shown = displayName(draft).trim();
+  if (!plainLabel(shown)) return false;
+  const name = fold(shown.replace(/['’]/g, " "));
+  const source = fold(clean(message).replace(/['’]/g, " "));
+  if (name === source || name.length >= Math.floor(source.length * 0.75)) return false;
+  if (/\b(nouveau client|nouvelle cliente|j ai|je veux|je voudrais|comme client)\b/.test(name)) return false;
+  return true;
+}
+
 function looksLikeClientBrief(text: string): boolean {
   return /client|particulier|entreprise|soci[ée]t[ée]|\b(?:sas|sarl|sasu|gmbh|ltd|oy|oyj)\b|vat\s*id|business\s*id/i.test(
     text,
@@ -504,11 +518,17 @@ function applyAddress(source: string, draft: ClientDraft) {
 }
 
 export function asksToEnrichRecord(text: string): boolean {
+  if (explicitClientCreation(text)) return false;
   const folded = fold(text);
   const verb = /\b(ajoute\w*|complete\w*|renseigne\w*|precis\w*|indique\w*|mettre|mets|mettez|modifi\w*|chang\w*|corrig\w*)\b/.test(folded);
   const topic = /\b(contact|contacts|information|informations|fiche|note|notes|secteur|adresse|telephone|tel|e-mail|email|mail|siret|siren|tva)\b/.test(folded);
   if (verb && topic) return true;
   return /\bcontacts?\b/.test(folded) && /\b(est|sont)\b/.test(folded);
+}
+
+export function enrichmentOwnsTurn(text: string, intent: AgentIntent): boolean {
+  if (explicitClientCreation(text)) return false;
+  return asksToEnrichRecord(text) || intent === "change";
 }
 
 export function knownRecordPrompt(draft: ClientDraft): string {

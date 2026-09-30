@@ -92,6 +92,7 @@ export function understandIntent(text: string): AgentIntent {
     return "change";
   }
   if (/\b(telephone|tel|e-mail|email|adresse)\b/.test(folded) && /\b(est|c est)\b/.test(folded)) {
+    if (/\b(dossier|projet|affaire)\b/.test(folded) && /\b(pour|chez|client)\b/.test(folded)) return "open";
     return "change";
   }
   return "open";

@@ -351,8 +351,9 @@ function partyCommand(
   type: "create_client" | "update_client" | "create_supplier" | "update_supplier",
   segments: string[],
 ): CatalogCommand | null {
+  if (!labeledTail(segments)) return null;
   const party = partyFromSegments(segments);
-  if (!party.name) return null;
+  if (!plainLabel(party.name)) return null;
   return { type, party };
 }
 
@@ -360,8 +361,9 @@ function productCommand(
   type: "create_product" | "update_product",
   segments: string[],
 ): CatalogCommand | null {
+  if (!labeledTail(segments)) return null;
   const product = productFromSegments(segments);
-  if (!product.name) return null;
+  if (!plainLabel(product.name)) return null;
   return { type, product };
 }
 
@@ -374,6 +376,8 @@ function projectCommand(segments: string[]): CatalogCommand | null {
   if (inline) {
     name = (inline[1] ?? "").trim();
     primaryClient = (inline[2] ?? "").trim();
+  } else if (/\bpour\b/i.test(name)) {
+    return null;
   }
   for (const segment of segments.slice(1)) {
     const field = parseField(segment);
@@ -381,8 +385,30 @@ function projectCommand(segments: string[]): CatalogCommand | null {
     if (field.key === "client") primaryClient = field.value;
     if (field.key === "action") nextAction = field.value;
   }
-  if (name.length < 2) return null;
+  if (!plainLabel(name)) return null;
+  if (primaryClient && !plainLabel(primaryClient)) return null;
   return { type: "create_project", name, primaryClient, nextAction };
+}
+
+function labeledTail(segments: string[]): boolean {
+  if (!plainLabel(segments[0] ?? "")) return false;
+  return segments.slice(1).every((segment) => parseField(segment) !== null);
+}
+
+const CLAUSE_WORD =
+  /\b(qui|que|dont|pour|avec|son|sa|ses|leur|habite|telephone|email|e-mail)\b/;
+
+/** Libellé isolé. Les mots de phrase ne comptent qu’en minuscules : « Pour » et « SA » restent des noms. */
+export function plainLabel(value: string): boolean {
+  const name = value.trim();
+  if (name.length < 2 || name.length > 120) return false;
+  if (/[.!?,:;]/.test(name)) return false;
+  if (CLAUSE_WORD.test(accentFold(name))) return false;
+  return /[a-z]/i.test(accentFold(name));
+}
+
+function accentFold(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 function parseQuote(rest: string): CatalogCommand | null {

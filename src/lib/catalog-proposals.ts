@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { presentCommand, type CatalogCommand } from "@/domain/catalog";
-import { stampProvenance } from "@/domain/provenance";
+import { readProvenance, stampProvenance, type FieldConfidence } from "@/domain/provenance";
 import { proposalFields } from "@/domain/client-file";
 import { confirmContractProposal, pendingContractProposal, rejectContractProposal } from "@/lib/contract-reply";
 import {
@@ -39,8 +39,9 @@ import { prisma } from "@/lib/db";
 export async function openCatalogProposal(
   command: CatalogCommand,
   conversationId: string,
+  provenance?: { modelVersion: "ollama"; confidence: FieldConfidence[] },
 ): Promise<ProposalView | { clarify: string }> {
-  if (command.type === "create_client" || command.type === "update_client") {
+  if (!provenance && (command.type === "create_client" || command.type === "update_client")) {
     return proposeFromParty(command, conversationId);
   }
   const scope = pendingInThread(conversationId);
@@ -55,7 +56,7 @@ export async function openCatalogProposal(
       status: "en_attente",
       conversationId: scope.conversationId,
       payload: command,
-      ...stampProvenance("regle", presented.fields),
+      ...storedProvenance(presented.fields, provenance),
     },
   });
   revalidatePath("/");
@@ -219,6 +220,16 @@ export async function confirmLatestWrite(conversationId: string): Promise<{ ok: 
     if (newest.kind === "catalog") return confirmCatalogProposal(scope.conversationId);
     return confirmCurrentProposal(scope.conversationId);
   });
+}
+
+function storedProvenance(
+  fields: Array<{ label: string; value: string }>,
+  provenance?: { modelVersion: "ollama"; confidence: FieldConfidence[] },
+): { modelVersion: string; confidence: FieldConfidence[] } {
+  if (!provenance) return stampProvenance("regle", fields);
+  const read = readProvenance({ modelVersion: provenance.modelVersion, fields: provenance.confidence });
+  if ("error" in read) return stampProvenance("regle", fields);
+  return read;
 }
 
 function candidate(

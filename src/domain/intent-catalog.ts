@@ -51,7 +51,8 @@ export type IntentDecision = {
 const WRITE =
   /\b(enregistr\w*|cr[ée]e[rz]?\b|cr[ée]er|ajout\w*|modifi\w*|supprim\w*|rattache\w*|affect\w*|rapproch\w*|num[ée]rot\w*|[ée]met\w*|emet\w*|envoy\w*)\b/i;
 
-const EXPLAIN = /^(comment|pourquoi|qu['’]est-ce|quels?\b|quelles?\b|est-ce|c['’]est quoi)\b/i;
+const EXPLAIN =
+  /^(comment|pourquoi|qu['’]est-ce|quels?\b|quelles?\b|est-ce|c['’]est quoi|peut-on|puis-je|liste|montre|affiche|combien|où)\b/i;
 
 export function decideFree(text: string): IntentDecision {
   const unfinished = matchUnfinished(text);
