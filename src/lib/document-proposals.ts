@@ -12,10 +12,12 @@ import { searchKnowledge } from "@/lib/knowledge-store";
 import { prisma } from "@/lib/db";
 import { recordOfferVersion } from "@/lib/pieces";
 import { recordSupplierOffer } from "@/lib/supplier-offers";
+import { refreshInboxStatus } from "@/lib/inbox-entry";
 
 export async function queueDocumentProposals(
   files: Array<{ id: string; originalName: string; reading: DocumentReading }>,
   context = "",
+  inboxItemId: string | null = null,
 ): Promise<number> {
   const interesting = files.filter((file) => file.reading.kind !== "autre");
   if (interesting.length === 0) return 0;
@@ -28,6 +30,7 @@ export async function queueDocumentProposals(
     await prisma.documentProposal.create({
       data: {
         fileId: file.id,
+        inboxItemId,
         kind: draft.kind,
         title: draft.title,
         summary: draft.summary,
@@ -37,6 +40,7 @@ export async function queueDocumentProposals(
     });
     count += 1;
   }
+  if (count > 0) await refreshInboxStatus(inboxItemId);
   return count;
 }
 
@@ -61,6 +65,7 @@ export async function confirmDocumentProposal(id: string): Promise<{ ok: boolean
     where: { id },
     data: { status: "confirmee", validatedAt: new Date() },
   });
+  await refreshInboxStatus(row.inboxItemId);
   const done = notes.filter(Boolean);
   return {
     ok: true,
@@ -77,6 +82,7 @@ export async function dismissDocumentProposal(id: string): Promise<{ ok: boolean
     where: { id },
     data: { status: "ecartee", validatedAt: new Date() },
   });
+  await refreshInboxStatus(row.inboxItemId);
   return { ok: true, message: "Proposition écartée. Le fichier reste dans À classer. Validation enregistrée." };
 }
 

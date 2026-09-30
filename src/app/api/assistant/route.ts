@@ -14,8 +14,9 @@ import {
   MONEY_RULE_REPLY,
 } from "@/domain/ollama-endpoint";
 import { parseBusinessBrief, planIsEmpty } from "@/domain/business-brief";
-import { readPieceIds } from "@/domain/proposal-scope";
+import { readInboxItemId } from "@/domain/inbox-entry";
 import { openBusinessPlanProposal } from "@/lib/business-plan-proposals";
+import { claimInboxItem } from "@/lib/inbox-entry";
 import { confirmLatestWrite, openCatalogProposal, rejectLatestWrite } from "@/lib/catalog-proposals";
 import {
   currentProposal,
@@ -157,7 +158,10 @@ export async function POST(request: Request) {
   }
 
   if (!correction) {
-    const direct = await answerDirectly(parsed.text, conversationId, readPieceIds(payload && typeof payload === "object" && "pieceIds" in payload ? payload.pieceIds : []));
+    const inboxItemId = readInboxItemId(
+      payload && typeof payload === "object" && "inboxItemId" in payload ? payload.inboxItemId : null,
+    );
+    const direct = await answerDirectly(parsed.text, conversationId, inboxItemId);
     if (direct) {
       return streamDirect({
         conversationId,
@@ -284,10 +288,29 @@ function stepFor(source: DirectReply["source"]): string {
   return "Réponse";
 }
 
-async function answerDirectly(text: string, conversationId: string, pieceIds: string[]): Promise<DirectReply | null> {
+async function answerDirectly(text: string, conversationId: string, inboxItemId: string | null): Promise<DirectReply | null> {
+  let linkedInboxId: string | null = null;
+  if (inboxItemId) {
+    const claimed = await claimInboxItem(inboxItemId, conversationId);
+    if (!claimed.accepted) {
+      return {
+        reply: "Cette entrée n’est pas disponible dans cette conversation.",
+        model: null,
+        source: "dossier",
+      };
+    }
+    if (claimed.documentCount > 0) {
+      return {
+        reply: "La pièce a été analysée. Les propositions sont dans À traiter.",
+        model: null,
+        source: "proposition",
+      };
+    }
+    linkedInboxId = claimed.inboxItemId;
+  }
   const plan = parseBusinessBrief(text);
   if (!planIsEmpty(plan)) {
-    const opened = await openBusinessPlanProposal(plan, conversationId, pieceIds);
+    const opened = await openBusinessPlanProposal(plan, conversationId, linkedInboxId);
     if ("clarify" in opened) {
       return { reply: opened.clarify, model: null, source: "dossier" as const };
     }

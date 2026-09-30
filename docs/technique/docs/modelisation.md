@@ -35,7 +35,9 @@ Project 1 ── * SaleDocument 1 ── * SaleDocumentLine
 Project 1 ── * Quote 1 ── * QuoteLine
 Project 1 ── * Conversation 1 ── * ConversationMessage
 Conversation 1 ── 0..1 AssistantTask
-InboxItem 1 ── * StoredFile
+Conversation 1 ── * InboxItem 1 ── * StoredFile
+InboxItem 1 ── * BusinessPlanProposal
+InboxItem 1 ── * DocumentProposal
 StoredFile 1 ── * Quote
 StoredFile 1 ── * DocumentProposal
 StoredFile 1 ── * Demand
@@ -55,7 +57,7 @@ Sans clé étrangère : Account, AppSetting, CompanyProfile, DocumentMemory,
 RecordEvent, KnowledgeChunk
 ```
 
-Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, produit d’un équipement installé, dossier d’un achat, fichier d’une demande, et le fil d’une proposition. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une boîte retire ses `StoredFile`. Supprimer un fil laisse les propositions : `conversationId` devient vide, l’état reste. Une proposition `en_attente` sans fil n’est pas confirmable depuis un autre fil.
+Une suppression en cascade retire les enfants. Un lien `SetNull` laisse la fiche et vide la référence : client d’un projet, fournisseur d’un produit, pièce d’un devis reçu, projet d’un devis reçu ou d’une conversation, produit d’une ligne de dossier, produit d’un équipement installé, dossier d’un achat, fichier d’une demande, le fil d’une proposition, le fil d’une entrée, et l’entrée d’une proposition. Supprimer un produit retire ses `QuoteLine`. Supprimer un fichier retire ses `DocumentProposal`. Supprimer une entrée retire ses `StoredFile`, et donc les `DocumentProposal` de ces fichiers. Le `BusinessPlanProposal` lié reste, avec `inboxItemId` vide. Supprimer un fil laisse l’entrée et les propositions : `conversationId` devient vide, l’état reste. Une proposition `en_attente` sans fil n’est pas confirmable depuis un autre fil. Une entrée déjà liée à un fil n’est pas réclamée par un autre.
 
 ## Réglages
 
@@ -259,11 +261,17 @@ Pièce constatée, rattachée à une commande ou à une autre pièce constatée.
 
 ### InboxItem
 
-Note déposée dans la boîte.
+Entrée d’un dépôt qui contient au moins un fichier. Un message sans fichier n’en crée pas. Le statut décrit le traitement de cette entrée, pas l’achèvement d’un projet ou d’un devis.
 
-- `body`, `createdAt`.
-- Enfants : `StoredFile`, supprimés avec la note.
-- Une note n’est pas classée dans un projet sans une action explicite.
+- `body`.
+- `source` : `depot` pour un dépôt. D’autres chaînes pourront nommer une note, un e-mail, une opération bancaire ou un connecteur.
+- `status` : `a_traiter`, `proposee`, `traitee`, `ignoree`. Défaut `a_traiter`. `ignoree` n’est pas recalculé : l’écriture du recalcul exige encore le statut lu. `traitee` exige une confirmation, plus aucune proposition active, et aucun plan en `echec`. Une entrée déjà présente devient `proposee` si une `DocumentProposal` liée est `en_attente`, sinon `traitee` si l’une est `confirmee`, sinon elle reste `a_traiter`.
+- `conversationId` vers `Conversation`, facultatif. Vide à la création. Le premier message du fil le réclame. Un autre fil ne le prend pas.
+- `createdAt`, `updatedAt`.
+- Enfants : `StoredFile`, supprimés avec l’entrée.
+- Liens : `BusinessPlanProposal` et `DocumentProposal`. Retirer l’entrée vide `inboxItemId` sur le plan. La proposition documentaire suit encore la suppression du fichier.
+- **Ignorer** passe à `ignoree` et ne retire ni fichier, ni proposition, ni historique. **Reprendre** remet `proposee` s’il reste une proposition active, sinon `a_traiter`.
+- Une entrée n’est pas classée dans un projet sans une action explicite. Le nom de projet affiché, s’il y en a un seul, vient d’un `ProjectEvent` déjà lié à un de ses fichiers.
 
 ### StoredFile
 
@@ -318,7 +326,8 @@ Tant que le statut est `en_attente`, rien n’est écrit dans le répertoire ni 
 Proposition tirée d’un fichier.
 
 - `status` : `en_attente`, `confirmee`, `ecartee`. Défaut `en_attente`.
-- `fileId` vers `StoredFile`.
+- `fileId` vers `StoredFile`. La suppression du fichier retire la proposition.
+- `inboxItemId` vers `InboxItem`, facultatif. Une proposition déjà présente le reçoit par `fileId` → `StoredFile.inboxItemId`. Pas de `conversationId`. Le statut de l’entrée est recalculé sur toutes les propositions de cette entrée.
 - `kind`, `title`, `summary`.
 - `payload` : brouillon `DocumentProposalDraft` (`kind`, `title`, `summary`, `fields`, `actions`, `sources`).
 - `modelVersion` : `lecture` pour une pièce relue sans modèle.
@@ -350,8 +359,9 @@ Fiche client encore à confirmer.
 Plan parlé ou tableau collé, encore à confirmer dans le fil. Supprimer le fil laisse cette ligne.
 
 - `conversationId` vers `Conversation`, facultatif. Vide si le fil a été retiré.
+- `inboxItemId` vers `InboxItem`, facultatif. Une nouvelle proposition issue d’un dépôt l’enregistre. Le remplacement dans le même fil le conserve. Les fichiers sont relus depuis cette entrée à la confirmation. Une proposition déjà présente n’est pas rattachée par son `payload`.
 - `status` : `en_attente`, `en_cours` (claim, pas un succès), `confirmee`, `echec`, `remplacee`, `rejetee`.
-- `payload` : le plan parsé (`clients`, `articles`, `projects`, `quotes`) et, s’il y a des pièces jointes, `fileIds` vers `StoredFile`. Le binaire et le texte extrait restent sur le fichier.
+- `payload` : le plan parsé (`clients`, `articles`, `projects`, `quotes`). Une proposition ancienne sans entrée peut encore porter `fileIds`. Le binaire et le texte extrait restent sur le fichier.
 - `failureNote` : court texte si le statut est `echec`. Vide sinon.
 - `modelVersion` : `regle`. `confidence` comme sur `DocumentProposal`.
 - `validatedAt` : moment du succès seulement. Vide tant que l’exécution n’a pas réussi.

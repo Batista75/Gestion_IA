@@ -1,3 +1,4 @@
+import { inboxAttentionLabel } from "@/domain/inbox-entry";
 import { homeMoneyLabel, storedSaleFigures } from "@/domain/pricing";
 import { prisma } from "@/lib/db";
 
@@ -56,9 +57,9 @@ export async function recentProjectCards(): Promise<HomeProjectCard[]> {
 }
 
 export async function homeAlerts(): Promise<HomeAlert[]> {
-  const [pending, looseNotes, drafts] = await Promise.all([
+  const [pending, openEntries, drafts] = await Promise.all([
     prisma.documentProposal.count({ where: { status: "en_attente" } }),
-    prisma.inboxItem.count(),
+    prisma.inboxItem.count({ where: { status: { in: ["a_traiter", "proposee"] } } }),
     prisma.saleDocument.count({ where: { kind: "devis", status: "brouillon" } }),
   ]);
   const alerts: HomeAlert[] = [];
@@ -68,11 +69,9 @@ export async function homeAlerts(): Promise<HomeAlert[]> {
       href: "/#a-traiter",
     });
   }
-  if (looseNotes > 0) {
-    alerts.push({
-      text: looseNotes === 1 ? "1 note reste hors projet." : `${looseNotes} notes restent hors projet.`,
-      href: "/#pieces",
-    });
+  const entryAlert = inboxAttentionLabel(openEntries);
+  if (entryAlert) {
+    alerts.push({ text: entryAlert, href: "/#pieces" });
   }
   if (drafts > 0) {
     alerts.push({

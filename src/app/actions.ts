@@ -5,11 +5,12 @@ import { redirect } from "next/navigation";
 import { ensureSpokenProject } from "@/lib/business-records";
 import { prisma } from "@/lib/db";
 import { isConversationId, rememberTurn } from "@/lib/conversations";
+import { ignoreInbox, resumeInbox } from "@/lib/inbox-entry";
 import { saveInboxPieces } from "@/lib/pieces";
 
 export type ActionState = {
   message: string | null;
-  fileIds?: string[];
+  inboxItemId?: string;
 };
 
 export async function createProjectAction(
@@ -63,7 +64,17 @@ export async function createInboxItemAction(
   revalidatePath("/");
   revalidatePath("/produits");
   revalidatePath("/fournisseurs");
-  return { message: result.message, fileIds: result.fileIds };
+  return { message: result.message, inboxItemId: result.inboxItemId };
+}
+
+export async function ignoreInboxAction(formData: FormData): Promise<void> {
+  await ignoreInbox(String(formData.get("id") ?? ""));
+  revalidatePath("/");
+}
+
+export async function resumeInboxAction(formData: FormData): Promise<void> {
+  await resumeInbox(String(formData.get("id") ?? ""));
+  revalidatePath("/");
 }
 
 export async function recordExchangeAction(input: {

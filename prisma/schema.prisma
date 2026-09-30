@@ -110,10 +110,20 @@ model ProjectEvent {
 }
 
 model InboxItem {
-  id        String       @id @default(cuid())
-  body      String
-  createdAt DateTime     @default(now())
-  files     StoredFile[]
+  id             String                 @id @default(cuid())
+  body           String
+  source         String                 @default("depot")
+  status         String                 @default("a_traiter")
+  conversationId String?
+  conversation   Conversation?          @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  files          StoredFile[]
+  businessPlanProposals BusinessPlanProposal[]
+  documentProposals     DocumentProposal[]
+
+  @@index([status])
+  @@index([conversationId])
 }
 
 model Client {
@@ -173,6 +183,7 @@ model Conversation {
   claimProposals               ClaimProposal[]
   returnRequestProposals       ReturnRequestProposal[]
   businessPlanProposals        BusinessPlanProposal[]
+  inboxItems                   InboxItem[]
 
   @@index([projectId])
 }
@@ -249,6 +260,8 @@ model BusinessPlanProposal {
   id             String        @id @default(cuid())
   conversationId String?
   conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  inboxItemId    String?
+  inboxItem      InboxItem?    @relation(fields: [inboxItemId], references: [id], onDelete: SetNull)
   status         String        @default("en_attente")
   payload        Json
   failureNote    String        @default("")
@@ -258,6 +271,7 @@ model BusinessPlanProposal {
   createdAt      DateTime      @default(now())
 
   @@index([conversationId, status])
+  @@index([inboxItemId])
 }
 
 /** Contrat encore à confirmer. La fiche `Contract` n’existe qu’après validation. */
@@ -675,10 +689,12 @@ model Demand {
 }
 
 model DocumentProposal {
-  id        String      @id @default(cuid())
-  status    String      @default("en_attente")
-  fileId    String?
-  file      StoredFile? @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  id           String      @id @default(cuid())
+  status       String      @default("en_attente")
+  fileId       String?
+  file         StoredFile? @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  inboxItemId  String?
+  inboxItem    InboxItem?  @relation(fields: [inboxItemId], references: [id], onDelete: SetNull)
   kind         String
   title        String
   summary      String
@@ -690,6 +706,7 @@ model DocumentProposal {
 
   @@index([status])
   @@index([fileId])
+  @@index([inboxItemId])
 }
 
 model Quote {

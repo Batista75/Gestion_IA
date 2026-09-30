@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ignoreInboxAction, resumeInboxAction } from "@/app/actions";
 import { deleteFileAction, deleteInboxAction, updateInboxAction } from "@/app/catalog-actions";
 import { ProjectAssistant } from "@/components/project-assistant";
 import { ConfirmDelete, NoteEditor } from "@/components/record-actions";
@@ -6,6 +7,7 @@ import { ProposalBoard, type PendingProposal } from "@/components/proposal-board
 import { fillDocumentProvenance } from "@/lib/document-proposals";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { inboxStatusLabel } from "@/domain/inbox-entry";
 import { kindLabel } from "@/domain/offer-versions";
 import { homeAlerts, recentProjectCards } from "@/lib/home-board";
 import { archivedConversations, isConversationId, latestConversation, openConversation, recentConversations } from "@/lib/conversations";
@@ -67,7 +69,7 @@ export default async function HomePage({
     prisma.inboxItem.findMany({
       orderBy: { createdAt: "desc" },
       take: 8,
-      include: { files: { orderBy: { createdAt: "asc" } } },
+      include: { files: { orderBy: { createdAt: "asc" }, select: { id: true, originalName: true, kind: true, enrichment: true } } },
     }),
     prisma.documentProposal.findMany({
       where: { status: "en_attente" },
@@ -95,6 +97,15 @@ export default async function HomePage({
     };
   });
 
+  const fileIds = inbox.flatMap((item) => item.files.map((file) => file.id));
+  const events =
+    fileIds.length === 0
+      ? []
+      : await prisma.projectEvent.findMany({
+          where: { fileId: { in: fileIds } },
+          select: { fileId: true, project: { select: { id: true, name: true } } },
+        });
+  const projectByFile = new Map(events.filter((event) => event.fileId).map((event) => [event.fileId, event.project]));
   const notices = alerts.filter((alert) => alert.href !== "/#a-traiter");
 
   return (
@@ -221,9 +232,27 @@ export default async function HomePage({
                         ))}
                       </ul>
                     ) : null}
-                    <p className="text-xs text-muted-foreground">
-                      {item.createdAt.toLocaleString("fr-FR")} · sans projet
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="secondary">{inboxStatusLabel(item.status)}</Badge>
+                      <span className="text-xs text-muted-foreground">{item.createdAt.toLocaleString("fr-FR")}</span>
+                      <InboxProject files={item.files} projectByFile={projectByFile} />
+                      {item.status === "a_traiter" || item.status === "proposee" ? (
+                        <form action={ignoreInboxAction}>
+                          <input type="hidden" name="id" value={item.id} />
+                          <button type="submit" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+                            Ignorer
+                          </button>
+                        </form>
+                      ) : null}
+                      {item.status === "ignoree" ? (
+                        <form action={resumeInboxAction}>
+                          <input type="hidden" name="id" value={item.id} />
+                          <button type="submit" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+                            Reprendre
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
                     <details>
                       <summary className="cursor-pointer text-sm font-medium">Modifier ou supprimer</summary>
                       <div className="grid gap-3 pt-3">
@@ -256,6 +285,23 @@ export default async function HomePage({
       </aside>
     </div>
   );
+}
+
+function InboxProject({
+  files,
+  projectByFile,
+}: {
+  files: Array<{ id: string }>;
+  projectByFile: Map<string, { id: string; name: string }>;
+}) {
+  const projects = new Map<string, string>();
+  for (const file of files) {
+    const project = projectByFile.get(file.id);
+    if (project) projects.set(project.id, project.name);
+  }
+  if (projects.size !== 1) return null;
+  const name = [...projects.values()][0];
+  return <span className="text-xs text-muted-foreground">{name}</span>;
 }
 
 function confidenceOf(value: unknown): Array<{ field: string; confidence: number }> {

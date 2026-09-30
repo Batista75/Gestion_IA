@@ -28,7 +28,7 @@ export type IncomingFile = {
 export type PieceIntakeResult = {
   ok: boolean;
   message: string;
-  fileIds?: string[];
+  inboxItemId?: string;
 };
 
 export async function saveInboxPieces(
@@ -68,7 +68,9 @@ export async function saveInboxPieces(
     };
   });
 
-  const item = await prisma.inboxItem.create({ data: { body: text } });
+  const item = await prisma.inboxItem.create({
+    data: { body: text, source: "depot", status: "a_traiter" },
+  });
   await mkdir(PIECES_DIR, { recursive: true });
 
   const stored: Array<{
@@ -112,19 +114,18 @@ export async function saveInboxPieces(
 
   const { parseBusinessBrief, planIsEmpty } = await import("@/domain/business-brief");
   const plan = parseBusinessBrief(note);
-  const fileIds = stored.map((file) => file.id);
   if (!planIsEmpty(plan)) {
     const fileNote = files.length === 1 ? "1 fichier enregistré." : `${files.length} fichiers enregistrés.`;
     return {
       ok: true,
       message: `${fileNote} Le plan sera proposé dans le fil. Rien n’est enregistré avant confirmation.`,
-      fileIds,
+      inboxItemId: item.id,
     };
   }
 
   const { queueDocumentProposals } = await import("@/lib/document-proposals");
-  const proposals = await queueDocumentProposals(stored, note);
-  return { ok: true, message: intakeMessage(files.length, proposals) };
+  const proposals = await queueDocumentProposals(stored, note, item.id);
+  return { ok: true, message: intakeMessage(files.length, proposals), inboxItemId: item.id };
 }
 
 export function resolveStoredPath(storagePath: string): string | null {
