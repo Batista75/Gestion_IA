@@ -3,12 +3,13 @@ import test from "node:test";
 import {
   commandFromTool,
   parseCatalogCommand,
+  presentCommand,
   productOrigin,
   readSupplierUrl,
   validateProduct,
 } from "../src/domain/catalog.ts";
 import { identifyClient } from "../src/domain/client-file.ts";
-import { structuredPlanEligible } from "../src/domain/structured-plan.ts";
+import { structuredPlanEligible, structuredShape } from "../src/domain/structured-plan.ts";
 
 test("crée un compte client et une mise à jour", () => {
   const created = parseCatalogCommand(
@@ -149,6 +150,27 @@ test("une note vide et un lien http sont acceptés, un autre schéma non", () =>
   if (site.ok) assert.equal(site.value, "https://fournisseur.example/vis");
   assert.equal(readSupplierUrl("javascript:alert(1)").ok, false);
   assert.equal(readSupplierUrl("www.fournisseur.example").ok, false);
+});
+
+test("le parseur déterministe reste devant le plan", () => {
+  const supplier = "Ajoute le fournisseur ACME";
+  const product = "Ajoute le produit Switch X";
+  assert.equal(parseCatalogCommand(supplier)?.type, "create_supplier");
+  assert.equal(parseCatalogCommand(product)?.type, "create_product");
+  assert.equal(structuredShape(supplier), null);
+  assert.equal(structuredShape(product), null);
+  assert.equal(parseCatalogCommand("ajouter un fournisseur Quincaillerie Durand")?.type, "create_supplier");
+});
+
+test("la carte produit montre la nature et la famille", () => {
+  const command = parseCatalogCommand("créer produit Switch X200, référence SX, unité u");
+  assert.equal(command?.type, "create_product");
+  if (command?.type !== "create_product") return;
+  command.product.kind = "service";
+  command.product.family = "reseau";
+  const view = presentCommand(command);
+  assert.match(view.reply, /Nature : Service/);
+  assert.match(view.reply, /Famille : Réseau/);
 });
 
 test("l’origine produit cite le devis", () => {

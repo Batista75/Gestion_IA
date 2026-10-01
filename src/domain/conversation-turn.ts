@@ -1,6 +1,6 @@
 import { nameKey } from "./catalog.ts";
 import { understandIntent } from "./knowledge.ts";
-import { addressSegments, addressValueSpans, structuredPlanEligible } from "./structured-plan.ts";
+import { addressSegments, addressValueSpans, structuredPlanEligible, structuredShape } from "./structured-plan.ts";
 
 export type PendingTurn = "confirm" | "reject" | "correction" | "new_intent" | "unknown";
 
@@ -21,6 +21,8 @@ export function classifyPendingTurn(text: string): PendingTurn {
   if (!normalized) return "unknown";
   if (CONFIRM.test(normalized)) return "confirm";
   if (REJECT.test(normalized)) return "reject";
+  const shape = structuredShape(text);
+  if (shape === "supplier" || shape === "product" || shape === "service") return "new_intent";
   if (isDraftCorrection(text)) return "correction";
   if (/^(oui|non)\b/.test(normalized)) return "unknown";
   if (isIndependentIntent(text)) return "new_intent";

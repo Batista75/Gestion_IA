@@ -1,6 +1,6 @@
 import { plainLabel } from "./catalog.ts";
 import { classifyPendingTurn, readFieldFocus } from "./conversation-turn.ts";
-import { explicitClientCreation } from "./structured-plan.ts";
+import { explicitClientCreation, structuredShape } from "./structured-plan.ts";
 import type { AgentIntent } from "./knowledge.ts";
 
 export type ClientKind = "particulier" | "entreprise" | "";
@@ -566,6 +566,8 @@ function applyAddress(source: string, draft: ClientDraft) {
 }
 
 export function asksToEnrichRecord(text: string): boolean {
+  const shape = structuredShape(text);
+  if (shape === "supplier" || shape === "product" || shape === "service") return false;
   if (explicitClientCreation(text)) return false;
   const folded = fold(text);
   const verb = /\b(ajoute\w*|complete\w*|renseigne\w*|precis\w*|indique\w*|mettre|mets|mettez|modifi\w*|chang\w*|corrig\w*)\b/.test(folded);
@@ -575,6 +577,8 @@ export function asksToEnrichRecord(text: string): boolean {
 }
 
 export function enrichmentOwnsTurn(text: string, intent: AgentIntent): boolean {
+  const shape = structuredShape(text);
+  if (shape === "supplier" || shape === "product" || shape === "service") return false;
   if (explicitClientCreation(text)) return false;
   return asksToEnrichRecord(text) || intent === "change";
 }

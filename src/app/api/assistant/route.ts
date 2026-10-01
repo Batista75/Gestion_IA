@@ -34,8 +34,11 @@ import {
   structuredAttemptOutcome,
   structuredPlanEligible,
   structuredPlanGate,
+  structuredShape,
   translateStructuredPlan,
   type ContactField,
+  type OmittedField,
+  type StructuredShape,
 } from "@/domain/structured-plan";
 import { openBusinessPlanProposal } from "@/lib/business-plan-proposals";
 import { claimInboxItem } from "@/lib/inbox-entry";
@@ -390,23 +393,18 @@ async function answerFromStructuredPlan(
       learned: null,
     });
   }
+  const shape = structuredShape(text);
   const lookup = resolutionName(plan);
   if (!lookup) {
-    return clarifyPlan(conversationId);
+    return clarifyPlan(conversationId, shape);
   }
-  const found = await prisma.client.findUnique({
-    where: { nameKey: nameKey(lookup) },
-    select: { name: true, email: true, phone: true, address: true },
-  });
-  const translated = translateStructuredPlan(
-    plan,
-    found ? { name: found.name, email: found.email, phone: found.phone, address: found.address } : null,
-    text,
-  );
+  const found = await lookupStructuredParty(shape, lookup);
+  const translated = translateStructuredPlan(plan, found, text);
   if (translated.kind === "already") {
+    const party = translated.entity === "supplier" ? "fournisseur" : translated.entity === "product" ? "produit" : "client";
     return streamDirect({
       conversationId,
-      reply: `Le client ${translated.name} existe déjà.`,
+      reply: `Le ${party} ${translated.name} existe déjà.`,
       source: "dossier",
       step: "Lecture des fiches",
     });
@@ -420,9 +418,10 @@ async function answerFromStructuredPlan(
     });
   }
   if (translated.kind === "contact-differs") {
+    const party = shape === "supplier" ? "fournisseur" : "client";
     return streamDirect({
       conversationId,
-      reply: contactDiffReply(translated.name, translated.fields, translated.withProject),
+      reply: contactDiffReply(translated.name, translated.fields, translated.withProject, party),
       source: "regle-metier",
       step: "Règle métier",
     });
@@ -440,7 +439,7 @@ async function answerFromStructuredPlan(
       learned: null,
     });
   }
-  if (translated.kind === "clarify" || translated.kind === "missing") return clarifyPlan(conversationId);
+  if (translated.kind === "clarify" || translated.kind === "missing") return clarifyPlan(conversationId, shape);
   if (translated.kind === "catalog") {
     const opened = await openCatalogProposal(translated.command, conversationId, provenance);
     if ("clarify" in opened) {
@@ -470,12 +469,40 @@ async function answerFromStructuredPlan(
   });
 }
 
-function omittedReply(fields: ContactField[], withProject: boolean): string {
+async function lookupStructuredParty(
+  shape: StructuredShape | null,
+  lookup: string,
+): Promise<{ name: string; email: string; phone: string; address: string } | null> {
+  if (shape === "supplier") {
+    const row = await prisma.supplier.findUnique({
+      where: { nameKey: nameKey(lookup) },
+      select: { name: true, email: true, phone: true, address: true },
+    });
+    return row ? { name: row.name, email: row.email, phone: row.phone, address: row.address } : null;
+  }
+  if (shape === "product" || shape === "service") {
+    const row = await prisma.product.findUnique({
+      where: { nameKey: nameKey(lookup) },
+      select: { name: true },
+    });
+    return row ? { name: row.name, email: "", phone: "", address: "" } : null;
+  }
+  const row = await prisma.client.findUnique({
+    where: { nameKey: nameKey(lookup) },
+    select: { name: true, email: true, phone: true, address: true },
+  });
+  return row ? { name: row.name, email: row.email, phone: row.phone, address: row.address } : null;
+}
+
+function omittedReply(fields: OmittedField[], withProject: boolean): string {
   const phrase = fields
     .map((field) => {
       if (field === "email") return "un e-mail";
       if (field === "phone") return "un téléphone";
-      return "une adresse";
+      if (field === "address") return "une adresse";
+      if (field === "amount") return "un montant";
+      if (field === "siren") return "un SIREN ou un SIRET";
+      return "une famille";
     })
     .join(" et ");
   const notice = `Vous avez également indiqué ${phrase}. Cette information n’est pas prise en compte dans cette action.`;
@@ -485,7 +512,7 @@ function omittedReply(fields: ContactField[], withProject: boolean): string {
   return `${notice} Rien n’est enregistré.`;
 }
 
-function contactDiffReply(name: string, fields: ContactField[], withProject: boolean): string {
+function contactDiffReply(name: string, fields: ContactField[], withProject: boolean, party: "client" | "fournisseur"): string {
   const phrase = fields
     .map((field) => {
       if (field === "email") return "un nouvel e-mail";
@@ -493,17 +520,25 @@ function contactDiffReply(name: string, fields: ContactField[], withProject: boo
       return "une nouvelle adresse";
     })
     .join(" et ");
+  const title = party === "fournisseur" ? "fournisseur" : "client";
   if (withProject) {
     return `Le client ${name} existe déjà. Vous avez aussi fourni ${phrase}. Voulez-vous mettre sa fiche à jour avant de créer le dossier ? Rien n’est enregistré.`;
   }
-  return `Le client ${name} existe déjà. Vous avez aussi fourni ${phrase}, différent de la fiche. La fiche n’est pas modifiée. Rien n’est enregistré.`;
+  return `Le ${title} ${name} existe déjà. Vous avez aussi fourni ${phrase}, différent de la fiche. La fiche n’est pas modifiée. Rien n’est enregistré.`;
 }
 
-function clarifyPlan(conversationId: string): Response {
+function clarifyPlan(conversationId: string, shape: StructuredShape | null): Response {
+  const reply =
+    shape === "supplier"
+      ? "Je ne peux préparer qu’une création de fournisseur à partir de cette phrase. Rien n’est enregistré."
+      : shape === "product"
+        ? "Je ne peux préparer qu’une création de produit à partir de cette phrase. Rien n’est enregistré."
+        : shape === "service"
+          ? "Je ne peux préparer qu’une création de service à partir de cette phrase. Rien n’est enregistré."
+          : "Je ne peux préparer qu’une création de client, un dossier pour un client déjà connu, ou les deux dans cet ordre. Rien n’est enregistré.";
   return streamDirect({
     conversationId,
-    reply:
-      "Je ne peux préparer qu’une création de client, un dossier pour un client déjà connu, ou les deux dans cet ordre. Rien n’est enregistré.",
+    reply,
     source: "regle-metier",
     step: "Règle métier",
   });

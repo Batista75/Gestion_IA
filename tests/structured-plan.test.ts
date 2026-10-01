@@ -11,6 +11,7 @@ import {
   translateStructuredPlan,
   valueAnchored,
   outsideStructuredPlan,
+  structuredShape,
   type KnownClient,
 } from "../src/domain/structured-plan.ts";
 
@@ -620,7 +621,6 @@ test("un téléphone écrit n’est pas perdu", () => {
 
 test("un fournisseur ou un produit ne devient pas un client", () => {
   for (const text of [
-    "Ajoute ClimPro comme fournisseur.",
     "Ajoute la pompe MSZ-AP25 au catalogue.",
     "J'ai un nouveau fournisseur ClimPro.",
     "Enregistre un contrat pour Dupont.",
@@ -634,6 +634,9 @@ test("un fournisseur ou un produit ne devient pas un client", () => {
     assert.equal(structuredPlanGate(structuredPlanEligible(text), false), "continue");
   }
   const supplier = "Ajoute ClimPro comme fournisseur.";
+  assert.equal(structuredShape(supplier), "supplier");
+  assert.equal(structuredPlanEligible(supplier), true);
+  assert.equal(outsideStructuredPlan(supplier), true);
   const parsed = parseStructuredPlan(
     plan([{ type: "CREATE_CLIENT", args: { name: "ClimPro" } }]),
     supplier,
@@ -776,4 +779,324 @@ test("Dupont existant et un téléphone nouveau ne réécrit pas la fiche", () =
   assert.deepEqual(differs.fields, ["phone"]);
   const same = translateStructuredPlan(parsed.plan, known("Dupont", { phone: "01 23 45 67 89" }), message);
   assert.equal(same.kind, "already");
+});
+
+function accepted(raw: string, message: string) {
+  const parsed = parseStructuredPlan(raw, message);
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok) throw new Error(message);
+  return parsed.plan;
+}
+
+test("le couple client et projet reste un plan métier", () => {
+  const phrases = [
+    "Nouveau client Dupont. Dossier Toiture pour Dupont.",
+    "Ajoute Dupont comme client et ouvre le dossier Toiture pour Dupont",
+    "Crée le client Dupont et ouvre le dossier Toiture pour Dupont",
+  ];
+  for (const message of phrases) {
+    assert.equal(structuredShape(message), "client-or-project");
+    const translated = translateStructuredPlan(accepted(plan([client, project]), message), null, message);
+    assert.equal(translated.kind, "business");
+  }
+  const knownClient = translateStructuredPlan(accepted(plan([client, project]), folder), known("DUPONT SARL"), folder);
+  assert.equal(knownClient.kind, "catalog");
+  if (knownClient.kind !== "catalog") return;
+  assert.equal(knownClient.command.type, "create_project");
+});
+
+test("comme client n’empêche pas le dossier", () => {
+  const message = "Ajoute Dupont comme client et ouvre le dossier Toiture pour Dupont";
+  const alone = translateStructuredPlan(accepted(plan([client]), message), null, message);
+  assert.equal(alone.kind, "catalog");
+  if (alone.kind !== "catalog") return;
+  assert.equal(alone.command.type, "create_client");
+  const pair = translateStructuredPlan(accepted(plan([client, project]), message), null, message);
+  assert.equal(pair.kind, "business");
+});
+
+test("un fournisseur structuré reprend le nom et les contacts ancrés", () => {
+  const message = "Ajoute ACME comme fournisseur, email contact@acme.fr, adresse 12 rue de Paris";
+  assert.equal(structuredShape(message), "supplier");
+  const translated = translateStructuredPlan(
+    accepted(
+      plan([{ type: "CREATE_SUPPLIER", args: { name: "ACME", email: "contact@acme.fr", address: "12 rue de Paris" } }]),
+      message,
+    ),
+    null,
+    message,
+  );
+  assert.equal(translated.kind, "catalog");
+  if (translated.kind !== "catalog" || translated.command.type !== "create_supplier") return;
+  assert.equal(translated.command.party.name, "ACME");
+  assert.equal(translated.command.party.email, "contact@acme.fr");
+  assert.equal(translated.command.party.siren, "");
+  assert.equal(parseStructuredPlan(plan([{ type: "CREATE_SUPPLIER", args: { name: "ACME France" } }]), "Ajoute ACME comme fournisseur").ok, false);
+  assert.equal(
+    parseStructuredPlan(plan([{ type: "CREATE_SUPPLIER", args: { name: "ACME", email: "autre@acme.fr" } }]), "Ajoute ACME comme fournisseur").ok,
+    false,
+  );
+  assert.equal(
+    parseStructuredPlan(plan([{ type: "CREATE_SUPPLIER", args: { name: "ACME comme fournisseur" } }]), "Ajoute ACME comme fournisseur").ok,
+    false,
+  );
+});
+
+test("un e-mail fournisseur absent du plan est omis", () => {
+  const message = "Ajoute ACME comme fournisseur, email contact@acme.fr";
+  const translated = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_SUPPLIER", args: { name: "ACME" } }]), message),
+    null,
+    message,
+  );
+  assert.equal(translated.kind, "omitted");
+  if (translated.kind !== "omitted") return;
+  assert.deepEqual(translated.fields, ["email"]);
+});
+
+test("un fournisseur existant ne devient pas une mise à jour", () => {
+  const message = "Ajoute ACME comme fournisseur, email contact@acme.fr";
+  const same = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_SUPPLIER", args: { name: "ACME", email: "contact@acme.fr" } }]), message),
+    known("ACME", { email: "contact@acme.fr" }),
+    message,
+  );
+  assert.equal(same.kind, "already");
+  if (same.kind !== "already") return;
+  assert.equal(same.entity, "supplier");
+  const differs = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_SUPPLIER", args: { name: "ACME", email: "contact@acme.fr" } }]), message),
+    known("ACME", { email: "ancien@acme.fr" }),
+    message,
+  );
+  assert.equal(differs.kind, "contact-differs");
+});
+
+test("un produit structuré force le kind et la famille explicite", () => {
+  const simple = "Ajoute Switch X200 comme produit";
+  assert.equal(structuredShape(simple), "product");
+  const created = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200" } }]), simple),
+    null,
+    simple,
+  );
+  assert.equal(created.kind, "catalog");
+  if (created.kind !== "catalog" || created.command.type !== "create_product") return;
+  assert.equal(created.command.product.kind, "produit");
+  assert.equal(created.command.product.family, "");
+  assert.equal(created.command.product.supplierName, "");
+
+  const family = "Ajoute Switch X200 comme produit, famille réseau";
+  const withFamily = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200", family: "reseau" } }]), family),
+    null,
+    family,
+  );
+  assert.equal(withFamily.kind, "catalog");
+  if (withFamily.kind !== "catalog" || withFamily.command.type !== "create_product") return;
+  assert.equal(withFamily.command.product.family, "reseau");
+
+  const serveur = "Ajoute Serveur Dell R750 comme produit";
+  const bare = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Serveur Dell R750" } }]), serveur),
+    null,
+    serveur,
+  );
+  assert.equal(bare.kind, "catalog");
+  if (bare.kind !== "catalog" || bare.command.type !== "create_product") return;
+  assert.equal(bare.command.product.family, "");
+
+  assert.equal(
+    translateStructuredPlan(
+      accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200", kind: "service" } }]), simple),
+      null,
+      simple,
+    ).kind,
+    "clarify",
+  );
+  assert.equal(parseStructuredPlan(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200", family: "serveurs" } }]), family).ok, false);
+  assert.equal(
+    translateStructuredPlan(
+      accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200" } }]), "Ajoute Switch X200 comme produit, famille serveurs"),
+      null,
+      "Ajoute Switch X200 comme produit, famille serveurs",
+    ).kind,
+    "clarify",
+  );
+});
+
+test("la référence et l’unité s’ancrent sans la règle des trois caractères", () => {
+  const message = "Ajoute Switch X200 comme produit, référence 123456, unité u";
+  const translated = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200", reference: "123456", unit: "u" } }]), message),
+    null,
+    message,
+  );
+  assert.equal(translated.kind, "catalog");
+  if (translated.kind !== "catalog" || translated.command.type !== "create_product") return;
+  assert.equal(translated.command.product.reference, "123456");
+  assert.equal(translated.command.product.unit, "u");
+  const square = "Ajoute Switch X200 comme produit, unité m2";
+  const unit = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200", unit: "m2" } }]), square),
+    null,
+    square,
+  );
+  assert.equal(unit.kind, "catalog");
+  assert.equal(parseStructuredPlan(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200", reference: "999" } }]), message).ok, false);
+});
+
+test("une référence de neuf chiffres n’est pas un SIREN", () => {
+  const message = "Ajoute Switch X comme produit, référence 123456789";
+  const translated = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X", reference: "123456789" } }]), message),
+    null,
+    message,
+  );
+  assert.equal(translated.kind, "catalog");
+  if (translated.kind !== "catalog" || translated.command.type !== "create_product") return;
+  assert.equal(translated.command.product.reference, "123456789");
+  const bare = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X" } }]), "Ajoute Switch X comme produit 123456789"),
+    null,
+    "Ajoute Switch X comme produit 123456789",
+  );
+  assert.equal(bare.kind, "omitted");
+  if (bare.kind !== "omitted") return;
+  assert.ok(bare.fields.includes("siren"));
+});
+
+test("un montant, un SIRET ou un mot siret bloque le produit", () => {
+  for (const message of [
+    "Ajoute Switch X200 comme produit à 150 €",
+    "Ajoute Switch X200 comme produit 150 EUR",
+    "Ajoute Switch X200 comme produit 150 euros",
+    "Ajoute Switch X200 comme produit $150",
+  ]) {
+    const translated = translateStructuredPlan(
+      accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200" } }]), message),
+      null,
+      message,
+    );
+    assert.equal(translated.kind, "omitted");
+    if (translated.kind !== "omitted") return;
+    assert.ok(translated.fields.includes("amount"));
+  }
+  assert.equal(
+    parseStructuredPlan(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200", costStated: "150" } }]), "Ajoute Switch X200 comme produit").ok,
+    false,
+  );
+  const siret = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200" } }]), "Ajoute Switch X200 comme produit, siret 12345678901234"),
+    null,
+    "Ajoute Switch X200 comme produit, siret 12345678901234",
+  );
+  assert.equal(siret.kind, "omitted");
+  if (siret.kind !== "omitted") return;
+  assert.ok(siret.fields.includes("siren"));
+  assert.equal(siret.fields.includes("phone"), false);
+  const phone = translateStructuredPlan(
+    accepted(
+      plan([{ type: "CREATE_SUPPLIER", args: { name: "ACME", phone: "06 12 34 56 78" } }]),
+      "Ajoute ACME comme fournisseur, téléphone 06 12 34 56 78",
+    ),
+    null,
+    "Ajoute ACME comme fournisseur, téléphone 06 12 34 56 78",
+  );
+  assert.equal(phone.kind, "catalog");
+});
+
+test("ouvre le dossier puis ajoute le service reste client ou projet", () => {
+  const message = "Ouvre le dossier Toiture pour Dupont et ajoute le service pose";
+  assert.equal(structuredShape(message), "client-or-project");
+  assert.notEqual(structuredShape(message), "service");
+});
+
+test("nouveau client puis ajoute une prestation reste client ou projet", () => {
+  const message = "Nouveau client Dupont, ajoute une prestation Audit";
+  assert.equal(structuredShape(message), "client-or-project");
+  assert.notEqual(structuredShape(message), "service");
+});
+
+test("un service est un produit dont le serveur fixe le kind", () => {
+  const service = "Ajoute le service Audit réseau";
+  assert.equal(structuredShape(service), "service");
+  const translated = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Audit réseau" } }]), service),
+    null,
+    service,
+  );
+  assert.equal(translated.kind, "catalog");
+  if (translated.kind !== "catalog" || translated.command.type !== "create_product") return;
+  assert.equal(translated.command.product.kind, "service");
+  assert.equal(translated.command.product.family, "");
+  assert.equal(translated.command.product.name, "Audit réseau");
+  assert.equal(parseStructuredPlan(plan([{ type: "CREATE_PRODUCT", args: { name: "service Audit réseau" } }]), service).ok, false);
+
+  const prestation = "Ajoute une prestation Audit réseau";
+  assert.equal(structuredShape(prestation), "service");
+  const named = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Audit réseau" } }]), prestation),
+    null,
+    prestation,
+  );
+  assert.equal(named.kind, "catalog");
+  if (named.kind !== "catalog" || named.command.type !== "create_product") return;
+  assert.equal(named.command.product.kind, "service");
+  assert.equal(named.command.product.family, "");
+});
+
+test("Service Premium dépend du déterminant", () => {
+  assert.equal(structuredShape("Ajoute Service Premium"), "client-or-project");
+  assert.equal(structuredShape("Ajoute le Service Premium"), "service");
+  const translated = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Service Premium" } }]), "Ajoute le Service Premium"),
+    null,
+    "Ajoute le Service Premium",
+  );
+  assert.equal(translated.kind, "catalog");
+  if (translated.kind !== "catalog" || translated.command.type !== "create_product") return;
+  assert.equal(translated.command.product.name, "Service Premium");
+  assert.equal(translated.command.product.kind, "service");
+});
+
+test("un rôle explicite l’emporte sur la forme service", () => {
+  assert.equal(structuredShape("Ajoute le Service Plus comme client"), "client-or-project");
+  assert.equal(structuredShape("Ajoute la prestation X comme produit"), "product");
+  assert.equal(structuredShape("Ajoute la prestation Atlas comme produit"), "product");
+  const product = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Atlas" } }]), "Ajoute la prestation Atlas comme produit"),
+    null,
+    "Ajoute la prestation Atlas comme produit",
+  );
+  assert.equal(product.kind, "catalog");
+  if (product.kind !== "catalog" || product.command.type !== "create_product") return;
+  assert.equal(product.command.product.kind, "produit");
+});
+
+test("deux rôles explicites ne choisissent pas", () => {
+  const message = "Ajoute ACME comme client et comme fournisseur";
+  assert.equal(structuredShape(message), null);
+  assert.equal(structuredPlanEligible(message), false);
+  assert.equal(
+    translateStructuredPlan({ source: "ollama", actions: [client], missing: [] }, null, message).kind,
+    "clarify",
+  );
+});
+
+test("un mot hors périmètre bloque toutes les formes", () => {
+  assert.equal(structuredShape("Ajoute ACME comme fournisseur pour le contrat Dupont"), null);
+  assert.equal(structuredShape("Ajoute Switch X200 comme produit pour le contrat Dupont"), null);
+});
+
+test("un produit existant est déjà connu", () => {
+  const message = "Ajoute Switch X200 comme produit";
+  const translated = translateStructuredPlan(
+    accepted(plan([{ type: "CREATE_PRODUCT", args: { name: "Switch X200" } }]), message),
+    known("Switch X200"),
+    message,
+  );
+  assert.equal(translated.kind, "already");
+  if (translated.kind !== "already") return;
+  assert.equal(translated.entity, "product");
 });

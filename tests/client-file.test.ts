@@ -280,3 +280,10 @@ test("une correction explicite reste une mise à jour de fiche", () => {
     assert.equal(structuredPlanEligible(text), false);
   }
 });
+
+test("un fournisseur avec e-mail n’enrichit pas le client du même nom", () => {
+  const text = "Ajoute ACME comme fournisseur, email contact@acme.fr";
+  assert.equal(asksToEnrichRecord(text), false);
+  assert.equal(enrichmentOwnsTurn(text, "change"), false);
+  assert.equal(enrichmentOwnsTurn(text, understandIntent(text)), false);
+});

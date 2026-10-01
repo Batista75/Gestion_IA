@@ -9,6 +9,7 @@ import {
   resumeSuspendedTask,
   taskSteps,
 } from "../src/domain/task-path.ts";
+import { structuredShape } from "../src/domain/structured-plan.ts";
 
 const empty = { projet: "", type: "", societe: "" };
 
@@ -75,4 +76,11 @@ test("une tâche enregistrée se relit sans inventer une étape", () => {
   assert.equal(task?.intent, "register_document");
   assert.equal(task?.steps.length, 4);
   assert.equal(readStoredTask({ status: "suspendue" }), null);
+});
+
+test("un service structuré ne reprend pas un parcours suspendu", () => {
+  const text = "Ajoute le service Audit réseau";
+  assert.equal(structuredShape(text), "service");
+  assert.equal(resumeKind(text), null);
+  assert.equal(resumeSuspendedTask(text, false), null);
 });

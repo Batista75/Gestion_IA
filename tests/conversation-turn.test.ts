@@ -463,3 +463,14 @@ test("une correction sans nom ne choisit pas entre plusieurs fiches", () => {
     ["dupont"],
   );
 });
+
+test("une création catalogue ne corrige pas la fiche client en attente", () => {
+  const email = "Ajoute ACME comme fournisseur, son email est contact@acme.fr";
+  const labeled = "Ajoute ACME comme fournisseur, email : contact@acme.fr";
+  const bare = "Ajoute ACME comme fournisseur";
+  for (const text of [email, labeled, bare]) {
+    assert.equal(classifyPendingTurn(text), "new_intent");
+    assert.equal(revisesPendingDraft(classifyPendingTurn(text)), false);
+  }
+  assert.equal(classifyPendingTurn("son email est nouveau@dupont.fr"), "correction");
+});

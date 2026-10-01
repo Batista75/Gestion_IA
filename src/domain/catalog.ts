@@ -1,4 +1,4 @@
-import { readProductFamily } from "./measures.ts";
+import { familyLabel, readProductFamily } from "./measures.ts";
 
 export type PartyInput = {
   name: string;
@@ -75,9 +75,11 @@ function commandFields(command: CatalogCommand): CommandField[] {
       return [
         { label: "Action", value: command.type === "update_product" ? "Mise à jour" : "Création" },
         { label: "Fiche", value: "Produit" },
+        ...kindField(command.product.kind),
         { label: "Nom", value: command.product.name },
         ...filled("Référence", command.product.reference),
         ...filled("Unité", command.product.unit),
+        ...filled("Famille", command.product.family ? familyLabel(command.product.family) : ""),
         ...filled("Fournisseur", command.product.supplierName),
       ];
     case "create_project":
@@ -99,6 +101,12 @@ function commandFields(command: CatalogCommand): CommandField[] {
         },
       ];
   }
+}
+
+function kindField(kind: string | undefined): CommandField[] {
+  if (kind === "service") return [{ label: "Nature", value: "Service" }];
+  if (kind === "produit") return [{ label: "Nature", value: "Produit" }];
+  return [];
 }
 
 function filled(label: string, value: string): CommandField[] {
