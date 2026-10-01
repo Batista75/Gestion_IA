@@ -2,61 +2,42 @@
 
 ## Baseline fonctionnelle
 
-BASELINE-7 — 70418dd — LOT-V3-005 validé
+BASELINE-8 — 4794328 — LOT-V3-006 validé
 
 SHA :
-70418ddc58da96cfb8a8a35095cb37b147d2f10f
+479432872e5148efbb475df2ff1ff57d9042a866
+
+371 tests, 0 échec.
 
 ## HEAD technique
 
-db86439 — chore: ajoute le protocole de handoff IA
+4794328 — feat: sécurise les actions de proposition par identifiant
 
-Ce commit ajoute uniquement le protocole .ai.
-Il ne constitue pas une nouvelle baseline fonctionnelle.
+HEAD = origin/main.
 
-## Lot actif
+## Lot clos
 
-LOT-V3-006 — Confirmation et rejet par identifiant de Proposal
+LOT-V3-006 validé.
 
-## État
+Confirmation et rejet par identifiant de la proposition affichée.
+Le texte libre continue de viser la proposition en attente la plus récente.
 
-CORRECTIONS AVANT RECETTE
+Claim atomique :
 
-L'implémentation du ciblage par ID est réalisée mais non commitée.
+en_attente → en_cours → confirmee/echec
 
-La revue Claude a validé :
-- ciblage exact par ID ;
-- isolation inter-conversation ;
-- mauvais type refusé ;
-- compatibilité historique ;
-- AssistantTask ;
-- texte libre ;
-- propagation ID/type.
+avant l’écriture métier. Un second essai, ou un rejet après le claim, n’écrit pas.
 
-Elle a identifié deux blocages :
-1. double exécution possible lors de confirmations concurrentes ;
-2. course possible entre confirmation et rejet.
+Aucune migration.
 
-## Décision
+## Backlog résiduel
 
-Ajouter un claim atomique :
-
-en_attente → en_cours
-
-avant toute écriture métier des Proposal confirmées.
-
-BusinessPlanProposal dispose déjà de ce mécanisme et sert de référence.
-
-## Backlog après LOT-V3-006
-
-- expiration AssistantTask ;
+- reprise des propositions `en_cours` ;
+- erreur `markConfirmed` après écriture ;
+- messages d’échec plus précis ;
+- `createProposalLedger` à sortir du domaine ;
 - tests complets de route ;
-- StructuredPlan fournisseur ;
-- StructuredPlan produit ;
-- StructuredPlan service ;
-- atomicité CatalogProposal généralisée ;
-- transaction BusinessPlan ;
-- adresse contenant le mot « à ».
+- `rejectBusinessPlanProposal` texte libre sans contrôle du count.
 
 ## Règle de travail
 
