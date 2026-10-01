@@ -11,7 +11,7 @@ SHA :
 
 ## HEAD technique
 
-0a8d5b7 — feat: etend StructuredPlan aux fournisseurs produits et services
+ad0b8b908b15290e420005a1cfc6550eff247de1 — chore: cloture LOT-V3-007 BASELINE-9
 
 HEAD = origin/main.
 
