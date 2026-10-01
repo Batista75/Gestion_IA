@@ -1,6 +1,12 @@
 import { revalidatePath } from "next/cache";
 import { nameKey, type PartyInput } from "@/domain/catalog";
-import { proposalsReplacedBy, resolveRecordTarget, resolveUpdateTarget, storedClientForDraft } from "@/domain/conversation-turn";
+import {
+  proposalsReplacedBy,
+  rejectPendingProposal,
+  resolveRecordTarget,
+  resolveUpdateTarget,
+  storedClientForDraft,
+} from "@/domain/conversation-turn";
 import { CLIENT_FIELD_LABELS, fieldChangeSummary } from "@/domain/record-journal";
 import {
   displayName,
@@ -24,7 +30,14 @@ import { syncPrimaryAddress } from "@/lib/addresses";
 import { attachOrganization } from "@/lib/organizations";
 import { syncPrimaryContact } from "@/lib/contacts";
 import { stampProvenance } from "@/domain/provenance";
-import { pendingInThread } from "@/domain/proposal-scope";
+import {
+  pendingInThread,
+  proposalCard,
+  runClaimedConfirmation,
+  selectProposalTarget,
+  UNAVAILABLE_PROPOSAL,
+  type ProposalCard,
+} from "@/domain/proposal-scope";
 import { prisma } from "@/lib/db";
 
 const PATHS = [
@@ -39,7 +52,7 @@ const PATHS = [
 
 export type ProposalView = {
   reply: string;
-  proposal: { fields: Array<{ label: string; value: string }>; confirmable?: boolean };
+  proposal: ProposalCard;
 };
 
 export async function openClientProposal(
@@ -75,7 +88,7 @@ export async function openClientProposal(
       data: { status: "remplacee" },
     });
   }
-  await prisma.clientProposal.create({
+  const created = await prisma.clientProposal.create({
     data: {
       status: "en_attente",
       conversationId: scope.conversationId,
@@ -83,7 +96,7 @@ export async function openClientProposal(
       ...stampProvenance("regle", proposalFields(ready)),
     },
   });
-  return view(ready);
+  return view(ready, created.id);
 }
 
 export async function currentProposal(conversationId: string): Promise<ClientDraft | null> {
@@ -132,16 +145,88 @@ export async function confirmCurrentProposal(conversationId: string): Promise<{
   if (!row) {
     return { ok: false, summary: "Il n’y a pas de fiche client en attente." };
   }
+  return applyClientProposal(row, scope.conversationId);
+}
+
+export async function confirmClientProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; summary: string }> {
+  const row = await clientProposalTarget(conversationId, proposalId);
+  if (!row) return { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  return applyClientProposal(row, row.conversationId ?? "");
+}
+
+export async function rejectClientProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; reply: string }> {
+  const row = await clientProposalTarget(conversationId, proposalId);
+  if (!row || !row.conversationId) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  const decision = rejectPendingProposal(
+    { status: row.status, validatedAt: null },
+    new Date().toISOString(),
+  );
+  if (!decision.changed || !decision.row.validatedAt) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  const claimed = await prisma.clientProposal.updateMany({
+    where: { id: row.id, conversationId: row.conversationId, status: "en_attente" },
+    data: { status: decision.row.status, validatedAt: new Date(decision.row.validatedAt) },
+  });
+  if (claimed.count !== 1) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  revalidatePath("/");
+  return { ok: true, reply: "La proposition a été annulée. Rien n’a été enregistré." };
+}
+
+async function clientProposalTarget(conversationId: string, proposalId: string) {
+  const found = await prisma.clientProposal.findFirst({ where: { id: proposalId } });
+  const target = selectProposalTarget(
+    found
+      ? [{ id: found.id, type: "client", conversationId: found.conversationId, status: found.status }]
+      : [],
+    { proposalId, proposalType: "client" },
+    conversationId,
+  );
+  if (!target) return null;
+  return prisma.clientProposal.findFirst({
+    where: { id: target.id, status: "en_attente", conversationId: target.conversationId },
+  });
+}
+
+async function applyClientProposal(
+  row: { id: string; payload: unknown },
+  conversationId: string,
+): Promise<{ ok: boolean; summary: string }> {
   const draft = asDraft(row.payload);
   if (!draft) return { ok: false, summary: "Cette proposition est illisible. Rien n’est enregistré." };
-  const saved = await withChangeSource("assistant", () => saveClientDraft(draft, { allowUpdate: true }));
-  if (!saved.ok) return saved;
-  await prisma.clientProposal.updateMany({
-    where: { id: row.id, status: "en_attente", conversationId: scope.conversationId },
-    data: { status: "confirmee", validatedAt: new Date() },
+  const outcome = await runClaimedConfirmation({
+    claim: async () => {
+      const claimed = await prisma.clientProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_attente" },
+        data: { status: "en_cours" },
+      });
+      return claimed.count === 1;
+    },
+    write: () => withChangeSource("assistant", () => saveClientDraft(draft, { allowUpdate: true })),
+    succeeded: (saved) => saved.ok,
+    markConfirmed: async () => {
+      await prisma.clientProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "confirmee", validatedAt: new Date() },
+      });
+    },
+    markFailed: async () => {
+      await prisma.clientProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "echec" },
+      });
+    },
   });
+  if (outcome.status !== "confirmed") {
+    return "value" in outcome ? outcome.value : { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  }
+  const saved = outcome.value;
   const left = await prisma.clientProposal.count({
-    where: { status: "en_attente", conversationId: scope.conversationId },
+    where: { status: "en_attente", conversationId },
   });
   if (left > 0) {
     return { ok: true, summary: `${saved.summary} Une autre proposition reste en attente.` };
@@ -383,10 +468,11 @@ function clientToDraft(row: {
   });
 }
 
-function view(draft: ClientDraft): ProposalView {
+function view(draft: ClientDraft, id?: string): ProposalView {
+  const fields = proposalFields(draft);
   return {
     reply: presentProposal(draft),
-    proposal: { fields: proposalFields(draft) },
+    proposal: id ? proposalCard("client", id, fields) : { fields },
   };
 }
 

@@ -20,7 +20,14 @@ import {
 } from "@/domain/interventions";
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { stampProvenance } from "@/domain/provenance";
-import { pendingInThread } from "@/domain/proposal-scope";
+import {
+  pendingInThread,
+  proposalCard,
+  runClaimedConfirmation,
+  selectProposalTarget,
+  UNAVAILABLE_PROPOSAL,
+  type ProposalCard,
+} from "@/domain/proposal-scope";
 import { withChangeSource } from "@/lib/change-source";
 import { prisma } from "@/lib/db";
 
@@ -28,7 +35,7 @@ export type InterventionReply = {
   reply: string;
   packet: AnswerPacket;
   source: "regle-metier" | "proposition";
-  proposal?: { fields: Array<{ label: string; value: string }> };
+  proposal?: ProposalCard;
 };
 
 export async function resolveIntervention(text: string, conversationId: string, now = new Date()): Promise<InterventionReply | null> {
@@ -88,7 +95,7 @@ export async function resolveIntervention(text: string, conversationId: string, 
     where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
   });
-  await prisma.interventionProposal.create({
+  const created = await prisma.interventionProposal.create({
     data: {
       status: "en_attente",
       conversationId: scope.conversationId,
@@ -96,12 +103,36 @@ export async function resolveIntervention(text: string, conversationId: string, 
       ...stampProvenance("regle", fields),
     },
   });
-  return { reply: safeReply(packet), packet, source: "proposition", proposal: { fields } };
+  return {
+    reply: safeReply(packet),
+    packet,
+    source: "proposition",
+    proposal: proposalCard("intervention", created.id, fields),
+  };
 }
 
 export async function confirmInterventionProposal(conversationId: string): Promise<{ ok: boolean; summary: string }> {
   const row = await pendingInterventionProposal(conversationId);
   if (!row) return { ok: false, summary: "Il n’y a pas d’intervention en attente." };
+  return applyInterventionProposal(row);
+}
+
+export async function confirmInterventionProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; summary: string }> {
+  const row = await interventionProposalTarget(conversationId, proposalId);
+  if (!row) return { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  return applyInterventionProposal(row);
+}
+
+async function applyInterventionProposal(row: {
+  id: string;
+  payload: unknown;
+  conversationId: string | null;
+}): Promise<{ ok: boolean; summary: string }> {
+  if (!row.conversationId) return { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  const conversationId = row.conversationId;
   const draft = interventionPayload(row.payload);
   if (!draft) return { ok: false, summary: "Cette proposition d’intervention est illisible." };
   const project = await prisma.project.findFirst({
@@ -109,30 +140,50 @@ export async function confirmInterventionProposal(conversationId: string): Promi
     select: { id: true, name: true, client: { select: { name: true } } },
   });
   if (!project) return { ok: false, summary: "Ce dossier est introuvable. L’intervention n’est pas enregistrée." };
-  await withChangeSource("assistant", () =>
-    prisma.intervention.create({
-      data: {
-        clientId: draft.clientId,
-        projectId: project.id,
-        kind: draft.kind,
-        occurredOn: draft.occurredOn,
-        durationMinutes: draft.durationMinutes,
-        rateUnit: draft.rateUnit,
-        rateCents: draft.rateCents,
-        ticket: draft.ticket,
-        billedReference: draft.billedReference,
-        onSite: draft.onSite,
-        underContract: draft.underContract,
-        requestedOn: draft.requestedOn,
-        arrivedOn: draft.arrivedOn,
-        confirmedAt: new Date(),
-      },
-    }),
-  );
-  await prisma.interventionProposal.update({
-    where: { id: row.id },
-    data: { status: "confirmee", validatedAt: new Date() },
+  const outcome = await runClaimedConfirmation({
+    claim: async () => {
+      const claimed = await prisma.interventionProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_attente" },
+        data: { status: "en_cours" },
+      });
+      return claimed.count === 1;
+    },
+    write: () =>
+      withChangeSource("assistant", () =>
+        prisma.intervention.create({
+          data: {
+            clientId: draft.clientId,
+            projectId: project.id,
+            kind: draft.kind,
+            occurredOn: draft.occurredOn,
+            durationMinutes: draft.durationMinutes,
+            rateUnit: draft.rateUnit,
+            rateCents: draft.rateCents,
+            ticket: draft.ticket,
+            billedReference: draft.billedReference,
+            onSite: draft.onSite,
+            underContract: draft.underContract,
+            requestedOn: draft.requestedOn,
+            arrivedOn: draft.arrivedOn,
+            confirmedAt: new Date(),
+          },
+        }),
+      ),
+    succeeded: () => true,
+    markConfirmed: async () => {
+      await prisma.interventionProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "confirmee", validatedAt: new Date() },
+      });
+    },
+    markFailed: async () => {
+      await prisma.interventionProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "echec" },
+      });
+    },
   });
+  if (outcome.status !== "confirmed") return { ok: false, summary: UNAVAILABLE_PROPOSAL };
   revalidatePath("/");
   return {
     ok: true,
@@ -142,13 +193,44 @@ export async function confirmInterventionProposal(conversationId: string): Promi
 
 export async function rejectInterventionProposal(conversationId: string): Promise<{ reply: string } | null> {
   const row = await pendingInterventionProposal(conversationId);
-  if (!row) return null;
-  await prisma.interventionProposal.update({
-    where: { id: row.id },
+  if (!row || !row.conversationId) return null;
+  const claimed = await prisma.interventionProposal.updateMany({
+    where: { id: row.id, conversationId: row.conversationId, status: "en_attente" },
     data: { status: "rejetee", validatedAt: new Date() },
   });
+  if (claimed.count !== 1) return { reply: UNAVAILABLE_PROPOSAL };
   revalidatePath("/");
   return { reply: "L’intervention n’est pas enregistrée." };
+}
+
+export async function rejectInterventionProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; reply: string }> {
+  const row = await interventionProposalTarget(conversationId, proposalId);
+  if (!row || !row.conversationId) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  const claimed = await prisma.interventionProposal.updateMany({
+    where: { id: row.id, status: "en_attente", conversationId: row.conversationId },
+    data: { status: "rejetee", validatedAt: new Date() },
+  });
+  if (claimed.count !== 1) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  revalidatePath("/");
+  return { ok: true, reply: "L’intervention n’est pas enregistrée." };
+}
+
+async function interventionProposalTarget(conversationId: string, proposalId: string) {
+  const found = await prisma.interventionProposal.findFirst({ where: { id: proposalId } });
+  const target = selectProposalTarget(
+    found
+      ? [{ id: found.id, type: "intervention", conversationId: found.conversationId, status: found.status }]
+      : [],
+    { proposalId, proposalType: "intervention" },
+    conversationId,
+  );
+  if (!target) return null;
+  return prisma.interventionProposal.findFirst({
+    where: { id: target.id, status: "en_attente", conversationId: target.conversationId },
+  });
 }
 
 export async function pendingInterventionProposal(conversationId: string) {

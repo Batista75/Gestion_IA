@@ -22,7 +22,14 @@ import {
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { PRODUCT_FAMILIES, type ProductFamily } from "@/domain/measures";
 import { stampProvenance } from "@/domain/provenance";
-import { pendingInThread } from "@/domain/proposal-scope";
+import {
+  pendingInThread,
+  proposalCard,
+  runClaimedConfirmation,
+  selectProposalTarget,
+  UNAVAILABLE_PROPOSAL,
+  type ProposalCard,
+} from "@/domain/proposal-scope";
 import { withChangeSource } from "@/lib/change-source";
 import { prisma } from "@/lib/db";
 
@@ -30,7 +37,7 @@ export type EquipmentReply = {
   reply: string;
   packet: AnswerPacket;
   source: "regle-metier" | "proposition";
-  proposal?: { fields: Array<{ label: string; value: string }> };
+  proposal?: ProposalCard;
 };
 
 export async function resolveEquipment(text: string, conversationId: string, now = new Date()): Promise<EquipmentReply | null> {
@@ -85,7 +92,7 @@ export async function resolveEquipment(text: string, conversationId: string, now
     where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
   });
-  await prisma.installedEquipmentProposal.create({
+  const created = await prisma.installedEquipmentProposal.create({
     data: {
       status: "en_attente",
       conversationId: scope.conversationId,
@@ -93,12 +100,36 @@ export async function resolveEquipment(text: string, conversationId: string, now
       ...stampProvenance("regle", fields),
     },
   });
-  return { reply: safeReply(packet), packet, source: "proposition", proposal: { fields } };
+  return {
+    reply: safeReply(packet),
+    packet,
+    source: "proposition",
+    proposal: proposalCard("equipment", created.id, fields),
+  };
 }
 
 export async function confirmEquipmentProposal(conversationId: string): Promise<{ ok: boolean; summary: string }> {
   const row = await pendingEquipmentProposal(conversationId);
   if (!row) return { ok: false, summary: "Il n’y a pas d’équipement en attente." };
+  return applyEquipmentProposal(row);
+}
+
+export async function confirmEquipmentProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; summary: string }> {
+  const row = await equipmentProposalTarget(conversationId, proposalId);
+  if (!row) return { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  return applyEquipmentProposal(row);
+}
+
+async function applyEquipmentProposal(row: {
+  id: string;
+  payload: unknown;
+  conversationId: string | null;
+}): Promise<{ ok: boolean; summary: string }> {
+  if (!row.conversationId) return { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  const conversationId = row.conversationId;
   const draft = equipmentPayload(row.payload);
   if (!draft) return { ok: false, summary: "Cette proposition d’équipement est illisible." };
   const client = await prisma.client.findUnique({ where: { id: draft.clientId }, select: { id: true, name: true } });
@@ -106,23 +137,43 @@ export async function confirmEquipmentProposal(conversationId: string): Promise<
   const product = draft.productId
     ? await prisma.product.findUnique({ where: { id: draft.productId }, select: { id: true } })
     : null;
-  await withChangeSource("assistant", () =>
-    prisma.installedEquipment.create({
-      data: {
-        clientId: client.id,
-        productId: product?.id ?? null,
-        designation: draft.designation,
-        family: draft.family,
-        installedOn: draft.installedOn,
-        warranty: draft.warranty,
-        confirmedAt: new Date(),
-      },
-    }),
-  );
-  await prisma.installedEquipmentProposal.update({
-    where: { id: row.id },
-    data: { status: "confirmee", validatedAt: new Date() },
+  const outcome = await runClaimedConfirmation({
+    claim: async () => {
+      const claimed = await prisma.installedEquipmentProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_attente" },
+        data: { status: "en_cours" },
+      });
+      return claimed.count === 1;
+    },
+    write: () =>
+      withChangeSource("assistant", () =>
+        prisma.installedEquipment.create({
+          data: {
+            clientId: client.id,
+            productId: product?.id ?? null,
+            designation: draft.designation,
+            family: draft.family,
+            installedOn: draft.installedOn,
+            warranty: draft.warranty,
+            confirmedAt: new Date(),
+          },
+        }),
+      ),
+    succeeded: () => true,
+    markConfirmed: async () => {
+      await prisma.installedEquipmentProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "confirmee", validatedAt: new Date() },
+      });
+    },
+    markFailed: async () => {
+      await prisma.installedEquipmentProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "echec" },
+      });
+    },
   });
+  if (outcome.status !== "confirmed") return { ok: false, summary: UNAVAILABLE_PROPOSAL };
   revalidatePath("/");
   return {
     ok: true,
@@ -132,13 +183,44 @@ export async function confirmEquipmentProposal(conversationId: string): Promise<
 
 export async function rejectEquipmentProposal(conversationId: string): Promise<{ reply: string } | null> {
   const row = await pendingEquipmentProposal(conversationId);
-  if (!row) return null;
-  await prisma.installedEquipmentProposal.update({
-    where: { id: row.id },
+  if (!row || !row.conversationId) return null;
+  const claimed = await prisma.installedEquipmentProposal.updateMany({
+    where: { id: row.id, conversationId: row.conversationId, status: "en_attente" },
     data: { status: "rejetee", validatedAt: new Date() },
   });
+  if (claimed.count !== 1) return { reply: UNAVAILABLE_PROPOSAL };
   revalidatePath("/");
   return { reply: "L’équipement n’est pas enregistré." };
+}
+
+export async function rejectEquipmentProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; reply: string }> {
+  const row = await equipmentProposalTarget(conversationId, proposalId);
+  if (!row || !row.conversationId) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  const claimed = await prisma.installedEquipmentProposal.updateMany({
+    where: { id: row.id, status: "en_attente", conversationId: row.conversationId },
+    data: { status: "rejetee", validatedAt: new Date() },
+  });
+  if (claimed.count !== 1) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  revalidatePath("/");
+  return { ok: true, reply: "L’équipement n’est pas enregistré." };
+}
+
+async function equipmentProposalTarget(conversationId: string, proposalId: string) {
+  const found = await prisma.installedEquipmentProposal.findFirst({ where: { id: proposalId } });
+  const target = selectProposalTarget(
+    found
+      ? [{ id: found.id, type: "equipment", conversationId: found.conversationId, status: found.status }]
+      : [],
+    { proposalId, proposalType: "equipment" },
+    conversationId,
+  );
+  if (!target) return null;
+  return prisma.installedEquipmentProposal.findFirst({
+    where: { id: target.id, status: "en_attente", conversationId: target.conversationId },
+  });
 }
 
 export async function pendingEquipmentProposal(conversationId: string) {

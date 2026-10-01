@@ -2,6 +2,7 @@ import { readPacket, type AnswerPacket } from "@/domain/answer-packet";
 import { readUnderstanding, type UnderstandingCard } from "@/domain/completeness";
 import { stampProvenance } from "@/domain/provenance";
 import { uniqueNameMatch } from "@/domain/knowledge";
+import { readStoredProposalCard, type ProposalCard } from "@/domain/proposal-scope";
 import { prisma } from "@/lib/db";
 import { THREAD_MESSAGE_LIMIT, type ThreadSummary } from "@/domain/thread";
 import { proposedThreadTitle } from "@/domain/thread-title";
@@ -12,7 +13,7 @@ export type StoredTurn = {
   content: string;
   source: string;
   steps: string[];
-  proposal: { fields: Array<{ label: string; value: string }>; confirmable?: boolean } | null;
+  proposal: ProposalCard | null;
   sources: Array<{ label: string; title: string }>;
   understanding: UnderstandingCard | null;
   packet: AnswerPacket | null;
@@ -106,7 +107,7 @@ export async function rememberTurn(input: {
   content: string;
   source?: string;
   steps?: string[];
-  proposal?: { fields: Array<{ label: string; value: string }>; confirmable?: boolean } | null;
+  proposal?: ProposalCard | null;
   sources?: Array<{ label: string; title: string }>;
   understanding?: UnderstandingCard | null;
   packet?: AnswerPacket | null;
@@ -276,21 +277,25 @@ function messageVersion(input: { role: string; source?: string; modelVersion?: s
 }
 
 function storedProposal(
-  proposal: { fields: Array<{ label: string; value: string }>; confirmable?: boolean } | null | undefined,
+  proposal: ProposalCard | null | undefined,
   understanding: UnderstandingCard | null | undefined,
   packet: AnswerPacket | null | undefined,
 ): {
+  id?: string;
+  type?: ProposalCard["type"];
   fields?: Array<{ label: string; value: string }>;
   confirmable?: boolean;
   understanding?: UnderstandingCard;
   packet?: AnswerPacket;
 } | undefined {
   if (!proposal && !understanding && !packet) return undefined;
+  const card = proposal ? readStoredProposalCard(proposal) : null;
   return {
-    ...(proposal
+    ...(card
       ? {
-          fields: proposal.fields,
-          ...(proposal.confirmable === false ? { confirmable: false } : {}),
+          ...(card.id && card.type ? { id: card.id, type: card.type } : {}),
+          fields: card.fields,
+          ...(card.confirmable === false ? { confirmable: false } : {}),
         }
       : {}),
     ...(understanding ? { understanding } : {}),
@@ -299,19 +304,7 @@ function storedProposal(
 }
 
 function proposalOf(value: unknown): StoredTurn["proposal"] {
-  if (!value || typeof value !== "object" || !("fields" in value)) return null;
-  const fields = (value as { fields?: unknown }).fields;
-  if (!Array.isArray(fields)) return null;
-  const rows = fields.flatMap((item) => {
-    if (!item || typeof item !== "object") return [];
-    const row = item as { label?: unknown; value?: unknown };
-    return typeof row.label === "string" && typeof row.value === "string"
-      ? [{ label: row.label, value: row.value }]
-      : [];
-  });
-  if (rows.length === 0) return null;
-  const confirmable = (value as { confirmable?: unknown }).confirmable;
-  return confirmable === false ? { fields: rows, confirmable: false } : { fields: rows };
+  return readStoredProposalCard(value);
 }
 
 function sourceList(value: unknown): Array<{ label: string; title: string }> {

@@ -4,8 +4,12 @@ import {
   pendingInThread,
   planInboxLink,
   presentBusinessPlan,
+  proposalCard,
   readStoredPlan,
+  type ProposalCard,
+  selectProposalTarget,
   settleBusinessPlan,
+  UNAVAILABLE_PROPOSAL,
 } from "@/domain/proposal-scope";
 import type { BusinessPlan } from "@/domain/business-brief";
 import { readProvenance, stampProvenance, type FieldConfidence } from "@/domain/provenance";
@@ -22,7 +26,7 @@ export async function openBusinessPlanProposal(
     provenance?: { modelVersion: "ollama"; confidence: FieldConfidence[] };
     inheritInboxItem?: boolean;
   },
-): Promise<{ reply: string; proposal: { fields: Array<{ label: string; value: string }> } } | { clarify: string }> {
+): Promise<{ reply: string; proposal: ProposalCard } | { clarify: string }> {
   const scope = pendingInThread(conversationId);
   if (!scope) return { clarify: "Le fil est inconnu. Rien n’est enregistré." };
   const presented = presentBusinessPlan(plan);
@@ -36,7 +40,7 @@ export async function openBusinessPlanProposal(
     where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
   });
-  await prisma.businessPlanProposal.create({
+  const created = await prisma.businessPlanProposal.create({
     data: {
       status: "en_attente",
       conversationId: scope.conversationId,
@@ -48,7 +52,7 @@ export async function openBusinessPlanProposal(
   await refreshInboxStatus(previous?.inboxItemId);
   await refreshInboxStatus(linked);
   revalidatePath("/");
-  return { reply: presented.reply, proposal: { fields: presented.fields } };
+  return { reply: presented.reply, proposal: proposalCard("businessPlan", created.id, presented.fields) };
 }
 
 export async function pendingBusinessPlanProposal(conversationId: string) {
@@ -176,4 +180,27 @@ export async function rejectBusinessPlanProposal(conversationId: string): Promis
   await refreshInboxStatus(row.inboxItemId);
   revalidatePath("/");
   return { reply: "Rien n’est enregistré." };
+}
+
+export async function rejectBusinessPlanProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; reply: string }> {
+  const found = await prisma.businessPlanProposal.findFirst({ where: { id: proposalId } });
+  const target = selectProposalTarget(
+    found
+      ? [{ id: found.id, type: "businessPlan", conversationId: found.conversationId, status: found.status }]
+      : [],
+    { proposalId, proposalType: "businessPlan" },
+    conversationId,
+  );
+  if (!target) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  const claimed = await prisma.businessPlanProposal.updateMany({
+    where: { id: target.id, status: "en_attente", conversationId: target.conversationId },
+    data: { status: "rejetee" },
+  });
+  if (claimed.count !== 1) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  await refreshInboxStatus(found?.inboxItemId ?? null);
+  revalidatePath("/");
+  return { ok: true, reply: "Rien n’est enregistré." };
 }

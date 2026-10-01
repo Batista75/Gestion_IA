@@ -33,7 +33,13 @@ import {
 } from "@/domain/claims";
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { stampProvenance } from "@/domain/provenance";
-import { pendingInThread } from "@/domain/proposal-scope";
+import {
+  pendingInThread,
+  proposalCard,
+  runClaimedConfirmation,
+  selectProposalTarget,
+  UNAVAILABLE_PROPOSAL,
+} from "@/domain/proposal-scope";
 import { withChangeSource } from "@/lib/change-source";
 import { prisma } from "@/lib/db";
 
@@ -88,7 +94,7 @@ async function proposeClaim(
     where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
   });
-  await prisma.claimProposal.create({
+  const created = await prisma.claimProposal.create({
     data: {
       status: "en_attente",
       conversationId: scope.conversationId,
@@ -96,7 +102,12 @@ async function proposeClaim(
       ...stampProvenance("regle", fields),
     },
   });
-  return { reply: safeReply(packet), packet, source: "proposition", proposal: { fields } };
+  return {
+    reply: safeReply(packet),
+    packet,
+    source: "proposition",
+    proposal: proposalCard("claim", created.id, fields),
+  };
 }
 
 async function proposeReturn(
@@ -134,7 +145,7 @@ async function proposeReturn(
     where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
   });
-  await prisma.returnRequestProposal.create({
+  const created = await prisma.returnRequestProposal.create({
     data: {
       status: "en_attente",
       conversationId: scope.conversationId,
@@ -142,29 +153,76 @@ async function proposeReturn(
       ...stampProvenance("regle", fields),
     },
   });
-  return { reply: safeReply(packet), packet, source: "proposition", proposal: { fields } };
+  return {
+    reply: safeReply(packet),
+    packet,
+    source: "proposition",
+    proposal: proposalCard("returnRequest", created.id, fields),
+  };
 }
 
 export async function confirmClaimProposal(conversationId: string): Promise<{ ok: boolean; summary: string }> {
   const row = await pendingClaimProposal(conversationId);
   if (!row) return { ok: false, summary: "Il n’y a pas de réclamation en attente." };
+  return applyClaimProposal(row);
+}
+
+export async function confirmClaimProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; summary: string }> {
+  const row = await claimProposalTarget(conversationId, proposalId);
+  if (!row) return { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  return applyClaimProposal(row);
+}
+
+async function applyClaimProposal(row: {
+  id: string;
+  payload: unknown;
+  conversationId: string | null;
+}): Promise<{ ok: boolean; summary: string }> {
+  if (!row.conversationId) return { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  const conversationId = row.conversationId;
   const draft = claimPayload(row.payload);
   if (!draft) return { ok: false, summary: "Cette proposition de réclamation est illisible." };
   const client = await prisma.client.findUnique({ where: { id: draft.clientId }, select: { id: true, name: true } });
   if (!client) return { ok: false, summary: "Ce client est introuvable. La réclamation n’est pas enregistrée." };
-  await withChangeSource("assistant", () =>
-    prisma.claim.create({
-      data: {
-        clientId: client.id,
-        kind: draft.kind,
-        occurredOn: draft.occurredOn,
-        status: draft.status,
-        note: draft.note,
-        confirmedAt: new Date(),
-      },
-    }),
-  );
-  await prisma.claimProposal.update({ where: { id: row.id }, data: { status: "confirmee", validatedAt: new Date() } });
+  const outcome = await runClaimedConfirmation({
+    claim: async () => {
+      const claimed = await prisma.claimProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_attente" },
+        data: { status: "en_cours" },
+      });
+      return claimed.count === 1;
+    },
+    write: () =>
+      withChangeSource("assistant", () =>
+        prisma.claim.create({
+          data: {
+            clientId: client.id,
+            kind: draft.kind,
+            occurredOn: draft.occurredOn,
+            status: draft.status,
+            note: draft.note,
+            confirmedAt: new Date(),
+          },
+        }),
+      ),
+    succeeded: () => true,
+    markConfirmed: async () => {
+      await prisma.claimProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "confirmee", validatedAt: new Date() },
+      });
+    },
+    markFailed: async () => {
+      await prisma.claimProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "echec" },
+      });
+    },
+  });
+  if (outcome.status !== "confirmed") return { ok: false, summary: UNAVAILABLE_PROPOSAL };
   revalidatePath("/");
   return { ok: true, summary: `Réclamation pour ${client.name} enregistrée. Validation enregistrée.` };
 }
@@ -172,48 +230,152 @@ export async function confirmClaimProposal(conversationId: string): Promise<{ ok
 export async function confirmReturnProposal(conversationId: string): Promise<{ ok: boolean; summary: string }> {
   const row = await pendingReturnProposal(conversationId);
   if (!row) return { ok: false, summary: "Il n’y a pas de retour en attente." };
+  return applyReturnProposal(row);
+}
+
+export async function confirmReturnProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; summary: string }> {
+  const row = await returnProposalTarget(conversationId, proposalId);
+  if (!row) return { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  return applyReturnProposal(row);
+}
+
+async function applyReturnProposal(row: {
+  id: string;
+  payload: unknown;
+  conversationId: string | null;
+}): Promise<{ ok: boolean; summary: string }> {
+  if (!row.conversationId) return { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  const conversationId = row.conversationId;
   const draft = returnPayload(row.payload);
   if (!draft) return { ok: false, summary: "Cette proposition de retour est illisible." };
   const client = await prisma.client.findUnique({ where: { id: draft.clientId }, select: { id: true, name: true } });
   if (!client) return { ok: false, summary: "Ce client est introuvable. Le retour n’est pas enregistré." };
-  await withChangeSource("assistant", () =>
-    prisma.returnRequest.create({
-      data: {
-        clientId: client.id,
-        kind: draft.kind,
-        occurredOn: draft.occurredOn,
-        status: draft.status,
-        underWarranty: draft.underWarranty,
-        note: draft.note,
-        confirmedAt: new Date(),
-      },
-    }),
-  );
-  await prisma.returnRequestProposal.update({
-    where: { id: row.id },
-    data: { status: "confirmee", validatedAt: new Date() },
+  const outcome = await runClaimedConfirmation({
+    claim: async () => {
+      const claimed = await prisma.returnRequestProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_attente" },
+        data: { status: "en_cours" },
+      });
+      return claimed.count === 1;
+    },
+    write: () =>
+      withChangeSource("assistant", () =>
+        prisma.returnRequest.create({
+          data: {
+            clientId: client.id,
+            kind: draft.kind,
+            occurredOn: draft.occurredOn,
+            status: draft.status,
+            underWarranty: draft.underWarranty,
+            note: draft.note,
+            confirmedAt: new Date(),
+          },
+        }),
+      ),
+    succeeded: () => true,
+    markConfirmed: async () => {
+      await prisma.returnRequestProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "confirmee", validatedAt: new Date() },
+      });
+    },
+    markFailed: async () => {
+      await prisma.returnRequestProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "echec" },
+      });
+    },
   });
+  if (outcome.status !== "confirmed") return { ok: false, summary: UNAVAILABLE_PROPOSAL };
   revalidatePath("/");
   return { ok: true, summary: `Retour pour ${client.name} enregistré. Validation enregistrée.` };
 }
 
 export async function rejectClaimProposal(conversationId: string): Promise<{ reply: string } | null> {
   const row = await pendingClaimProposal(conversationId);
-  if (!row) return null;
-  await prisma.claimProposal.update({ where: { id: row.id }, data: { status: "rejetee", validatedAt: new Date() } });
+  if (!row || !row.conversationId) return null;
+  const claimed = await prisma.claimProposal.updateMany({
+    where: { id: row.id, conversationId: row.conversationId, status: "en_attente" },
+    data: { status: "rejetee", validatedAt: new Date() },
+  });
+  if (claimed.count !== 1) return { reply: UNAVAILABLE_PROPOSAL };
   revalidatePath("/");
   return { reply: "La réclamation n’est pas enregistrée." };
 }
 
-export async function rejectReturnProposal(conversationId: string): Promise<{ reply: string } | null> {
-  const row = await pendingReturnProposal(conversationId);
-  if (!row) return null;
-  await prisma.returnRequestProposal.update({
-    where: { id: row.id },
+export async function rejectClaimProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; reply: string }> {
+  const row = await claimProposalTarget(conversationId, proposalId);
+  if (!row || !row.conversationId) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  const claimed = await prisma.claimProposal.updateMany({
+    where: { id: row.id, status: "en_attente", conversationId: row.conversationId },
     data: { status: "rejetee", validatedAt: new Date() },
   });
+  if (claimed.count !== 1) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  revalidatePath("/");
+  return { ok: true, reply: "La réclamation n’est pas enregistrée." };
+}
+
+async function claimProposalTarget(conversationId: string, proposalId: string) {
+  const found = await prisma.claimProposal.findFirst({ where: { id: proposalId } });
+  const target = selectProposalTarget(
+    found
+      ? [{ id: found.id, type: "claim", conversationId: found.conversationId, status: found.status }]
+      : [],
+    { proposalId, proposalType: "claim" },
+    conversationId,
+  );
+  if (!target) return null;
+  return prisma.claimProposal.findFirst({
+    where: { id: target.id, status: "en_attente", conversationId: target.conversationId },
+  });
+}
+
+export async function rejectReturnProposal(conversationId: string): Promise<{ reply: string } | null> {
+  const row = await pendingReturnProposal(conversationId);
+  if (!row || !row.conversationId) return null;
+  const claimed = await prisma.returnRequestProposal.updateMany({
+    where: { id: row.id, conversationId: row.conversationId, status: "en_attente" },
+    data: { status: "rejetee", validatedAt: new Date() },
+  });
+  if (claimed.count !== 1) return { reply: UNAVAILABLE_PROPOSAL };
   revalidatePath("/");
   return { reply: "Le retour n’est pas enregistré." };
+}
+
+export async function rejectReturnProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; reply: string }> {
+  const row = await returnProposalTarget(conversationId, proposalId);
+  if (!row || !row.conversationId) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  const claimed = await prisma.returnRequestProposal.updateMany({
+    where: { id: row.id, status: "en_attente", conversationId: row.conversationId },
+    data: { status: "rejetee", validatedAt: new Date() },
+  });
+  if (claimed.count !== 1) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  revalidatePath("/");
+  return { ok: true, reply: "Le retour n’est pas enregistré." };
+}
+
+async function returnProposalTarget(conversationId: string, proposalId: string) {
+  const found = await prisma.returnRequestProposal.findFirst({ where: { id: proposalId } });
+  const target = selectProposalTarget(
+    found
+      ? [{ id: found.id, type: "returnRequest", conversationId: found.conversationId, status: found.status }]
+      : [],
+    { proposalId, proposalType: "returnRequest" },
+    conversationId,
+  );
+  if (!target) return null;
+  return prisma.returnRequestProposal.findFirst({
+    where: { id: target.id, status: "en_attente", conversationId: target.conversationId },
+  });
 }
 
 export async function pendingClaimProposal(conversationId: string) {

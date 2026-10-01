@@ -13,6 +13,129 @@ export type ProposalKind =
   | "returnRequest"
   | "businessPlan";
 
+const PROPOSAL_KINDS: ProposalKind[] = [
+  "client",
+  "catalog",
+  "contract",
+  "intervention",
+  "equipment",
+  "purchase",
+  "supplierTerms",
+  "claim",
+  "returnRequest",
+  "businessPlan",
+];
+
+export type ProposalCard = {
+  id?: string;
+  type?: ProposalKind;
+  fields: Array<{ label: string; value: string }>;
+  confirmable?: boolean;
+};
+
+export type ProposalAction = {
+  action: "confirm" | "reject";
+  proposalId: string;
+  proposalType: ProposalKind;
+};
+
+export type ProposalTarget = {
+  id: string;
+  type: ProposalKind;
+  conversationId: string | null;
+  status: string;
+};
+
+export const UNAVAILABLE_PROPOSAL =
+  "Cette proposition n’est plus disponible ou ne peut pas être modifiée.";
+
+export function isProposalKind(value: unknown): value is ProposalKind {
+  return typeof value === "string" && PROPOSAL_KINDS.some((kind) => kind === value);
+}
+
+export function proposalCard(
+  type: ProposalKind,
+  id: string,
+  fields: Array<{ label: string; value: string }>,
+  confirmable?: boolean,
+): ProposalCard {
+  return confirmable === undefined ? { id, type, fields } : { id, type, fields, confirmable };
+}
+
+/** Boutons Confirmer et Rejeter : l’identifiant et le type sont requis. confirmable reste un drapeau d’affichage. */
+export function cardMayAct(card: ProposalCard | null | undefined): boolean {
+  return Boolean(card?.id && isProposalKind(card.type) && card.confirmable !== false);
+}
+
+export function readStoredProposalCard(value: unknown): ProposalCard | null {
+  if (!value || typeof value !== "object" || !("fields" in value)) return null;
+  const fields = (value as { fields?: unknown }).fields;
+  if (!Array.isArray(fields)) return null;
+  const rows = fields.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as { label?: unknown; value?: unknown };
+    return typeof row.label === "string" && typeof row.value === "string"
+      ? [{ label: row.label, value: row.value }]
+      : [];
+  });
+  if (rows.length === 0) return null;
+  const source = value as { id?: unknown; type?: unknown; confirmable?: unknown };
+  const card: ProposalCard = { fields: rows };
+  if (typeof source.id === "string" && source.id && isProposalKind(source.type)) {
+    card.id = source.id;
+    card.type = source.type;
+  }
+  if (source.confirmable === false) card.confirmable = false;
+  return card;
+}
+
+export function proposalActionGate(
+  value: unknown,
+): { kind: "absent" } | { kind: "invalid" } | { kind: "ready"; action: ProposalAction } {
+  if (value == null) return { kind: "absent" };
+  if (!value || typeof value !== "object") return { kind: "invalid" };
+  const row = value as { action?: unknown; proposalId?: unknown; proposalType?: unknown };
+  if (row.action !== "confirm" && row.action !== "reject") return { kind: "invalid" };
+  if (typeof row.proposalId !== "string" || !row.proposalId.trim()) return { kind: "invalid" };
+  if (!isProposalKind(row.proposalType)) return { kind: "invalid" };
+  return {
+    kind: "ready",
+    action: { action: row.action, proposalId: row.proposalId.trim(), proposalType: row.proposalType },
+  };
+}
+
+/**
+ * Une action de carte est traitée avant un parcours suspendu et avant le texte libre.
+ * Sans action, un parcours suspendu peut reprendre.
+ */
+export function assistantTurnKind(input: {
+  proposalAction: ProposalAction | null;
+  taskSuspended: boolean;
+}): "structured" | "task" | "text" {
+  if (input.proposalAction) return "structured";
+  if (input.taskSuspended) return "task";
+  return "text";
+}
+
+/** La ligne demandée, dans ce fil, encore en attente, du type annoncé. Sinon rien. */
+export function selectProposalTarget(
+  rows: ProposalTarget[],
+  action: { proposalId: string; proposalType: ProposalKind },
+  conversationId: string,
+): ProposalTarget | null {
+  const scope = pendingInThread(conversationId);
+  if (!scope) return null;
+  return (
+    rows.find(
+      (row) =>
+        row.id === action.proposalId &&
+        row.type === action.proposalType &&
+        row.conversationId === scope.conversationId &&
+        row.status === scope.status,
+    ) ?? null
+  );
+}
+
 export type PendingCandidate = {
   id: string;
   kind: ProposalKind;
@@ -101,6 +224,91 @@ export function businessPlanDecision(input: {
 export function settleBusinessPlan(outcome: "succes" | "echec"): PlanSettlement {
   if (outcome === "succes") return { status: "confirmee", validated: true };
   return { status: "echec", validated: false };
+}
+
+export type ClaimedOutcome<T> =
+  | { status: "lost" }
+  | { status: "confirmed"; value: T }
+  | { status: "failed"; value: T }
+  | { status: "failed"; error: unknown };
+
+/**
+ * Un seul claim gagne : en_attente, puis en_cours, puis l’écriture.
+ * Le perdant n’écrit pas. Une erreur passe la ligne à echec, sans retour à en_attente.
+ */
+export async function runClaimedConfirmation<T>(input: {
+  claim: () => Promise<boolean>;
+  write: () => Promise<T>;
+  succeeded: (value: T) => boolean;
+  markConfirmed: () => Promise<void>;
+  markFailed: () => Promise<void>;
+}): Promise<ClaimedOutcome<T>> {
+  if (!(await input.claim())) return { status: "lost" };
+  try {
+    const value = await input.write();
+    if (!input.succeeded(value)) {
+      await input.markFailed();
+      return { status: "failed", value };
+    }
+    await input.markConfirmed();
+    return { status: "confirmed", value };
+  } catch (error) {
+    await input.markFailed();
+    return { status: "failed", error };
+  }
+}
+
+/** Filet de test : le passage en_attente → en_cours est synchrone, donc un seul gagnant. */
+export function createProposalLedger(status = "en_attente") {
+  let current = status;
+  let writes = 0;
+  let history = 0;
+  return {
+    status: () => current,
+    writes: () => writes,
+    history: () => history,
+    claim: async () => {
+      if (current !== "en_attente") return false;
+      current = "en_cours";
+      return true;
+    },
+    reject: async () => {
+      if (current !== "en_attente") return false;
+      current = "rejetee";
+      return true;
+    },
+    write: async () => {
+      await Promise.resolve();
+      writes += 1;
+      history += 1;
+      return { ok: true as const };
+    },
+    markConfirmed: async () => {
+      if (current === "en_cours") current = "confirmee";
+    },
+    markFailed: async () => {
+      if (current === "en_cours") current = "echec";
+    },
+  };
+}
+
+/** Texte du bouton, ou le texte libre déjà reconnu. */
+export function structuredButtonTurn(text: string): "confirm" | "reject" | null {
+  const value = text.trim();
+  if (value === "Confirmer cette proposition." || /^je confirme\b/i.test(value)) return "confirm";
+  if (value === "Rejeter cette proposition." || /^rejette\b/i.test(value)) return "reject";
+  return null;
+}
+
+export function proposalFollowUpState(input: {
+  latest: boolean;
+  userText: string | null;
+  assistantSource: string | null;
+}): "a_confirmer" | "confirmee" | "sans_suite" {
+  if (input.latest) return "a_confirmer";
+  const turn = input.userText ? structuredButtonTurn(input.userText) : null;
+  if (turn === "confirm" && input.assistantSource === "action") return "confirmee";
+  return "sans_suite";
 }
 
 const PIECE_ID = /^[\w-]{8,80}$/;

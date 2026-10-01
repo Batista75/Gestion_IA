@@ -32,6 +32,7 @@ import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import type { AnswerPacket } from "@/domain/answer-packet";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { provenanceLabel } from "@/domain/provenance";
+import { cardMayAct, proposalFollowUpState, type ProposalAction, type ProposalKind } from "@/domain/proposal-scope";
 import { THREAD_MESSAGE_LIMIT, openThreadLabel, threadIsFull, threadProjectHref, type ThreadSummary } from "@/domain/thread";
 import type { StoredTurn } from "@/lib/conversations";
 import { cn } from "cn";
@@ -41,7 +42,7 @@ type SourceRef = { label: string; title: string };
 type ChatMeta = {
   source?: string;
   modelVersion?: string;
-  proposal?: { fields: Field[]; confirmable?: boolean } | null;
+  proposal?: { id?: string; type?: ProposalKind; fields: Field[]; confirmable?: boolean } | null;
   sources?: SourceRef[];
   understanding?: UnderstandingCard | null;
   packet?: AnswerPacket | null;
@@ -86,6 +87,7 @@ export function AssistantChat({
   const router = useRouter();
   const pathname = usePathname();
   const hint = useRef({ view: "/", attachments: [] as string[], inboxItemId: "" });
+  const proposalActionRef = useRef<ProposalAction | null>(null);
   // Lu au moment de l’envoi, avec la page et les pièces de cet instant.
   // eslint-disable-next-line react-hooks/refs -- la valeur sert à la requête, pas au rendu
   hint.current.view = pathname || "/";
@@ -97,11 +99,14 @@ export function AssistantChat({
         prepareSendMessagesRequest: ({ id, messages }) => {
           const inboxItemId = hint.current.inboxItemId;
           hint.current.inboxItemId = "";
+          const proposalAction = proposalActionRef.current;
+          proposalActionRef.current = null;
           return {
             body: {
               id,
               messages,
               inboxItemId,
+              ...(proposalAction ? { proposalAction } : {}),
               context: {
                 view: hint.current.view,
                 attachments: hint.current.attachments,
@@ -158,9 +163,10 @@ export function AssistantChat({
     node.scrollTop = node.scrollHeight;
   }, [messages, status, pending]);
 
-  async function send(content: string) {
+  async function send(content: string, action?: ProposalAction) {
     const text = content.trim();
     if (!text || pending || threadIsFull(messages.length)) return;
+    proposalActionRef.current = action ?? null;
     setDraft("");
     setFileError(null);
     hint.current.attachments = [];
@@ -243,7 +249,12 @@ export function AssistantChat({
         confirm={message.id === lastAssistant?.id && hasProposal(message)}
         proposalState={proposalState(messages, index, message.id === lastAssistant?.id)}
         editable={message.id === lastAssistant?.id}
-        onConfirm={() => void send("Je confirme.")}
+        onConfirm={(action) => {
+          void send(
+            action.action === "confirm" ? "Confirmer cette proposition." : "Rejeter cette proposition.",
+            action,
+          );
+        }}
         onAmend={() => draftRef.current?.focus()}
         onCorrect={(line, attachments) => {
           hint.current.attachments = attachments;
@@ -745,7 +756,7 @@ function MessageRow({
   confirm: boolean;
   proposalState: ProposalState;
   editable: boolean;
-  onConfirm: () => void;
+  onConfirm: (action: ProposalAction) => void;
   onAmend: () => void;
   onCorrect: (line: string, attachments: string[]) => void;
 }) {
@@ -759,7 +770,10 @@ function MessageRow({
     return title && title !== label ? [title] : [];
   });
   const proposal = message.metadata?.proposal?.fields ?? [];
-  const allowConfirm = message.metadata?.proposal?.confirmable !== false;
+  const card = message.metadata?.proposal ?? null;
+  const allowAct = cardMayAct(card);
+  const proposalId = allowAct ? card?.id ?? "" : "";
+  const proposalType = allowAct && card?.type ? card.type : null;
   const sources = message.metadata?.sources ?? [];
   const understanding = message.metadata?.understanding ?? null;
   const packet = message.metadata?.packet ?? null;
@@ -825,16 +839,34 @@ function MessageRow({
             state={proposalState}
             fields={proposal}
             actions={
-              confirm ? (
+              allowAct || confirm ? (
                 <>
-                  {allowConfirm ? (
-                    <Button type="button" size="sm" disabled={pending} onClick={onConfirm}>
-                      Confirmer
+                  {allowAct && proposalType ? (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => onConfirm({ action: "confirm", proposalId, proposalType })}
+                      >
+                        Confirmer
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() => onConfirm({ action: "reject", proposalId, proposalType })}
+                      >
+                        Rejeter
+                      </Button>
+                    </>
+                  ) : null}
+                  {confirm ? (
+                    <Button type="button" size="sm" variant="outline" disabled={pending} onClick={onAmend}>
+                      Préciser la demande
                     </Button>
                   ) : null}
-                  <Button type="button" size="sm" variant="outline" disabled={pending} onClick={onAmend}>
-                    Préciser la demande
-                  </Button>
                 </>
               ) : null
             }
@@ -867,15 +899,14 @@ const SOURCE_TONE: Record<string, StatusTone> = {
 };
 
 function proposalState(messages: ChatMessage[], index: number, latest: boolean): ProposalState {
-  if (latest) return "a_confirmer";
   const reply = messages[index + 1];
   const outcome = messages[index + 2];
-  const confirmed =
-    reply?.role === "user" &&
-    reply.parts.some((part) => part.type === "text" && /^je confirme\b/i.test(part.text.trim())) &&
-    outcome?.role === "assistant" &&
-    outcome.metadata?.source === "action";
-  return confirmed ? "confirmee" : "sans_suite";
+  const userText =
+    reply?.role === "user"
+      ? reply.parts.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n")
+      : null;
+  const assistantSource = outcome?.role === "assistant" ? (outcome.metadata?.source ?? null) : null;
+  return proposalFollowUpState({ latest, userText, assistantSource });
 }
 
 function toUi(turns: StoredTurn[]): ChatMessage[] {

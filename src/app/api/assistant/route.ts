@@ -27,6 +27,7 @@ import {
 } from "@/domain/ollama-endpoint";
 import { parseBusinessBrief, planIsEmpty } from "@/domain/business-brief";
 import { readInboxItemId } from "@/domain/inbox-entry";
+import { assistantTurnKind, proposalActionGate, proposalCard, UNAVAILABLE_PROPOSAL } from "@/domain/proposal-scope";
 import {
   parseStructuredPlan,
   resolutionName,
@@ -38,9 +39,16 @@ import {
 } from "@/domain/structured-plan";
 import { openBusinessPlanProposal } from "@/lib/business-plan-proposals";
 import { claimInboxItem } from "@/lib/inbox-entry";
-import { confirmLatestWrite, openCatalogProposal, pendingProposalRoster, rejectLatestWrite } from "@/lib/catalog-proposals";
+import {
+  applyProposalAction,
+  confirmLatestWrite,
+  openCatalogProposal,
+  pendingProposalRoster,
+  rejectLatestWrite,
+} from "@/lib/catalog-proposals";
 import {
   currentProposal,
+  currentProposalRecord,
   listPendingClientProposals,
   openClientProposal,
   proposeChangeFromMessage,
@@ -140,6 +148,27 @@ export async function POST(request: Request) {
     content: parsed.text,
     linkText: parsed.text,
   });
+  const proposalGate = proposalActionGate(
+    payload && typeof payload === "object" && "proposalAction" in payload
+      ? (payload as { proposalAction?: unknown }).proposalAction
+      : null,
+  );
+  if (proposalGate.kind !== "absent") {
+    const turn = assistantTurnKind({
+      proposalAction: proposalGate.kind === "ready" ? proposalGate.action : null,
+      taskSuspended: true,
+    });
+    const outcome =
+      proposalGate.kind === "ready" && turn === "structured"
+        ? await applyProposalAction(conversationId, proposalGate.action)
+        : { ok: false, reply: UNAVAILABLE_PROPOSAL };
+    return streamDirect({
+      conversationId,
+      reply: outcome.reply,
+      source: outcome.ok ? "action" : "regle-metier",
+      step: outcome.ok ? "Enregistrement" : "Règle métier",
+    });
+  }
   const hint = readHint(payload && typeof payload === "object" && "context" in payload ? payload.context : null);
   let snapshot = await resolveContext(hint);
   await attachConversationProject(conversationId, snapshot.projectId);
@@ -728,14 +757,17 @@ async function pendingClarification(
   conversationId: string,
 ): Promise<DirectReply> {
   const roster = await pendingProposalRoster(conversationId);
+  const record = await currentProposalRecord(conversationId);
+  const confirmable = clarificationMayConfirm(roster.clientId, roster.ids);
+  const fields = proposalFields(record?.draft ?? pending);
   return {
     reply: PENDING_TURN_CLARIFICATION,
     model: null,
     source: "proposition",
-    proposal: {
-      fields: proposalFields(pending),
-      confirmable: clarificationMayConfirm(roster.clientId, roster.ids),
-    },
+    proposal:
+      record && record.id === roster.clientId
+        ? proposalCard("client", record.id, fields, confirmable)
+        : { fields, confirmable },
   };
 }
 

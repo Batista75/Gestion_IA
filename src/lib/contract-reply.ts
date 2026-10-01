@@ -16,7 +16,14 @@ import {
 } from "@/domain/contracts";
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { stampProvenance } from "@/domain/provenance";
-import { pendingInThread } from "@/domain/proposal-scope";
+import {
+  pendingInThread,
+  proposalCard,
+  runClaimedConfirmation,
+  selectProposalTarget,
+  UNAVAILABLE_PROPOSAL,
+  type ProposalCard,
+} from "@/domain/proposal-scope";
 import { withChangeSource } from "@/lib/change-source";
 import { prisma } from "@/lib/db";
 
@@ -24,7 +31,7 @@ export type ContractReply = {
   reply: string;
   packet: AnswerPacket;
   source: "regle-metier" | "proposition";
-  proposal?: { fields: Array<{ label: string; value: string }> };
+  proposal?: ProposalCard;
 };
 
 export async function resolveContract(text: string, conversationId: string, now = new Date()): Promise<ContractReply | null> {
@@ -71,7 +78,7 @@ export async function resolveContract(text: string, conversationId: string, now 
     where: { status: "en_attente", conversationId: scope.conversationId },
     data: { status: "remplacee" },
   });
-  await prisma.contractProposal.create({
+  const created = await prisma.contractProposal.create({
     data: {
       status: "en_attente",
       conversationId: scope.conversationId,
@@ -79,33 +86,71 @@ export async function resolveContract(text: string, conversationId: string, now 
       ...stampProvenance("regle", fields),
     },
   });
-  return { reply: safeReply(packet), packet, source: "proposition", proposal: { fields } };
+  return { reply: safeReply(packet), packet, source: "proposition", proposal: proposalCard("contract", created.id, fields) };
 }
 
 export async function confirmContractProposal(conversationId: string): Promise<{ ok: boolean; summary: string }> {
   const row = await pendingContractProposal(conversationId);
   if (!row) return { ok: false, summary: "Il n’y a pas de contrat en attente." };
+  return applyContractProposal(row);
+}
+
+export async function confirmContractProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; summary: string }> {
+  const row = await contractProposalTarget(conversationId, proposalId);
+  if (!row) return { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  return applyContractProposal(row);
+}
+
+async function applyContractProposal(row: { id: string; payload: unknown; conversationId: string | null }): Promise<{
+  ok: boolean;
+  summary: string;
+}> {
+  if (!row.conversationId) return { ok: false, summary: UNAVAILABLE_PROPOSAL };
+  const conversationId = row.conversationId;
   const draft = contractPayload(row.payload);
   if (!draft) return { ok: false, summary: "Cette proposition de contrat est illisible." };
   const client = await prisma.client.findUnique({ where: { id: draft.clientId }, select: { id: true, name: true } });
   if (!client) return { ok: false, summary: "Ce client est introuvable. Le contrat n’est pas enregistré." };
-  await withChangeSource("assistant", () =>
-    prisma.contract.create({
-      data: {
-        clientId: client.id,
-        kind: draft.kind,
-        startsOn: draft.startsOn,
-        endsOn: draft.endsOn,
-        periodicity: draft.periodicity,
-        amountCents: draft.amountCents,
-        confirmedAt: new Date(),
-      },
-    }),
-  );
-  await prisma.contractProposal.update({
-    where: { id: row.id },
-    data: { status: "confirmee", validatedAt: new Date() },
+  const outcome = await runClaimedConfirmation({
+    claim: async () => {
+      const claimed = await prisma.contractProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_attente" },
+        data: { status: "en_cours" },
+      });
+      return claimed.count === 1;
+    },
+    write: () =>
+      withChangeSource("assistant", () =>
+        prisma.contract.create({
+          data: {
+            clientId: client.id,
+            kind: draft.kind,
+            startsOn: draft.startsOn,
+            endsOn: draft.endsOn,
+            periodicity: draft.periodicity,
+            amountCents: draft.amountCents,
+            confirmedAt: new Date(),
+          },
+        }),
+      ),
+    succeeded: () => true,
+    markConfirmed: async () => {
+      await prisma.contractProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "confirmee", validatedAt: new Date() },
+      });
+    },
+    markFailed: async () => {
+      await prisma.contractProposal.updateMany({
+        where: { id: row.id, conversationId, status: "en_cours" },
+        data: { status: "echec" },
+      });
+    },
   });
+  if (outcome.status !== "confirmed") return { ok: false, summary: UNAVAILABLE_PROPOSAL };
   revalidatePath("/");
   return {
     ok: true,
@@ -115,13 +160,44 @@ export async function confirmContractProposal(conversationId: string): Promise<{
 
 export async function rejectContractProposal(conversationId: string): Promise<{ reply: string } | null> {
   const row = await pendingContractProposal(conversationId);
-  if (!row) return null;
-  await prisma.contractProposal.update({
-    where: { id: row.id },
+  if (!row || !row.conversationId) return null;
+  const claimed = await prisma.contractProposal.updateMany({
+    where: { id: row.id, conversationId: row.conversationId, status: "en_attente" },
     data: { status: "rejetee", validatedAt: new Date() },
   });
+  if (claimed.count !== 1) return { reply: UNAVAILABLE_PROPOSAL };
   revalidatePath("/");
   return { reply: "Le contrat n’est pas enregistré." };
+}
+
+export async function rejectContractProposalById(
+  conversationId: string,
+  proposalId: string,
+): Promise<{ ok: boolean; reply: string }> {
+  const row = await contractProposalTarget(conversationId, proposalId);
+  if (!row || !row.conversationId) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  const claimed = await prisma.contractProposal.updateMany({
+    where: { id: row.id, status: "en_attente", conversationId: row.conversationId },
+    data: { status: "rejetee", validatedAt: new Date() },
+  });
+  if (claimed.count !== 1) return { ok: false, reply: UNAVAILABLE_PROPOSAL };
+  revalidatePath("/");
+  return { ok: true, reply: "Le contrat n’est pas enregistré." };
+}
+
+async function contractProposalTarget(conversationId: string, proposalId: string) {
+  const found = await prisma.contractProposal.findFirst({ where: { id: proposalId } });
+  const target = selectProposalTarget(
+    found
+      ? [{ id: found.id, type: "contract", conversationId: found.conversationId, status: found.status }]
+      : [],
+    { proposalId, proposalType: "contract" },
+    conversationId,
+  );
+  if (!target) return null;
+  return prisma.contractProposal.findFirst({
+    where: { id: target.id, status: "en_attente", conversationId: target.conversationId },
+  });
 }
 
 export async function pendingContractProposal(conversationId: string) {

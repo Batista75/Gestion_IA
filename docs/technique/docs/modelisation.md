@@ -319,7 +319,7 @@ Devis ou offre reçue, pas une pièce de vente du dossier. Les totaux sont recop
 
 Tant que le statut est `en_attente`, rien n’est écrit dans le répertoire ni dans le dossier. Les outils du modèle sont en lecture seule.
 
-`ClientProposal`, `CatalogProposal`, `ContractProposal`, `InterventionProposal`, `InstalledEquipmentProposal`, `PurchaseFollowUpProposal`, `SupplierTermsProposal`, `ClaimProposal`, `ReturnRequestProposal` et `BusinessPlanProposal` ont `conversationId` vers `Conversation`, indexé avec `status`. Retirer le fil vide cette colonne et conserve la ligne. Une confirmation ou un rejet ne lit qu’une ligne `en_attente` dont `conversationId` est le fil courant. Une valeur vide n’est pas un repli. Passer une ligne à `remplacee` ne concerne que ce fil. Les lignes `en_attente` déjà présentes sans fil passent à `expiree`. `DocumentProposal` n’a pas cette colonne.
+`ClientProposal`, `CatalogProposal`, `ContractProposal`, `InterventionProposal`, `InstalledEquipmentProposal`, `PurchaseFollowUpProposal`, `SupplierTermsProposal`, `ClaimProposal`, `ReturnRequestProposal` et `BusinessPlanProposal` ont `conversationId` vers `Conversation`, indexé avec `status`. Retirer le fil vide cette colonne et conserve la ligne. Une confirmation réclame d’abord la ligne (`en_attente` vers `en_cours`) avant l’écriture métier. Le rejet ne réussit que depuis `en_attente`. Une confirmation ou un rejet ne lit qu’une ligne `en_attente` dont `conversationId` est le fil courant. Une valeur vide n’est pas un repli. Passer une ligne à `remplacee` ne concerne que ce fil. Les lignes `en_attente` déjà présentes sans fil passent à `expiree`. `DocumentProposal` n’a pas cette colonne.
 
 ### DocumentProposal
 
@@ -339,7 +339,7 @@ Proposition tirée d’un fichier.
 
 Commande de catalogue encore à confirmer.
 
-- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `status` : `en_attente`, `en_cours` (claim, pas un succès), `confirmee`, `echec`, `remplacee`, `rejetee`.
 - `payload` : `CatalogCommand` (`create_client`, `update_client`, `create_supplier`, `update_supplier`, `create_product`, `update_product`, `create_project`, `record_quote`).
 - `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.
@@ -348,7 +348,7 @@ Commande de catalogue encore à confirmer.
 
 Fiche client encore à confirmer.
 
-- `status` : `en_attente`, `remplacee`, `confirmee`.
+- `status` : `en_attente`, `en_cours` (claim, pas un succès), `confirmee`, `echec`, `remplacee`, `rejetee`.
 - `conversationId` vers `Conversation`, facultatif pour les lignes anciennes.
 - `payload` : `ClientDraft` (mode `create` ou `update`, `kind`, `scope`, identité, adresse, immatriculation, contact, `notes`, `missing`).
 - `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
@@ -371,7 +371,7 @@ Plan parlé ou tableau collé, encore à confirmer dans le fil. Supprimer le fil
 
 Contrat encore à confirmer. Confirmer crée le `Contract`. Rejeter n’écrit pas de contrat.
 
-- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `status` : `en_attente`, `en_cours` (claim, pas un succès), `confirmee`, `echec`, `remplacee`, `rejetee`.
 - `payload` : client, type fermé (`maintenance`, `infogerance`, `location`), début, fin, périodicité (`mensuel`, `trimestriel`, `semestriel`, `annuel`) et `amountCents` de la période.
 - `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.
@@ -392,7 +392,7 @@ Contrat confirmé. Le montant stocké est celui de la période, en centimes. Le 
 
 Intervention encore à confirmer. Confirmer crée l’`Intervention`. Rejeter n’écrit pas d’intervention.
 
-- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `status` : `en_attente`, `en_cours` (claim, pas un succès), `confirmee`, `echec`, `remplacee`, `rejetee`.
 - `payload` : client, dossier, type fermé (`assistance`, `intervention`, `integration`, `panne`), date, durée en minutes, unité de taux (`horaire` ou `journalier`), `rateCents`, ticket recopié, référence de pièce facturée, sur site, sous contrat, date de demande, date d’arrivée.
 - `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.
@@ -417,7 +417,7 @@ Intervention confirmée. La durée et le taux sont stockés. Le taux moyen, le t
 
 Équipement installé encore à confirmer. Confirmer crée l’`InstalledEquipment`. Rejeter n’écrit pas d’équipement.
 
-- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `status` : `en_attente`, `en_cours` (claim, pas un succès), `confirmee`, `echec`, `remplacee`, `rejetee`.
 - `payload` : client, produit facultatif, désignation, famille fermée (`serveur`, `poste`, `portable`, `reseau`, `prestation`, `autre`), date d’installation, niveau de garantie (`h4`, `j1`, `standard`, `aucune`).
 - `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.
@@ -439,7 +439,7 @@ Intervention confirmée. La durée et le taux sont stockés. Le taux moyen, le t
 
 Achat encore à confirmer. Confirmer crée le `PurchaseFollowUp`. Rejeter n’écrit pas d’achat.
 
-- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `status` : `en_attente`, `en_cours` (claim, pas un succès), `confirmee`, `echec`, `remplacee`, `rejetee`.
 - `payload` : fournisseur, désignation, famille (`serveur`, `poste`, `portable`, `reseau`, `prestation`, `autre`, `sous-traitance`), date de commande, `orderCents` du bon de commande, `invoiceCents` de la facture reçue ou vide, reliquat (`ouvert`, `partiel`, `clos`), date d’expédition, suivi recopié, livraison (`chez_nous` ou `chez_client`).
 - `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.
@@ -448,7 +448,7 @@ Achat encore à confirmer. Confirmer crée le `PurchaseFollowUp`. Rejeter n’é
 
 Encours et délai encore à confirmer. Confirmer écrit `Supplier.outstandingCents` et `Supplier.paymentDays`. Rejeter ne change pas la fiche.
 
-- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `status` : `en_attente`, `en_cours` (claim, pas un succès), `confirmee`, `echec`, `remplacee`, `rejetee`.
 - `payload` : fournisseur, encours en centimes, délai en jours.
 - `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.
@@ -475,7 +475,7 @@ Ligne d’achat confirmée. Le bon de commande et la facture reçue sont deux mo
 
 Réclamation encore à confirmer. Confirmer crée le `Claim`. Rejeter n’écrit pas de réclamation.
 
-- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `status` : `en_attente`, `en_cours` (claim, pas un succès), `confirmee`, `echec`, `remplacee`, `rejetee`.
 - `payload` : client, type fermé (`deballage` ou `retard`), date, état (`ouverte`, `en_cours`, `closee`), texte recopié.
 - `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.
@@ -496,7 +496,7 @@ Réclamation confirmée. Le nombre du mois n’est pas une colonne : c’est un 
 
 Retour encore à confirmer. Confirmer crée le `ReturnRequest`. Rejeter n’écrit pas de retour.
 
-- `status` : `en_attente`, `remplacee`, `confirmee`, `rejetee`.
+- `status` : `en_attente`, `en_cours` (claim, pas un succès), `confirmee`, `echec`, `remplacee`, `rejetee`.
 - `payload` : client, type fermé (`retour` ou `remplacement`), date, état (`en_cours` ou `clos`), sous garantie ou hors garantie, texte recopié.
 - `modelVersion` : `regle`. `confidence` et `validatedAt` comme sur `DocumentProposal`.
 - `createdAt`.

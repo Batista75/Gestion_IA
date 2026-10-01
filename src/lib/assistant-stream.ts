@@ -12,6 +12,7 @@ import {
 import type { AnswerPacket } from "@/domain/answer-packet";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { retrievalContext, sourceLabel } from "@/domain/knowledge";
+import type { ProposalCard } from "@/domain/proposal-scope";
 import { rememberTurn } from "@/lib/conversations";
 import { withGpuLane } from "@/lib/gpu-lane";
 import { searchKnowledge } from "@/lib/knowledge-store";
@@ -19,7 +20,7 @@ import { SYSTEM_PROMPT } from "@/lib/ollama";
 import { readTradeInstruction } from "@/lib/trade-steps";
 import { loadTechnicalConfig } from "@/lib/technical-settings";
 
-type FieldList = { fields: Array<{ label: string; value: string }>; confirmable?: boolean };
+type FieldList = ProposalCard;
 
 type Meta = {
   source: string;
