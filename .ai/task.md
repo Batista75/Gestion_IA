@@ -1,4 +1,4 @@
-# LOT-V3-007 — Audit StructuredPlan fournisseur / produit / service
+# LOT-V3-007 — Correction de conception StructuredPlan
 
 ## OUTIL DESTINATAIRE
 
@@ -6,9 +6,9 @@ CURSOR
 
 ## MODE
 
-AUDIT EN LECTURE SEULE
+CONCEPTION UNIQUEMENT
 
-Ne modifie aucun fichier.
+Ne modifie aucun fichier source.
 Ne commit pas.
 Ne push pas.
 Ne crée aucune migration.
@@ -17,746 +17,350 @@ Ne modifie pas PostgreSQL.
 
 ## Baseline
 
-BASELINE-8 — 4794328 — LOT-V3-006 validé
+BASELINE-8 — 4794328 — LOT-V3-006 validé.
 
-SHA complet :
+La revue Claude LOT-V3-007 conclut :
 
-479432872e5148efbb475df2ff1ff57d9042a866
+CORRECTIONS DE CONCEPTION
 
-Le HEAD technique peut contenir des commits `.ai/` postérieurs.
-La baseline fonctionnelle reste celle-ci.
+## Objectif
 
----
-
-# 1. Objectif du lot
-
-Étendre StructuredPlan au-delà de :
-
-- CREATE_CLIENT
-- CREATE_PROJECT
-
-pour préparer la prise en charge de :
-
-- CREATE_SUPPLIER
-- CREATE_PRODUCT
-- CREATE_SERVICE
-
-sans transformer StructuredPlan en planner générique.
-
-Le principe reste :
-
-Utilisateur
-→ compréhension IA
-→ StructuredPlan strict
-→ validation serveur
-→ CatalogProposal
-→ confirmation
-→ écriture métier
-
-Le modèle ne doit jamais écrire directement.
-
----
-
-# 2. Questions à trancher
-
-L’audit doit déterminer :
-
-1. quels ActionTypes existent déjà ;
-2. quels CatalogCommand existent déjà ;
-3. quelles créations fournisseur / produit / service existent déjà côté métier ;
-4. quels parsers déterministes les couvrent déjà ;
-5. quels champs sont obligatoires ;
-6. quels champs peuvent être omis ;
-7. quels champs doivent être ancrés dans le message utilisateur ;
-8. quelles ambiguïtés de routage risquent d’intercepter StructuredPlan ;
-9. comment traduire proprement StructuredPlan vers CatalogProposal ;
-10. s’il faut réellement trois ActionTypes ou seulement deux selon le modèle de données actuel.
-
----
-
-# 3. StructuredPlan actuel
-
-Inspecter notamment :
-
-- `src/domain/structured-plan.ts`
-- validateurs associés
-- tests StructuredPlan
-- helpers d’ancrage
-- `plainLabel`
-- détection des champs omis
-- limites de nombre d’actions
-- types d’actions autorisés aujourd’hui
-
-Produire la structure exacte du contrat actuel.
-
----
-
-# 4. CREATE_CLIENT et CREATE_PROJECT comme références
-
-Documenter précisément :
-
-```text
-message utilisateur
-→ sortie Ollama
-→ parseStructuredPlan
-→ validation/ancrage
-→ traduction
-→ Proposal
-```
-
-Identifier les fonctions exactes.
-
-Nous voulons réutiliser le même modèle, pas créer un deuxième mécanisme.
-
----
-
-# 5. Fournisseur
-
-Chercher :
-
-- modèle Supplier ;
-- Organization éventuelle ;
-- CatalogCommand fournisseur ;
-- parser de création fournisseur ;
-- `createParty` ou helper équivalent ;
-- données minimales ;
-- `nameKey` ;
-- adresse ;
-- contact ;
-- téléphone ;
-- email ;
-- SIRET / VAT / identifiants si présents ;
-- notes ;
-- encours / délai éventuels.
-
-Répondre :
-
-## Champs obligatoires minimum
-
-## Champs facultatifs
-
-## Contraintes d’unicité
-
-## Normalisations
-
-## Règles existantes
-
-## Risques de duplication
-
----
-
-# 6. Produit
-
-Chercher :
-
-- modèle Product ;
-- CatalogCommand produit ;
-- parser actuel ;
-- famille/catégorie ;
-- fournisseur éventuel ;
-- coût ;
-- prix ;
-- référence fournisseur ;
-- unité ;
-- description ;
-- nameKey ou autre contrainte.
-
-Répondre :
-
-## Champs obligatoires minimum
-
-## Champs facultatifs
-
-## Contraintes d’unicité
-
-## Champs financiers sensibles
-
-## Champs que le modèle ne doit jamais inventer
-
----
-
-# 7. Service
-
-Déterminer d’abord si l’application possède réellement :
-
-```text
-Service
-```
-
-comme entité distincte.
-
-Si oui :
-- documenter son modèle et ses commandes.
-
-Si non :
-- déterminer comment les services sont représentés aujourd’hui :
-  - Product avec famille/type ;
-  - CatalogItem ;
-  - autre entité.
-
-NE PAS inventer une nouvelle entité.
-
-Donner un verdict :
-
-`SERVICE ENTITÉ DISTINCTE`
-
-ou
-
-`SERVICE REPRÉSENTÉ PAR ...`
-
----
-
-# 8. CatalogCommand
-
-Lister les commandes actuelles liées à :
-
-- create_supplier
-- update_supplier
-- create_product
-- update_product
-- éventuel service
-
-Pour chaque commande :
-
-| Commande | Champs | Validation | Écriture métier | Proposal actuelle |
-|---|---|---|---|---|
-
----
-
-# 9. Parsers déterministes
-
-Identifier tous les chemins qui peuvent déjà reconnaître des formulations comme :
-
-```text
-Ajoute le fournisseur ACME
-Crée un fournisseur ACME
-Ajoute le produit Switch X
-Ajoute une prestation Audit réseau
-```
-
-Chercher notamment :
-
-- `parseCatalogCommand`
-- `identifyClient`
-- helpers de catalogue
-- route assistant
-- `answerDirectly`
-- priorité des parsers
-
-Important :
-
-StructuredPlan ne doit pas être ajouté derrière un parser trop permissif qui capte déjà la phrase.
-
----
-
-# 10. Ordre de routage
-
-Cartographier l’ordre actuel de traitement d’une phrase naturelle :
-
-```text
-read
-update
-deterministic parser
-StructuredPlan
-clarification
-```
-
-ou l’ordre réel.
-
-Identifier précisément où doivent passer :
-
-```text
-Ajoute le fournisseur ACME
-Ajoute le produit Switch X
-Ajoute le service Audit réseau
-```
-
----
-
-# 11. Ancrage fournisseur
-
-Proposer la règle d’ancrage minimale.
-
-Exemple :
-
-Utilisateur :
-
-```text
-Ajoute le fournisseur ACME, email contact@acme.fr
-```
-
-Le modèle ne peut pas proposer :
-
-```text
-name = ACME France
-```
-
-si `ACME France` n’apparaît pas.
-
-Même règle pour :
-
-- email ;
-- téléphone ;
-- adresse ;
-- identifiants.
-
-Réutiliser les helpers existants si possible.
-
----
-
-# 12. Ancrage produit
-
-Exemples :
-
-Utilisateur :
-
-```text
-Ajoute le produit Switch X200
-```
-
-Plan acceptable :
-
-```text
-name = Switch X200
-```
-
-Plan interdit :
-
-```text
-name = Switch X200 Pro
-```
-
-si `Pro` n’est pas présent.
-
-Pour les prix/coûts :
-
-le modèle ne doit jamais produire un montant absent du texte.
-
-Identifier les validateurs existants réutilisables.
-
----
-
-# 13. Service
-
-Si le service est un produit catégorisé, définir ce que StructuredPlan devrait produire.
-
-Exemple possible :
-
-```text
-CREATE_PRODUCT
-name = Audit réseau
-family = prestation
-```
-
-Seulement si cela correspond réellement au modèle métier.
-
-Ne rien inventer.
-
----
-
-# 14. Champs omis
-
-Pour chaque type, déterminer les champs explicitement détectables dans le message mais omis par Ollama.
-
-Exemple fournisseur :
-
-```text
-Ajoute ACME comme fournisseur, email contact@acme.fr
-```
-
-si le plan contient seulement :
-
-```text
-name = ACME
-```
-
-le serveur doit-il refuser pour champ omis ?
-
-Documenter les règles existantes et proposer les extensions minimales.
-
----
-
-# 15. Références existantes
-
-Pour fournisseur / produit, analyser le comportement si une entité du même nom existe déjà.
-
-Ne pas transformer CREATE en UPDATE silencieusement.
-
-Attendu probable :
-
-```text
-CREATE + exact existing
-→ clarification / refus / commande existante
-```
-
-Documenter le comportement actuel et recommander la règle.
-
----
-
-# 16. Multi-actions
-
-Évaluer si V1 doit autoriser :
-
-```text
-CREATE_SUPPLIER
-+
-CREATE_PRODUCT
-```
-
-dans un même StructuredPlan.
-
-Exemple :
-
-```text
-Ajoute le fournisseur ACME et le produit Switch X fourni par ACME
-```
-
-Ne pas supposer que c’est nécessaire.
-
-Classer :
-
-`IN V1`
-
-ou
-
-`OUT V1`
-
-avec justification.
-
----
-
-# 17. Références entre actions
-
-Si un produit peut référencer un fournisseur :
-
-- le plan peut-il référencer une action précédente ?
-- ou cela nécessiterait-il un identifiant inventé/interne ?
-
-Rappel :
-
-les IDs ne doivent pas venir du modèle.
-
-Si le lien nécessite une résolution complexe, recommander de le laisser OUT V1.
-
----
-
-# 18. Limites V1
-
-Proposer un périmètre minimal robuste.
-
-Exemple possible :
-
-```text
-CREATE_SUPPLIER
-- nom
-- email
-- téléphone
-- adresse
-
-CREATE_PRODUCT
-- nom
-- famille/type
-- référence
-```
-
-mais uniquement si le code actuel le justifie.
-
----
-
-# 19. UPDATE
-
-Ne pas implémenter UPDATE dans cet audit.
-
-Mais déterminer si :
-
-- UPDATE_SUPPLIER
-- UPDATE_PRODUCT
-
-existent déjà côté CatalogCommand.
-
-Classer :
-
-`OUT LOT-V3-007`
-
-sauf nécessité architecturale démontrée.
-
----
-
-# 20. Prix et coûts
-
-Inspecter les règles métier existantes.
-
-Rappel :
-
-les montants doivent rester déterministes.
-
-Déterminer si StructuredPlan V1 doit accepter :
-
-```text
-coût = 100 €
-prix = 150 €
-```
-
-lorsqu’ils sont explicitement fournis.
-
-Ou s’il vaut mieux les laisser OUT V1.
-
-Donner une recommandation.
-
----
-
-# 21. Risques de collision sémantique
-
-Tester mentalement :
-
-```text
-Ajoute Orange comme fournisseur
-Ajoute Paris comme produit
-Ajoute Service Premium
-```
-
-Éviter qu’un mot soit interprété comme :
-
-- client existant ;
-- ville ;
-- fournisseur ;
-- nom de projet.
-
-Identifier les protections déjà disponibles.
-
----
-
-# 22. Sortie Ollama
-
-Proposer le JSON minimal attendu pour chaque nouveau type.
-
-Exemple conceptuel seulement :
-
-```json
-{
-  "actions": [
-    {
-      "type": "CREATE_SUPPLIER",
-      "args": {
-        "name": "ACME"
-      }
-    }
-  ],
-  "missing": []
-}
-```
+Corriger uniquement la conception LOT-V3-007 à partir des quatre findings MAJOR de `.ai/claude-review.md`.
 
 Ne pas implémenter.
 
----
+## MAJOR-1 — Lier forme déterministe et ActionType
 
-# 23. Validation serveur
+Concevoir une fonction unique, par exemple :
 
-Proposer précisément :
+structuredShape(text)
 
-- clés autorisées ;
-- clés interdites ;
-- limites de longueur ;
-- valeurs fermées ;
-- règles d’ancrage ;
-- règles d’omission ;
-- nombre maximal d’actions.
+qui retourne exactement :
 
----
+client
+project
+client+project
+supplier
+product
+service
+null
 
-# 24. Traduction vers CatalogProposal
+à partir de formes fermées.
 
-Pour chaque type, indiquer :
+Minimum attendu :
 
-```text
-StructuredPlan
-→ CatalogCommand
-→ CatalogProposal
-```
+supplier
+→ "… comme fournisseur"
+→ exactement CREATE_SUPPLIER
 
-avec les fonctions existantes à réutiliser.
+product
+→ "… comme produit"
+→ exactement CREATE_PRODUCT
+→ kind forcé côté serveur à "produit"
 
----
+service
+→ "ajoute|crée + déterminant + service|prestation + nom"
+→ exactement CREATE_PRODUCT
+→ kind forcé côté serveur à "service"
 
-# 25. Tests à prévoir
+Toute incohérence entre forme détectée et ActionType Ollama doit produire :
 
-Proposer au minimum :
+clarify / blocked
 
-## Supplier
+Jamais une autre création.
 
-- création simple ;
-- email ancré ;
-- adresse ancrée ;
-- champ inventé refusé ;
-- fournisseur existant ;
-- champ présent mais omis.
+Le modèle ne choisit pas le kind final.
 
-## Product
+Le serveur le déduit de structuredShape.
 
-- création simple ;
-- famille valide ;
-- famille inventée ;
-- montant absent inventé ;
-- produit existant.
+Conserver les parseurs déterministes existants devant StructuredPlan.
 
-## Service
+`Ajoute le fournisseur ACME`
+reste déterministe.
 
-Selon le modèle réellement trouvé.
+`Ajoute ACME comme fournisseur`
+passe par StructuredPlan.
 
----
+`Ajoute Service Premium`
+ne doit pas devenir automatiquement un service.
 
-# 26. Recette réelle future
+## MAJOR-2 — Famille uniquement avec marqueur explicite
 
-Proposer 5 à 10 phrases utilisateur réalistes pour la future recette PostgreSQL/Ollama.
+Ne plus inférer une famille parce qu’un mot du nom correspond à une valeur de PRODUCT_FAMILIES.
 
-Inclure :
+Exemples :
 
-- formulations naturelles ;
-- formulation courte ;
-- ambiguïté ;
-- entité déjà existante ;
-- champ facultatif ;
-- champ non supporté.
+`Ajoute une prestation Audit réseau`
 
----
+ne doit pas considérer `réseau` comme une famille.
 
-# 27. Impact fichiers
+`Ajoute Serveur Dell R750 comme produit`
 
-Lister les fichiers probablement concernés lors de l’implémentation.
+ne doit pas considérer automatiquement `serveur` comme une famille.
 
-Classer :
+La famille doit être portée uniquement par un marqueur explicite :
 
-- MUST MODIFY
-- MAY MODIFY
-- NO CHANGE
+`famille réseau`
+`famille prestation`
+`famille serveur`
 
----
+La détection d’omission ne porte également que sur ce marqueur explicite.
 
-# 28. Migration
+La forme :
 
-Déterminer explicitement si une migration Prisma est nécessaire.
+`une prestation ...`
 
-Préférence :
+fixe seulement :
 
-`AUCUNE MIGRATION`
+kind = service
 
-si les entités existent déjà.
+Elle ne fixe pas automatiquement :
 
----
+family = prestation
 
-# 29. Périmètre recommandé
+## MAJOR-3 — Empêcher l’enrichissement client de capturer une création catalogue
 
-Donner :
+Analyser précisément :
 
-## MUST LOT-V3-007
+enrichmentOwnsTurn
+asksToEnrichRecord
+explicitClientCreation
 
-## SHOULD LOT-V3-007
+dans `client-file.ts`.
 
-## OUT
+Le garde-fou doit exclure toute forme reconnue par :
 
-Éviter un lot trop large.
+structuredShape(text)
 
----
+ou un helper catalogue dédié équivalent.
 
-# 30. Estimation
+Cas obligatoire :
 
-Donner :
+Client ACME déjà existant.
 
-- complexité ;
-- risque ;
-- nombre d’itérations ;
-- besoin ou non de Claude avant implémentation ;
-- besoin ou non d’une recette Ollama réelle.
+Message :
 
----
+`Ajoute ACME comme fournisseur, email contact@acme.fr`
 
-# 31. Contrôles techniques
+Attendu :
 
-En lecture seule, exécuter si possible :
+- aucune proposition de modification du client ACME ;
+- StructuredPlan fournisseur ;
+- jamais enrichissement client.
 
-```bash
-npm test
-./node_modules/.bin/tsc --noEmit
-npm run lint
-git diff --check
-```
+`src/domain/client-file.ts` devient MUST MODIFY lors de l’implémentation.
 
-Ne pas lancer de commande qui modifie le dépôt.
+## MAJOR-4 — Consommateurs de structuredPlanEligible
 
----
+Intégrer explicitement dans la conception :
 
-# 32. Rapport attendu
+src/domain/conversation-turn.ts
+src/domain/task-path.ts
+src/domain/client-file.ts
 
-Écrire le rapport dans :
+Décrire l’impact du nouvel élargissement de structuredPlanEligible.
 
-`.ai/cursor-report.md`
+Prévoir des tests de non-régression pour :
 
-Structure :
+### Conversation pending
 
-## A. Baseline
+Une ClientProposal est en attente.
 
-## B. StructuredPlan actuel
+Utilisateur :
 
-## C. Référence CREATE_CLIENT / CREATE_PROJECT
+`Ajoute ACME comme fournisseur`
 
-## D. Fournisseur
+Attendu :
 
-## E. Produit
+nouvelle intention StructuredPlan fournisseur.
 
-## F. Service
+Pas une correction de la fiche client en attente.
 
-## G. CatalogCommand
+### Task suspendue
 
-## H. Parsers déterministes
+Un parcours est suspendu.
 
-## I. Ordre de routage
+Utilisateur :
 
-## J. Ancrage fournisseur
+`Ajoute le service Audit réseau`
 
-## K. Ancrage produit
+Attendu :
 
-## L. Champs omis
+nouvelle intention StructuredPlan.
 
-## M. Entités existantes
+Pas reprise automatique du parcours.
 
-## N. Multi-actions
+### Client enrichment
 
-## O. Références inter-actions
+Client ACME existant.
 
-## P. UPDATE
+`Ajoute ACME comme fournisseur, email contact@acme.fr`
 
-## Q. Prix / coûts
+Attendu :
 
-## R. Risques sémantiques
+pas d’enrichissement client.
 
-## S. JSON cible
+## Nom de l’entité
 
-## T. Validation serveur
+Ajouter une règle empêchant le rôle d’être absorbé dans le nom.
 
-## U. Traduction Proposal
+Refuser par exemple :
 
-## V. Tests
+`name = "ACME comme fournisseur"`
+`name = "service Audit réseau"`
 
-## W. Recette future
+Le nom attendu est :
 
-## X. Fichiers impactés
+`ACME`
+`Audit réseau`
 
-## Y. Migration
+Réutiliser expressionAnchored et plainLabel, avec une règle supplémentaire de nettoyage/validation du rôle.
 
-## Z. MUST / SHOULD / OUT
+## Existing supplier / product
 
-## AA. Estimation
+Conserver :
 
-## AB. Contrôles techniques
+CREATE + entité existante
+→ already
+→ aucune CatalogProposal
+→ aucune mise à jour silencieuse
 
+Le type de already doit être explicite :
+
+client
+supplier
+product
+
+Pour un fournisseur existant avec email/téléphone différent :
+
+prévoir l’équivalent de contact-differs.
+
+Ne pas implémenter UPDATE.
+
+## Carte de proposition
+
+Passer à MUST :
+
+la carte create_product doit afficher :
+
+kind
+family
+
+quand ces valeurs existent.
+
+L’utilisateur doit voir qu’il confirme :
+
+produit
+
+ou :
+
+service
+
+## Périmètre V1 confirmé
+
+### IN
+
+- CREATE_SUPPLIER
+- CREATE_PRODUCT
+- service via CREATE_PRODUCT + kind service
+- nom
+- fournisseur : email, téléphone, adresse
+- produit : référence, unité, description, family explicite
+- already avant proposition
+- une seule action fournisseur ou produit
+
+### OUT
+
+- CREATE_SERVICE
+- UPDATE_SUPPLIER
+- UPDATE_PRODUCT
+- prix
+- coût
+- TVA
+- supplierName
+- fournisseur + produit dans le même plan
+- références entre actions
+- SIREN porté par StructuredPlan
+- création cachée de fournisseur
+- migration Prisma
+
+## Fichiers à retenir
+
+### MUST MODIFY lors de l’implémentation
+
+- src/domain/structured-plan.ts
+- src/app/api/assistant/route.ts
+- src/domain/client-file.ts
+- src/domain/catalog.ts
+- tests/structured-plan.test.ts
+- tests/client-file.test.ts
+- docs/manuel-utilisateur.md
+
+### MAY MODIFY / tests obligatoires
+
+- src/domain/conversation-turn.ts
+- tests/conversation-turn.test.ts
+- src/domain/task-path.ts
+- tests/task-path.test.ts
+- tests/catalog-command.test.ts
+- docs/technique/docs/orchestration.md
+
+### NO CHANGE
+
+- prisma/schema.prisma
+- prisma/migrations
+- src/lib/catalog-store.ts
+- src/lib/catalog-proposals.ts
+- src/domain/pricing.ts
+- src/lib/business-records.ts
+
+## Recette future corrigée
+
+Prévoir notamment :
+
+1. Ajoute ACME comme fournisseur
+2. Ajoute ACME comme fournisseur, email contact@acme.fr
+3. client ACME déjà existant + phrase précédente
+4. Ajoute Switch X200 comme produit
+5. Ajoute Switch X200 comme produit, famille réseau
+6. Ajoute le service Audit réseau
+7. Ajoute une prestation Audit réseau
+8. Ajoute Service Premium
+9. Ajoute une prestation Audit réseau à 150 €
+10. fournisseur/produit déjà existant
+
+Attendus précis dans le rapport.
+
+## Rapport attendu
+
+Réécrire `.ai/cursor-report.md` avec une conception corrigée.
+
+Structure minimale :
+
+## A. structuredShape
+## B. Matrice forme → ActionType
+## C. Règles supplier
+## D. Règles product
+## E. Règles service
+## F. Famille
+## G. Enrichissement client
+## H. Conversation pending
+## I. Task suspendue
+## J. Ancrage / nom
+## K. Existing entities
+## L. Carte
+## M. Tests
+## N. Recette future
+## O. Fichiers
+## P. Périmètre final
 ## Verdict
 
 Une seule valeur :
 
-`GO CONCEPTION LOT-V3-007`
+GO IMPLEMENTATION LOT-V3-007
 
 ou
 
-`AUDIT INSUFFISANT`
+CONCEPTION ENCORE INCOMPLÈTE
 
-Aucune modification.
+Ne modifier aucun fichier source.
