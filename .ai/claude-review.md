@@ -1,158 +1,101 @@
-# LOT-V3-007 — Revue Claude : conception corrigée
+# LOT-V3-007 — Revue Claude : validation finale de la conception consolidée
 
 Outil : Claude (revue indépendante, lecture seule)
 Baseline : BASELINE-8 — 4794328 — LOT-V3-006 validé
-Objet : conception corrigée de Cursor dans `.ai/cursor-report.md`, en réponse à `.ai/task.md` (correction des quatre MAJOR de la revue précédente).
+Objet : spécification consolidée de `.ai/cursor-report.md`, en réponse au complément de `.ai/task.md`.
 
 Aucun fichier source modifié. Aucun commit, aucun push. Suite de tests non relancée.
 
-Fichiers lus : `AGENTS.md`, `.ai/project-state.md`, `.ai/task.md`, `.ai/cursor-report.md`, `.ai/claude-review.md` (précédente), `src/domain/structured-plan.ts`, `src/domain/catalog.ts`, `src/domain/client-file.ts`, `src/domain/conversation-turn.ts`, `src/domain/task-path.ts`, `src/domain/knowledge.ts`, `src/domain/intent-catalog.ts`, `src/app/api/assistant/route.ts`. Le code source n’a pas changé depuis la revue précédente.
+Fichiers lus : `AGENTS.md`, `.ai/project-state.md`, `.ai/task.md`, `.ai/cursor-report.md`, `.ai/claude-review.md` (précédente), `src/domain/structured-plan.ts`, `src/domain/conversation-turn.ts`, `src/domain/task-path.ts`, `tests/structured-plan.test.ts`. Le code source n’a pas changé depuis la revue précédente.
 
-Vérification exécutée sur une copie locale, sans écriture dans le dépôt : `classifyPendingTurn`, `readFieldFocus`, `understandIntent`, `identifyClient` et `decideFree` actuels, sur les phrases du lot (tableau en MAJOR-A).
-
----
-
-## 1. Les quatre MAJOR précédents
-
-### MAJOR-1 — Forme déterministe ↔ ActionType : RÉSOLU
-
-- `structuredShape(text)` rend `client | project | client+project | supplier | product | service | null`, sur des formes fermées, dans un ordre fixe.
-- `structuredPlanEligible` = refus actuels (question, négation, modification) + forme non nulle.
-- `translateStructuredPlan` commence par la forme. Matrice stricte : `supplier` → un seul `CREATE_SUPPLIER` ; `product` → un seul `CREATE_PRODUCT`, kind `produit` ; `service` → un seul `CREATE_PRODUCT`, kind `service`. Toute autre combinaison → `clarify`, puis blocage par la route. Un `CREATE_CLIENT` rendu par Ollama sur une forme `supplier` ne peut plus devenir `create_client`.
-- Kind imposé par le serveur. Un `kind` envoyé par le modèle doit être égal, sinon `clarify`. Le guide demande de ne pas l’envoyer.
-- `fournisseur` et `produit` restent bloquants hors des formes `comme fournisseur` / `comme produit`. Le test existant « un fournisseur ou un produit ne devient pas un client » garde son sens.
-- Branches implicites (`anchored`, `planNamesAreLabels`, `findOmittedStructuredFields`, `resolutionName`) rendues explicites par type.
-
-Réserve mineure sur l’ordre des formes : voir MINOR-1.
-
-### MAJOR-2 — Famille par marqueur explicite : RÉSOLU
-
-- Famille lue seulement sur `famille <valeur>`, valeur exacte de `PRODUCT_FAMILIES` après pli ; hors liste ou plusieurs marqueurs → `clarify`.
-- Omission limitée à ce marqueur.
-- Un mot de famille dans le nom n’est ni famille ni omission (`Audit réseau`, `Serveur Dell R750`).
-- La forme `prestation` fixe `kind = service`, pas `family = prestation`.
-
-### MAJOR-3 — Enrichissement client : RÉSOLU pour `enrichmentOwnsTurn`
-
-- Garde-fou dans `asksToEnrichRecord` et `enrichmentOwnsTurn` : `structuredShape ∈ {supplier, product, service}` → faux.
-- Choix justifié de ne pas exclure la forme `client` entière (« Ajoute le téléphone de Martin » doit rester un enrichissement).
-- Cas obligatoire (client ACME existant + « Ajoute ACME comme fournisseur, email contact@acme.fr ») couvert par un test dans `tests/client-file.test.ts`.
-- `client-file.ts` en MUST MODIFY.
-
-Il reste cependant un second chemin de capture côté client, dans la fiche en attente : voir MAJOR-A.
-
-### MAJOR-4 — Consommateurs de `structuredPlanEligible` : PARTIELLEMENT RÉSOLU
-
-- `conversation-turn.ts`, `task-path.ts`, `client-file.ts` sont intégrés, avec des tests de non-régression obligatoires. Bon.
-- Task suspendue (section I) : l’analyse est juste. `NEW_WRITE` et l’éligibilité ferment déjà la reprise ; le lot change seulement le classement en `service`.
-- Conversation pending (section H) : l’analyse est **incomplète**. Elle suppose que l’éligibilité suffit à rendre `new_intent`. C’est faux dès que la phrase porte un champ avec marqueur. Voir MAJOR-A.
+Vérifications exécutées sur une copie locale, sans écriture dans le dépôt : `PROJECT_CREATE`, `structuredPlanEligible`, `parseStructuredPlan` et `translateStructuredPlan` actuels sur les phrases client + projet (MAJOR-B).
 
 ---
 
-## 2. Points complémentaires
+## 1. Dernier MAJOR (fiche client en attente) — RÉSOLU
+
+Section H de la spécification :
+
+- règle `structuredShape ∈ {supplier, product, service} → new_intent` dans `classifyPendingTurn`, **avant** `isDraftCorrection` ;
+- placée après `CONFIRM` et `REJECT`. Ces deux motifs sont des phrases entières (`/^(oui|…|je confirme|…)$/`), une phrase « Ajoute … comme fournisseur » ne peut pas les satisfaire. Ordre correct ;
+- « Ajoute ACME comme fournisseur, son email est contact@acme.fr » et « …, email : contact@acme.fr » → `new_intent`, `revisesPendingDraft` faux, fiche client inchangée ;
+- « son email est nouveau@dupont.fr » → forme `null` → reste `correction` ;
+- `conversation-turn.ts` en MUST MODIFY, quatre tests obligatoires dans `tests/conversation-turn.test.ts`.
+
+Le MAJOR-A de la revue précédente est fermé.
+
+---
+
+## 2. Cohérence des autres corrections
 
 | Point | Statut |
 |---|---|
-| `CREATE_SUPPLIER` et `CREATE_PRODUCT` seulement | OK |
-| Service = `CREATE_PRODUCT` + `kind = service` imposé par le serveur | OK |
-| Parseurs déterministes prioritaires (`Ajoute le fournisseur ACME` reste `parseCatalogCommand`) | OK |
-| Pas de prix, coût, TVA, UPDATE, `supplierName` en V1 ; montant écrit → `omitted` | OK |
-| Aucune migration Prisma (`Product.kind`, `Product.family`, `Supplier` existent) | OK |
-| Carte `create_product` / `update_product` avec kind et family (MUST, `commandFields`) | OK |
-| `already` typé `client` / `supplier` / `product`, lecture par `nameKey` dans la bonne table | OK |
+| Matrice forme → ActionType (supplier, product, service) | OK |
+| Rôles explicites `comme client|fournisseur|produit` prioritaires sur la forme service | OK pour supplier/product/service ; **casse le couple client + projet**, voir MAJOR-B |
+| Service = `CREATE_PRODUCT` + `kind = service` imposé serveur, `kind` modèle seulement contrôlé | OK |
+| Famille uniquement par `famille <valeur>`, omission limitée au marqueur | OK |
+| Mots `OUTSIDE_V0` bloquants pour toutes les formes (étape 1) | OK |
+| Détecteurs montant / SIREN / SIRET, téléphone qui ignore les séquences SIREN/SIRET | OK, une collision avec `reference`, voir MINOR-1 |
+| Ancrage `reference` / `unit` par égalité exacte de segment | OK |
+| `already` typé `client` / `supplier` / `product` | OK |
 | `contact-differs` fournisseur, sans `update_supplier` | OK |
-| Une seule action fournisseur ou produit par plan | OK |
-| Nom sans `comme` ni mot de rôle en tête ou en fin | OK |
-| Recette corrigée (phrases 3 et 9 de l’ancienne liste retirées ou corrigées) | OK |
+| Parseurs déterministes prioritaires (`Ajoute le fournisseur ACME`, `Ajoute le produit Switch X`) | OK |
+| Garde-fou d’enrichissement client sur supplier/product/service | OK |
+| Task suspendue (`Ajoute le service Audit réseau`) | OK |
+| Carte : kind et family visibles | OK |
+| Aucune migration Prisma | OK |
+| Pas de prix, coût, TVA, UPDATE, `supplierName` en V1 ; clés interdites dans le JSON | OK |
+| `Ajoute Service Premium` client / `Ajoute le Service Premium` service, documenté | OK |
+| Liste de fichiers MUST / MAY / NO CHANGE | OK |
 
 ---
 
 ## 3. Findings
 
-### MAJOR-A — Une fiche client en attente capte encore une création fournisseur avec champ
+### MAJOR-B — La nouvelle `structuredShape` casse le couple client + projet déjà livré
 
-**Où :** `src/domain/conversation-turn.ts`, `classifyPendingTurn`. Route : `answerDirectly`, bloc `if (pending)`, avant StructuredPlan.
+**Où :** section A, étapes 2 et 4, et matrice B.
 
-`classifyPendingTurn` teste `isDraftCorrection` **avant** `isIndependentIntent`. L’éligibilité StructuredPlan n’est jamais consultée si la phrase ressemble à une correction de champ.
+La forme `client+project` est définie comme « `PROJECT_CREATE` et, dans la même phrase, une création de client ». Or `PROJECT_CREATE` exige un verbe (`ouvre`, `crée`, `nouveau`) **directement** suivi de `dossier|projet|affaire`. Et l’étape 2 (`comme client` → `client`) est évaluée avant l’étape 4.
 
-Résultats actuels, exécutés :
+Résultats exécutés :
 
-| Phrase | `classifyPendingTurn` | `readFieldFocus` |
-|---|---|---|
-| Ajoute ACME comme fournisseur | unknown | null |
-| Ajoute ACME comme fournisseur, email contact@acme.fr | unknown | null |
-| Ajoute ACME comme fournisseur, **son email est** contact@acme.fr | **correction** | draft, contact@acme.fr |
-| Ajoute ACME comme fournisseur, **email :** contact@acme.fr | **correction** | draft, contact@acme.fr |
-| Ajoute ACME comme fournisseur, téléphone 06 12 34 56 78 | unknown | null |
-| Ajoute le service Audit réseau | new_intent | null |
+| Phrase | `PROJECT_CREATE` | Aujourd’hui (`eligible`, traduction de [CREATE_CLIENT, CREATE_PROJECT]) | Avec la spécification |
+|---|---|---|---|
+| Nouveau client Dupont. Dossier Toiture pour Dupont. | **false** | true, `business` | étape 4 échoue → forme `client` → la matrice n’accepte qu’un `CREATE_CLIENT` → **clarify** |
+| Ajoute Dupont comme client et ouvre le dossier Toiture pour Dupont | true | true, `business` | étape 2 rend `client` avant l’étape 4 → **clarify** |
+| Crée le client Dupont et ouvre le dossier Toiture pour Dupont | true | `business` | `client+project`, OK |
 
-**Scénario :** une `ClientProposal` est en attente (par exemple Dupont). L’utilisateur écrit « Ajoute ACME comme fournisseur, son email est contact@acme.fr ». `enrichmentOwnsTurn` est bien faux grâce au nouveau garde-fou, mais `pending` est vrai, `classifyPendingTurn` rend `correction`, `revisesPendingDraft` est vrai, et la route appelle `reviseDraft` sur la fiche client en attente puis `openClientProposal`.
+La première phrase est exactement la constante `folder` de `tests/structured-plan.test.ts`. Les tests existants « client et projet nouveaux deviennent un plan métier » et « client existant et projet deviennent seulement create_project » tomberaient, ou devraient être réécrits.
 
-**Conséquence :** la fiche client en attente reçoit l’e-mail du fournisseur et une nouvelle proposition client remplace la précédente. Aucun fournisseur n’est proposé. Rien n’est écrit avant confirmation, mais c’est exactement le cas que `.ai/task.md` exclut (« Pas une correction de la fiche client en attente »), et la section H affirme à tort que la phrase devient `new_intent`.
+**Conséquence :** régression d’un comportement livré (couple client + projet → `BusinessPlan` ou `create_project`), hors du périmètre du lot.
 
 **Correction de conception :**
 
-- dans `classifyPendingTurn` (ou en tête de `isDraftCorrection`), `structuredShape ∈ {supplier, product, service}` → `new_intent`, avant le test de correction ;
-- `src/domain/conversation-turn.ts` passe de MAY à **MUST MODIFY** ;
-- tests dans `tests/conversation-turn.test.ts` : fiche client en attente + « Ajoute ACME comme fournisseur, son email est contact@acme.fr » et « …, email : contact@acme.fr » → `new_intent`, pas `correction` ; et une vraie correction (« son email est … » seul) reste `correction`.
+- conserver pour la famille client / projet la reconnaissance actuelle, sans la redécouper : une seule forme `client-or-project` (ou les trois formes actuelles) acceptée quand `CLIENT_CREATE` ou `PROJECT_CREATE` reconnaît la phrase, comme aujourd’hui ;
+- pour cette forme, la matrice reste la logique actuelle de `translateStructuredPlan` (un client, un projet, ou le couple client puis projet vérifié par `projectRolesMatch`) ;
+- le rôle explicite `comme client` sert seulement à empêcher la forme `service` ; il ne restreint pas le plan à un seul `CREATE_CLIENT` ;
+- ajouter aux tests de non-régression les deux phrases du tableau ci-dessus, avec le résultat `business`.
 
-### MINOR-1 — Ordre des formes : `service` avant `comme client`
+### MINOR-1 — Une référence produit de 9 ou 14 chiffres est prise pour un SIREN/SIRET
 
-`service` est testé en premier. « Ajoute le Service Plus comme client » (déterminant + `Service`) devient une forme `service`. Le modèle rendra `CREATE_CLIENT`, la matrice répondra `clarify`, et la phrase sera bloquée alors qu’elle est cliente aujourd’hui. Même ambiguïté pour « Ajoute la prestation X comme produit ».
+Section M : « une séquence d’exactement 9 chiffres » ou « 14 chiffres » → SIREN/SIRET → `omitted`. Section D : `référence 123456` est explicitement accepté. Une référence de 9 chiffres (`référence 123456789`) sera refusée comme SIREN omis.
 
-Correction : un tour explicite `comme client|fournisseur|produit` l’emporte sur la forme `service`, ou la forme `service` exclut la présence d’un `comme <rôle>`. Ajouter les deux phrases aux tests.
+Correction : pour les formes `product` et `service`, ne détecter le SIREN/SIRET que sur le mot `siren` / `siret` ; ou exclure du détecteur la valeur qui suit le marqueur `référence`. Ajouter un test.
 
-### MINOR-2 — Mots hors V0 dans les formes catalogue
+### MINOR-2 — Deux rôles explicites dans la même phrase
 
-La conception dit que `client` exige l’absence de mot `OUTSIDE_V0`, mais ne dit pas si `supplier`, `product`, `service` le doivent aussi (« Ajoute ACME comme fournisseur de contrats », « Ajoute Switch X200 comme produit pour le contrat Dupont »). Préciser la règle. Recommandation : les autres mots `OUTSIDE_V0` (contrat, intervention, équipement, réclamation, retour, catalogue, article) restent bloquants pour toutes les formes.
+« Ajoute ACME comme client et comme fournisseur » : l’ordre de l’étape 2 rend `supplier` sans signaler l’ambiguïté. Recommandation : deux rôles différents → `null` (ou `clarify`). Test à ajouter.
 
-### MINOR-3 — Détecteurs d’omission non définis
+### Hors lot, pour mémoire
 
-« Montant reconnu » et « SIREN ou SIRET reconnu » n’ont pas de détecteur écrit. Un SIRET de 14 chiffres est aussi vu par `phoneCandidates` (au moins 10 chiffres), donc détecté comme téléphone omis. Définir les deux détecteurs (montant : `€`, `EUR`, `euro(s)`, `$`, `USD` à côté d’un nombre ; SIREN/SIRET : mot `siren` / `siret` ou 9/14 chiffres groupés) et exclure leurs chiffres de la détection de téléphone.
-
-### MINOR-4 — Ancrage des args produit courts
-
-`expressionAnchored` exige trois caractères utiles dont une lettre. Une unité (`u`, `m2`) ou une référence entièrement numérique (`123456`) ne s’ancre jamais : le plan sera refusé si le modèle la porte. Soit documenter la limite, soit ancrer ces deux champs par égalité de segment sans la règle des trois caractères.
-
-### MINOR-5 — `Ajoute le Service Premium`
-
-Avec déterminant, « Ajoute le Service Premium » devient une forme `service`, alors que « Ajoute Service Premium » est `client`. Le comportement est cohérent avec la règle, mais il doit être écrit dans la recette et le manuel pour ne pas surprendre.
+Avec une fiche client en attente, une phrase de forme `client` qui porte un champ (« Ajoute Martin comme client, son email est … ») reste classée `correction` de la fiche en attente. C’est le comportement actuel, non modifié par le lot. À noter au backlog.
 
 ---
 
-## 4. Fichiers — liste à retenir
+## 4. Synthèse
 
-**MUST MODIFY**
-
-- `src/domain/structured-plan.ts`
-- `src/app/api/assistant/route.ts`
-- `src/domain/client-file.ts`
-- `src/domain/conversation-turn.ts` (MAJOR-A, au lieu de MAY)
-- `src/domain/catalog.ts`
-- `tests/structured-plan.test.ts`
-- `tests/client-file.test.ts`
-- `tests/conversation-turn.test.ts`
-- `docs/manuel-utilisateur.md`
-
-**MAY MODIFY / tests obligatoires**
-
-- `src/domain/task-path.ts`, `tests/task-path.test.ts`
-- `tests/catalog-command.test.ts`
-- `docs/technique/docs/orchestration.md`
-
-**NO CHANGE**
-
-- `prisma/schema.prisma`, `prisma/migrations`
-- `src/lib/catalog-store.ts`
-- `src/lib/catalog-proposals.ts`
-- `src/domain/pricing.ts`
-- `src/lib/business-records.ts`
-
----
-
-## 5. Synthèse
-
-Trois MAJOR sur quatre sont résolus, et les points complémentaires sont conformes. Le quatrième (consommateurs de l’éligibilité) laisse un trou concret et reproduit : avec une fiche client en attente, une création fournisseur, produit ou service qui porte un champ avec marqueur (« son email est », « email : ») est traitée comme une correction de la fiche client. La correction est petite (forme catalogue → `new_intent` avant le test de correction, `conversation-turn.ts` en MUST, deux tests), mais elle doit figurer dans la conception avant l’implémentation.
+Le dernier MAJOR (fiche client en attente) est résolu, et les corrections demandées sont cohérentes entre elles pour fournisseur, produit et service. En revanche, la redéfinition des formes client / projet dans `structuredShape` casse le couple client + projet déjà livré, sur la phrase de référence des tests actuels et sur « … comme client et ouvre le dossier … ». La correction est locale (garder la reconnaissance client / projet actuelle et limiter `comme client` à l’exclusion de la forme service), mais elle doit être écrite dans la spécification avant l’implémentation.
 
 ---
 
