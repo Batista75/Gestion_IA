@@ -1,562 +1,345 @@
-# Audit LOT-V3-007 — StructuredPlan fournisseur / produit / service
+# Conception corrigée LOT-V3-007
 
-Lecture seule. Aucun fichier source, aucune migration, aucun commit.
+Conception seulement. Aucun fichier source. Aucune migration. Aucun commit.
 
-## A. Baseline
+Baseline fonctionnelle : `BASELINE-8 — 4794328 — LOT-V3-006 validé` (`479432872e5148efbb475df2ff1ff57d9042a866`).
 
-Baseline fonctionnelle : `BASELINE-8 — 4794328 — LOT-V3-006 validé`.
+Cette version remplace la conception précédente. Elle intègre les quatre findings MAJOR de la revue Claude, et les MINOR qui changent le contrat.
 
-SHA : `479432872e5148efbb475df2ff1ff57d9042a866`.
+Le modèle ne choisit pas le kind. Il ne écrit pas. Le serveur déduit la forme, valide le plan, ouvre une `CatalogProposal`, et n’écrit qu’après confirmation.
 
-HEAD technique : `b2b0c48` — `chore: prépare l'audit LOT-V3-007`. Commit `.ai/` seulement. La baseline fonctionnelle reste `4794328`.
+## A. structuredShape
 
-Arbre de travail propre avant ce rapport.
-
-## B. StructuredPlan actuel
-
-Contrat dans `src/domain/structured-plan.ts`.
+Nouvelle fonction déterministe dans `src/domain/structured-plan.ts` :
 
 ```text
-StructuredPlan
-  source: "ollama"
-  actions: 1 ou 2
-  missing: au plus 4 textes, 120 caractères
-  confidence?: au plus 8, champs name | clientName | email | phone | address, valeur 0 à 1
-  explanation?: au plus 300 caractères
+structuredShape(text) →
+  client | project | client+project | supplier | product | service | null
 ```
 
-Actions autorisées, et elles seules :
+Elle ne lit que des formes fermées. Premier motif gagnant, dans cet ordre :
+
+1. `service` — début de création `ajoute|crée|créer|création`, puis un déterminant `le|la|un|une`, puis le mot `service` ou `prestation`, puis un nom.
+2. `supplier` — un verbe de création et le tour exact `comme fournisseur` ou `comme fournisseurs`.
+3. `product` — un verbe de création et le tour exact `comme produit` ou `comme produits`.
+4. `client+project` — la forme de dossier actuelle (`PROJECT_CREATE`) et, dans la même phrase, une création de client déjà reconnue.
+5. `project` — `PROJECT_CREATE` seul.
+6. `client` — la création client actuelle (`CLIENT_CREATE`), seulement si aucun mot de `OUTSIDE_V0` n’est présent.
+7. `null`.
+
+`structuredPlanEligible` devient :
 
 ```text
-CREATE_CLIENT
-  args: name (2 à 120)
-        email? (120, forme e-mail)
-        phone? (40)
-        address? (200)
-
-CREATE_PROJECT
-  args: name (2 à 120)
-        clientName (2 à 120)
+phrase non vide
+et pas une question, une négation, ni un verbe de modification ou de suppression
+et structuredShape ≠ null
 ```
 
-Clés de plan : `source`, `actions`, `missing`, `confidence`, `explanation`.
-Clés d’action : `type`, `args`.
-Toute autre clé d’argument est refusée.
-Clés interdites partout : `id`, `clientId`, `supplierId`, `projectId`, `productId`, `conversationId`, `inboxItemId`, `fileId`, `fileIds`, `quoteId`, `demandId`, `storedFileId`, `proposalId`.
+`OUTSIDE_V0` conserve contrat, intervention, équipement, réclamation, retour, catalogue, article, et aussi `fournisseur` et `produit`. Ces deux derniers mots ne bloquent plus les seules formes `comme fournisseur` et `comme produit`, parce que ces formes sont reconnues avant le blocage. Hors de ces formes, `fournisseur` et `produit` restent bloquants : `Ajoute le fournisseur ACME` n’est pas une forme StructuredPlan.
 
-JSON brut : 4 000 caractères maximum. `parseStructuredPlan` exige un objet JSON, puis l’ancrage dans le message.
+`translateStructuredPlan` commence par `structuredShape`. La forme `null`, ou un `ActionType` qui n’est pas celui de la matrice, donne `clarify`. La route, déjà, transforme un plan éligible non accepté en blocage. Aucune autre création n’est ouverte.
 
-`plainLabel` (`src/domain/catalog.ts`) : 2 à 120 caractères, au moins une lettre, sans `.!?,:;`, sans mot de proposition en minuscules (`qui`, `que`, `dont`, `pour`, `avec`, `son`, `sa`, `ses`, `leur`, `habite`, `telephone`, `email`, `e-mail`).
+Les branches aujourd’hui implicites deviennent explicites. `anchored`, `planNamesAreLabels`, `findOmittedStructuredFields` et `resolutionName` traitent `CREATE_SUPPLIER` et `CREATE_PRODUCT` par leur type. Tout ce qui n’est pas `CREATE_CLIENT` ne sera plus lu comme un `CREATE_PROJECT`.
 
-Éligibilité actuelle, `structuredPlanEligible` :
+## B. Matrice forme → ActionType
 
-- refuse question, négation, et verbes de modification ou de suppression ;
-- refuse `outsideStructuredPlan` : le mot fournisseur, produit, article, contrat, intervention, équipement, réclamation, retour ou catalogue ;
-- accepte une création client (`crée`, `ajoute`, `nouveau client`) ou une création de dossier (`ouvre` / `crée` un dossier, projet ou affaire, avec `pour`, `chez` ou `client`).
-
-Le guide Ollama, `structuredPlanGuide`, n’autorise que `CREATE_CLIENT` et `CREATE_PROJECT`. Il interdit d’inventer un mail, un téléphone, une adresse, un montant, une TVA ou un identifiant.
-
-## C. Référence CREATE_CLIENT / CREATE_PROJECT
-
-Chaîne réelle :
-
-```text
-message
-→ answerDirectly (src/app/api/assistant/route.ts)
-→ si rien n’a répondu : decideFree puis structuredPlanGate
-→ readStructuredPlan (src/lib/structured-plan-read.ts) envoie structuredPlanGuide à Ollama
-→ parseStructuredPlan
-→ ancrage : expressionAnchored, emailAnchored, phoneAnchored, addressAnchored
-→ resolutionName puis lecture Client par nameKey
-→ translateStructuredPlan
-→ openCatalogProposal ou openBusinessPlanProposal
-→ CatalogProposal ou BusinessPlanProposal
-→ confirmation humaine
-→ applyCatalogCommand / applyBusinessPlan
-```
-
-Fonctions à réutiliser telles quelles : `parseStructuredPlan`, `valueAnchored`, `expressionAnchored`, `detectStructuredContactHints`, `findOmittedStructuredFields`, `plainLabel`, `nameKey`, `openCatalogProposal`, `presentCommand`.
-
-Traductions actuelles :
-
-| Plan | Issue |
-| --- | --- |
-| `CREATE_CLIENT` seul, client inconnu | `create_client` |
-| `CREATE_CLIENT` seul, même nom et mêmes contacts | `already`, aucune proposition |
-| `CREATE_CLIENT` seul, contact différent | `contact-differs`, aucune mise à jour |
-| e-mail, téléphone ou adresse présents dans le message et absents du plan | `omitted`, refus |
-| `CREATE_PROJECT` seul, client connu, rôles ancrés | `create_project`, prochaine action fixe « Qualifier le besoin » |
-| `CREATE_PROJECT` seul, client inconnu | `unknown-client`, aucun dossier |
-| `CREATE_CLIENT` puis `CREATE_PROJECT`, même nom, client déjà là | `create_project` seulement |
-| `CREATE_CLIENT` puis `CREATE_PROJECT`, client absent, sans téléphone ni adresse | `BusinessPlan` (client + projet) |
-| tout autre couple | `clarify` |
-
-`CREATE_CLIENT` force `siren` et `notes` à vide. Le modèle ne les porte pas.
-
-## D. Fournisseur
-
-Il existe un modèle `Supplier`. `Organization` relie un client et un fournisseur du même `nameKey`. `createParty("supplier", …)` dans `src/lib/catalog-store.ts` crée la fiche, le contact principal, l’adresse principale et l’organisation.
-
-`CatalogCommand` : `create_supplier` et `update_supplier`, payload `PartyInput` (`name`, `siren`, `email`, `phone`, `address`, `notes`).
-
-Le parseur déterministe `parseCatalogCommand` couvre déjà la forme stricte `ajoute|crée|ouvre` + `fournisseur` + nom, avec des champs étiquetés après virgule (`email`, `téléphone`, `adresse`, `siren`, `siret`, `notes`).
-
-### Champs obligatoires minimum
-
-`name`, 2 à 120 caractères, `plainLabel`, ancré dans le message.
-
-### Champs facultatifs
-
-Pour ce lot, les mêmes que le client structuré : `email`, `phone`, `address`, seulement s’ils sont écrits.
-
-`siren` / `siret`, `notes`, le nom de contact séparé, l’encours et le délai existent sur la fiche ou sur `SupplierTermsProposal`. Ils restent hors du plan V1.
-
-### Contraintes d’unicité
-
-`Supplier.nameKey` est unique. `nameKey` met en minuscules, retire les accents et ramène les espaces. Un second fournisseur du même nom n’est pas créé : `createParty` répond que le fournisseur existe déjà, avec `ok: true`, sans deuxième ligne.
-
-Le même nom qu’un client partage l’`Organization`. La fiche fournisseur reste distincte.
-
-### Normalisations
-
-`validateParty` : nom trimé, e-mail contrôlé, téléphone coupé à 30 caractères, adresse coupée à 300, SIREN 9 chiffres ou SIRET 14. L’adresse structurée s’arrête au premier mot « à » dans la rue : limite déjà connue, conservée.
-
-### Règles existantes
-
-La confirmation passe par `CatalogProposal`, puis `applyCatalogCommand` → `createParty`. Le modèle n’écrit pas.
-
-### Risques de duplication
-
-La voie déterministe ouvre la proposition même si le nom existe. Le doublon n’est vu qu’à la confirmation, et la proposition devient `confirmee` alors qu’aucune fiche nouvelle n’est écrite. La voie StructuredPlan client, elle, refuse avant la proposition (`already`). Le fournisseur structuré doit suivre ce refus préalable, sur `Supplier.nameKey`. Aucune bascule silencieuse vers `update_supplier`.
-
-## E. Produit
-
-Modèle `Product`. `nameKey` unique. `kind` vaut `produit` ou `service`. `family` est une liste fermée : `serveur`, `poste`, `portable`, `reseau`, `prestation`, `autre` (`readProductFamily`).
-
-`CatalogCommand` : `create_product` et `update_product`, payload `ProductInput`.
-
-### Champs obligatoires minimum
-
-`name`, 2 à 120, `plainLabel`, ancré. L’unité vide devient `u` dans `validateProduct`. Le plan peut omettre l’unité.
-
-### Champs facultatifs
-
-`reference` (60), `unit` (20), `description` (1 000), `family` si le mot du message est dans la liste fermée, `kind` à `service` seulement si le message dit service ou prestation.
-
-`supplierName` existe. Le laisser vide en V1 : `ensureSupplier` crée le fournisseur manquant pendant l’écriture du produit.
-
-### Contraintes d’unicité
-
-`Product.nameKey`. `createProduct` répond que le produit est déjà au catalogue, `ok: true`, sans deuxième ligne. Même recommandation que le fournisseur : refus `already` avant la proposition. `saveArticle` rapproche aussi par référence ; le plan V1 ne doit pas transformer une référence existante en mise à jour.
-
-### Champs financiers sensibles
-
-`costStated`, `currency`, `statedPrice`, `vatNote`, `sourceUrl`. `validateProduct` recopie `costStated` tel quel et n’accepte comme devise que `EUR` ou `USD`. Aucun calcul de `pricing.ts`.
-
-### Champs que le modèle ne doit jamais inventer
-
-Montant, devise, TVA, URL, identifiant, fournisseur non écrit, famille hors liste, suffixe de nom (`Pro`, `France`).
-
-## F. Service
-
-Verdict : `SERVICE REPRÉSENTÉ PAR Product.kind = "service"`.
-
-Aucune entité `Service`. Aucune commande `create_service`.
-
-Deux représentations déjà là :
-
-- `Product.kind = "service"` quand un tableau métier a un en-tête `id service` (`saveArticle`) ;
-- `Product.family = "prestation"` dans la liste fermée des familles, distincte du `kind`.
-
-`CREATE_SERVICE` n’est pas un troisième ActionType. Une phrase de service ou de prestation devient `CREATE_PRODUCT` avec `kind: "service"`. La famille `prestation` n’est posée que si ce mot, ou un mot de la liste, est ancré.
-
-## G. CatalogCommand
-
-| Commande | Champs | Validation | Écriture métier | Proposal actuelle |
-| --- | --- | --- | --- | --- |
-| `create_supplier` | `PartyInput` | `plainLabel` puis `validateParty` | `createParty("supplier")` | `CatalogProposal` via `openCatalogProposal` |
-| `update_supplier` | `PartyInput`, nom = cible | `patchParty` : champs vides conservent l’existant | `updatePartyById` | même proposition catalogue |
-| `create_product` | `ProductInput` | `plainLabel` puis `validateProduct` | `createProduct` ; `ensureSupplier` si un nom de fournisseur est fourni | `CatalogProposal` |
-| `update_product` | `ProductInput`, nom = cible | `patchProduct` | `updateProductById` | `CatalogProposal` |
-| service | aucun type dédié | `kind === "service"` dans `validateProduct` | colonne `Product.kind` | aucune commande propre |
-
-`presentCommand` affiche pour un produit le nom, la référence, l’unité et le fournisseur. Il n’affiche ni `kind` ni `family`.
-
-## H. Parsers déterministes
-
-`parseCatalogCommand` reconnaît, en tête de phrase :
-
-```text
-ajoute | crée | ouvre | création
-+ un | une | le | la | du | compte
-+ client | fournisseur | produit | projet
-+ reste
-```
-
-Mesures sur les phrases de l’audit :
-
-| Phrase | Commande | StructuredPlan éligible |
+| Forme | Action acceptée | Kind écrit par le serveur |
 | --- | --- | --- |
-| Ajoute le fournisseur ACME | `create_supplier`, nom ACME | non |
-| Crée un fournisseur ACME | `create_supplier`, nom ACME | non |
-| Ajoute le fournisseur ACME, email contact@acme.fr | `create_supplier`, e-mail repris | non |
-| Ajoute ACME comme fournisseur, email contact@acme.fr | aucune | non (`outsideStructuredPlan`) |
-| Ajoute le produit Switch X | `create_product`, nom Switch X | non |
-| Ajoute le produit Switch X200 | `create_product` | non |
-| Ajoute une prestation Audit réseau | aucune | oui, traité comme une création client possible |
-| Ajoute le service Audit réseau | aucune | oui, même collision |
-| Ajoute Orange comme fournisseur | aucune | non |
-| Ajoute Paris comme produit | aucune | non |
-| Ajoute Service Premium | aucune | oui |
+| `client` | un seul `CREATE_CLIENT` | inchangé |
+| `project` | un seul `CREATE_PROJECT` | inchangé |
+| `client+project` | `CREATE_CLIENT` puis `CREATE_PROJECT`, même nom | inchangé, seul couple conservé |
+| `supplier` | un seul `CREATE_SUPPLIER` | aucun kind |
+| `product` | un seul `CREATE_PRODUCT` | `produit` |
+| `service` | un seul `CREATE_PRODUCT` | `service` |
+| autre combinaison | `clarify`, puis blocage | rien |
 
-`identifyClient` ignore une phrase qui commence par `ajoute` / `crée` / `ouvre` sans le mot client (`isOtherCatalogCommand`). Ces phrases ne deviennent pas une fiche client par ce parseur.
+Le champ `kind` du JSON, s’il est présent, doit être égal à la valeur du serveur. S’il est absent, le serveur le pose. S’il diffère, `clarify`. Le guide Ollama dit de ne pas envoyer `kind`.
 
-`parseBusinessBrief` ne lit un service que dans un tableau `id service` / `SRV-`. Une phrase naturelle ne l’alimente pas.
+`Ajoute le fournisseur ACME` et `Ajoute le produit Switch X` restent devant, dans `parseCatalogCommand`, appelés par `answerDirectly` avant StructuredPlan. Ils ne deviennent pas des formes `supplier` ou `product`.
 
-Le mot `fournisseur` ou `produit` dans `OUTSIDE_V0` empêche StructuredPlan d’atteindre les formes naturelles « comme fournisseur » et « comme produit ». En même temps, l’absence de ces mots laisse « prestation », « service » et « Ajoute Service Premium » entrer dans le plan client.
+`Ajoute ACME comme fournisseur` est `supplier`.
 
-## I. Ordre de routage
+`Ajoute Service Premium` n’a pas de déterminant devant `Service`. La forme est `client`, comme aujourd’hui. Ce n’est pas un service.
 
-Ordre réel de `POST /api/assistant` :
+## C. Règles supplier
+
+Forme : verbe de création et `comme fournisseur`.
+
+Args autorisés : `name`, `email`, `phone`, `address`. Mêmes limites que le client structuré. `siren` et `notes` restent vides dans le `PartyInput`.
+
+Ancrage : `expressionAnchored` sur le nom, `emailAnchored`, `phoneAnchored`, `addressAnchored`.
+
+Omission : un e-mail, un téléphone ou une adresse reconnus dans la phrase et absents du plan → `omitted`. Un SIREN, un SIRET ou un montant reconnu → `omitted` aussi, parce que le plan ne les porte pas.
+
+Traduction : `create_supplier`. `supplierName` n’existe pas sur cette commande.
+
+## D. Règles product
+
+Forme : verbe de création et `comme produit`.
+
+Args autorisés : `name`, `reference`, `unit`, `description`, `family`.
+
+`kind` forcé à `produit`. `supplierName` vide, pour que `ensureSupplier` ne crée pas de fournisseur. Unité absente : `validateProduct` pose déjà `u`.
+
+`family` seulement par le marqueur de la section F.
+
+Omission : marqueur `famille` présent et famille absente ou différente ; montant, SIREN ou SIRET reconnu. Une référence, une unité ou une description ne sont pas devinées : elles ne sont acceptées que si la valeur du plan est ancrée. Leur absence, sans marqueur dédié déjà parsé, ne bloque pas.
+
+## E. Règles service
+
+Forme fermée :
 
 ```text
-action de carte par identifiant
-→ parcours suspendu
-→ answerDirectly
-    tableau métier
-    mesures, contrat, intervention, équipement, brouillon, achat, réclamation, dossier, trésorerie
-    règle d’argent
-    « Je confirme. » / « Rejette. »
-    devis hybride
-    parseCatalogCommand
-    intention de lecture
-    enrichissement client
-    proposition client
-    toute autre CatalogProposal
-→ decideFree
-→ structuredPlanEligible && structuredPlanGate
-→ si le plan est éligible et Ollama ne rend pas un plan valide : blocage, sans repli vers le modèle de conversation
-→ sinon le modèle de conversation
+ajoute | crée | créer | création
++ le | la | un | une
++ service | prestation
++ nom
 ```
 
-`decideFree` sur « ajoute » renvoie `execution: "absente"` et `id: null`. La porte StructuredPlan reste ouverte, car elle ne se ferme que si `id` est rempli.
+Action : un seul `CREATE_PRODUCT`. `kind` forcé à `service`.
 
-Destination recommandée, en gardant le parseur strict devant :
+`Ajoute le service Audit réseau` → nom `Audit réseau`.
+`Ajoute une prestation Audit réseau` → nom `Audit réseau`, `kind` `service`. Le mot `prestation` ne pose pas `family`.
 
-| Phrase | Chemin |
+`Ajoute Service Premium` ne matche pas : pas de déterminant. Forme `client`.
+
+Mêmes args produit, même ancrage, même omission, même `supplierName` vide.
+
+## F. Famille
+
+La famille n’est lue que sur le marqueur explicite :
+
+```text
+famille réseau
+famille prestation
+famille serveur
+```
+
+Le mot qui suit `famille`, plié sans accent, doit être exactement une valeur de `PRODUCT_FAMILIES` : `serveur`, `poste`, `portable`, `reseau`, `prestation`, `autre`. Une valeur hors liste, ou plusieurs marqueurs, donne `clarify`.
+
+Un mot de cette liste dans le nom n’est ni une famille ni un champ omis.
+
+| Phrase | Famille |
 | --- | --- |
-| Ajoute le fournisseur ACME | reste `parseCatalogCommand` → `CatalogProposal`. StructuredPlan ne la voit pas. |
-| Ajoute le produit Switch X | reste `create_product`. |
-| Ajoute ACME comme fournisseur | nouveau StructuredPlan `CREATE_SUPPLIER`, une fois le mot retiré du blocage aveugle et la forme « comme fournisseur » exigée. |
-| Ajoute le service Audit réseau | StructuredPlan `CREATE_PRODUCT`, `kind: "service"`. Aujourd’hui la phrase est éligible comme client : ce classement doit cesser. |
-| Ajoute une prestation Audit réseau | même produit de kind `service`, famille `prestation` parce que le mot est ancré. |
+| Ajoute une prestation Audit réseau | aucune. `réseau` reste dans le nom. |
+| Ajoute le service Audit réseau | aucune. |
+| Ajoute Serveur Dell R750 comme produit | aucune. |
+| Ajoute Switch X200 comme produit, famille réseau | `reseau`. |
+| Ajoute une prestation Audit réseau, famille prestation | `prestation`, en plus du `kind` `service`. |
 
-## J. Ancrage fournisseur
+Omission : le marqueur est dans la phrase et `family` manque, ou ne reprend pas cette valeur. Pas d’autre détection.
 
-Réutiliser `expressionAnchored`, `emailAnchored`, `phoneAnchored`, `addressAnchored`, `plainLabel`.
+## G. Enrichissement client
 
-```text
-Ajoute le fournisseur ACME, email contact@acme.fr
-```
-
-est déjà une commande déterministe. Le cas StructuredPlan est :
+`asksToEnrichRecord` rend vrai dès qu’un verbe (`ajoute`) et un sujet (`email`) sont présents. `explicitClientCreation` ne connaît que les créations de client. Donc aujourd’hui :
 
 ```text
 Ajoute ACME comme fournisseur, email contact@acme.fr
 ```
 
-Accepté : `name = ACME`, `email = contact@acme.fr`.
-Refusé : `name = ACME France`, un e-mail, un téléphone, une adresse ou un SIREN absent du texte.
+est un enrichissement. Si le client ACME existe, `proposeChangeFromMessage` propose de modifier ce client. `answerDirectly` fait cet appel avant StructuredPlan.
 
-Le nom doit être un segment de mots entier. Trois lettres utiles minimum, comme l’ancrage actuel.
-
-## K. Ancrage produit
+Garde-fou à ajouter dans `asksToEnrichRecord` et `enrichmentOwnsTurn` :
 
 ```text
-Ajoute le produit Switch X200
+structuredShape ∈ { supplier, product, service } → false
 ```
 
-Accepté : `name = Switch X200`.
-Refusé : `name = Switch X200 Pro`.
+C’est le helper catalogue équivalent demandé. On n’exclut pas la forme `client` entière : elle contient le verbe `ajoute`, qui est aussi celui de `Ajoute le téléphone de Martin`. Exclure toute forme non nulle fermerait ces enrichissements.
 
-Famille : le mot du message, plié sans accent, doit être exactement une valeur de `PRODUCT_FAMILIES`. `réseau` peut devenir `reseau`. `réseaux professionnels` est refusé.
+Cas obligatoire. Client ACME déjà en base. Phrase `Ajoute ACME comme fournisseur, email contact@acme.fr`.
 
-Montant : aucun validateur d’ancrage monétaire dans StructuredPlan. `validateProduct` recopie une chaîne, il ne prouve pas qu’elle était dans le message. V1 ne porte pas le montant.
+- `enrichmentOwnsTurn` faux ;
+- aucune proposition de mise à jour du client ;
+- forme `supplier` ;
+- StructuredPlan `CREATE_SUPPLIER`, e-mail ancré.
 
-## L. Champs omis
+`src/domain/client-file.ts` est MUST MODIFY. Le test vit dans `tests/client-file.test.ts`.
 
-Règle actuelle, clients seulement : un e-mail, un téléphone ou une adresse reconnus dans le message et absents de tous les `CREATE_CLIENT` donnent `kind: "omitted"`. La route refuse, rien n’est proposé.
+## H. Conversation pending
 
-Extensions minimales :
+`isIndependentIntent` (`src/domain/conversation-turn.ts`) rend `new_intent` dès que `structuredPlanEligible` est vrai. Aujourd’hui `Ajoute ACME comme fournisseur` n’est pas éligible (`outsideStructuredPlan`), donc ce n’est pas une nouvelle intention : le fil peut la garder contre la fiche client en attente.
 
-- fournisseur : les mêmes trois champs, sur `CREATE_SUPPLIER` ;
-- produit : une famille de la liste fermée présente dans le message et absente du plan est un champ omis ;
-- un montant reconnu (`€`, `EUR`, `euro`) dans une phrase de création est un champ omis en V1, puisque le plan ne le porte pas ;
-- un SIREN ou un SIRET écrit et non porté par le plan est un champ omis, pour la même raison.
+Après le lot, la phrase est éligible. `classifyPendingTurn` rend `new_intent`. `revisesPendingDraft` ne s’applique qu’à une correction. La fiche client en attente n’est pas révisée. La route continue jusqu’à StructuredPlan fournisseur.
+
+Test dans `tests/conversation-turn.test.ts` : une proposition client en attente et `Ajoute ACME comme fournisseur` → `new_intent`, pas une correction de brouillon.
+
+## I. Task suspendue
+
+`resumeKind` (`src/domain/task-path.ts`) rend déjà `null` si `NEW_WRITE` voit `ajoute`, et aussi si `structuredPlanEligible` est vrai. Le second verrou n’est pas encore vrai pour `Ajoute le service Audit réseau`, parce que la phrase est aujourd’hui éligible comme client générique via `ajoute`, ce qui la rend déjà éligible. Le changement utile est le classement : la phrase doit être `service`, pas `client`.
+
+Attendu : `structuredShape` = `service`, `resumeKind` = `null`, `resumeSuspendedTask` = `null`. Le parcours suspendu ne reprend pas. La phrase part en StructuredPlan.
+
+Test dans `tests/task-path.test.ts`.
+
+## J. Ancrage / nom
+
+Helpers repris : `expressionAnchored`, `emailAnchored`, `phoneAnchored`, `addressAnchored`, `plainLabel`.
+
+Règle ajoutée, sur le nom de chaque forme : le nom ne contient pas le mot `comme`, et ne commence ni ne finit par le mot de rôle de la forme (`fournisseur`, `produit`, `service`, `prestation`, et `client` pour la forme client).
+
+| Plan | Résultat |
+| --- | --- |
+| `name = ACME` pour `comme fournisseur` | accepté |
+| `name = ACME comme fournisseur` | refusé |
+| `name = ACME France` si `France` est absent | refusé par `expressionAnchored` |
+| `name = Audit réseau` après `le service` | accepté |
+| `name = service Audit réseau` | refusé |
+| `name = Switch X200 Pro` si `Pro` est absent | refusé |
+
+Limite connue, inchangée : `expressionAnchored` exige trois caractères utiles. `Ajoute HP comme fournisseur` et `Ajoute 3M comme fournisseur` sont refusés par StructuredPlan. `Ajoute le fournisseur HP` reste la voie déterministe.
+
+L’adresse coupée au mot `à` dans une rue reste la limite déjà connue. Ce lot ne la corrige pas.
+
+## K. Existing entities
+
+`already` porte le type :
 
 ```text
-Ajoute ACME comme fournisseur, email contact@acme.fr
+{ kind: "already", entity: "client" | "supplier" | "product", name }
 ```
 
-avec seulement `name = ACME` : refus pour e-mail omis. Même mécanique que le client.
+Lecture dans `answerFromStructuredPlan`, par `nameKey` :
 
-## M. Entités existantes
+- client ou projet : `prisma.client`, comme aujourd’hui ;
+- fournisseur : `prisma.supplier` ;
+- produit ou service : `prisma.product`.
 
-Comportement actuel à la confirmation :
+`CREATE` et fiche de même nom : réponse `already`, aucune `CatalogProposal`, aucune mise à jour. Messages distincts : le client, le fournisseur, ou le produit existe déjà. Un service existant est un produit de `kind` `service` ; la phrase dit « le produit ».
 
-- fournisseur de même `nameKey` : pas de deuxième fiche, résumé « existe déjà », proposition quand même confirmée ;
-- produit de même `nameKey` : même schéma ;
-- client StructuredPlan : refus avant proposition, pas de `update_client`.
+Fournisseur existant dont l’e-mail, le téléphone ou l’adresse du plan diffère : `contact-differs`, même champs que le client, `withProject` faux. Rien n’est écrit. Pas d’`update_supplier`.
 
-Règle recommandée pour les nouveaux plans : `CREATE` + nom exact déjà en base → réponse `already`, aucune proposition, aucune mise à jour. Le parseur déterministe existant n’est pas à réécrire dans ce lot.
+La voie déterministe `Ajoute le fournisseur ACME` n’est pas réécrite. Si ACME existe, elle ouvre encore une proposition ; la confirmation répond que le fournisseur existe déjà et ne crée pas une deuxième fiche.
 
-## N. Multi-actions
+## L. Carte
 
-`OUT V1`.
+MUST. `commandFields` dans `src/domain/catalog.ts` affiche, pour `create_product` et `update_product`, les valeurs présentes :
 
-`ACTION_MAX` vaut 2, et le seul couple traduit est `CREATE_CLIENT` puis `CREATE_PROJECT`. Une `CatalogProposal` porte une seule `CatalogCommand`. `BusinessPlan` a des clients, des articles, des projets et des devis, pas de fournisseur. « Ajoute le fournisseur ACME et le produit Switch X » demanderait deux propositions ou une commande nouvelle. Une action par plan en V1.
+- kind `produit` → libellé Produit ;
+- kind `service` → libellé Service ;
+- `family` non vide → libellé de `familyLabel`.
 
-Le couple client + projet déjà livré reste inchangé.
+L’utilisateur voit qu’il confirme un produit ou un service, et la famille seulement si le marqueur `famille` l’a posée.
 
-## O. Références inter-actions
+`openCatalogProposal` et `createProduct` ne changent pas. Le `kind` et la `family` sont déjà des champs de `ProductInput`.
 
-`OUT V1`.
+## M. Tests
 
-`Product.supplierName` est un nom, pas un identifiant. Le modèle ne doit pas produire d’id. À l’écriture, `ensureSupplier` crée le fournisseur s’il manque. Lier le produit à l’action fournisseur précédente réintroduirait cette création cachée. V1 laisse `supplierName` vide.
+`tests/structured-plan.test.ts`
 
-## P. UPDATE
+- `comme fournisseur` → `supplier`, un `CREATE_SUPPLIER`, nom `ACME` ;
+- e-mail et adresse ancrés acceptés ; `ACME France`, e-mail inventé, `ACME comme fournisseur` refusés ;
+- e-mail présent et absent du plan → `omitted` ;
+- `CREATE_CLIENT` sur une forme `supplier` → `clarify` ;
+- `comme produit` → `CREATE_PRODUCT`, kind serveur `produit` ;
+- `famille réseau` → `reseau` ; `famille serveurs` → refus ;
+- `Serveur Dell R750 comme produit` sans marqueur → pas de famille, pas d’omission ;
+- kind modèle `service` sur une forme `product` → `clarify` ;
+- montant ou `costStated` inventé → refus ; `150 €` dans la phrase → `omitted` ;
+- fournisseur ou produit de même `nameKey` → `already` du bon type ;
+- fournisseur existant, e-mail différent → `contact-differs`, pas d’update ;
+- `ajoute|crée + déterminant + service|prestation + nom` → kind `service`, nom sans le rôle ;
+- `Audit réseau` ne pose pas la famille `reseau` ;
+- `Ajoute Service Premium` → forme `client` ;
+- `ajouter un fournisseur Quincaillerie Durand` reste `parseCatalogCommand`, forme StructuredPlan `null`.
 
-`update_supplier` et `update_product` existent, avec le parseur « mettre à jour le fournisseur|produit … ».
+`tests/client-file.test.ts`
 
-`OUT LOT-V3-007`.
+- client ACME existant, `Ajoute ACME comme fournisseur, email contact@acme.fr` → `asksToEnrichRecord` et `enrichmentOwnsTurn` faux.
 
-Le plan structuré n’a pas d’`UPDATE_*`. Une phrase de modification reste sur `OPPOSITE` / le parseur déterministe. Aucune nécessité d’ouvrir l’update pour faire tenir la création.
+`tests/conversation-turn.test.ts`
 
-## Q. Prix / coûts
+- fiche client en attente, `Ajoute ACME comme fournisseur` → `new_intent`.
 
-Recommandation : `OUT V1`.
+`tests/task-path.test.ts`
 
-Les montants restent des chaînes recopiées (`costStated`, `statedPrice`). StructuredPlan interdit déjà d’inventer un montant, et aucun ancrage monétaire n’existe. Les accepter demanderait un détecteur, une preuve d’ancrage et un affichage sur la carte. Un prix écrit dans la phrase V1 doit provoquer un refus de champ omis, pour qu’il ne disparaisse pas en silence.
+- parcours suspendu, `Ajoute le service Audit réseau` → `resumeKind` null, forme `service`.
 
-## R. Risques sémantiques
+`tests/catalog-command.test.ts`
 
-| Phrase | Protection actuelle | Règle du lot |
-| --- | --- | --- |
-| Ajoute Orange comme fournisseur | parseur strict muet ; StructuredPlan bloqué par le mot fournisseur ; `identifyClient` ne s’applique pas | `CREATE_SUPPLIER`, nom `Orange` seulement s’il est ancré. Pas de ville, pas de client. |
-| Ajoute Paris comme produit | même blocage par le mot produit | `CREATE_PRODUCT`, nom `Paris`. L’adresse exige une rue numérotée : `Paris` seul n’est pas une adresse. |
-| Ajoute Service Premium | éligible au plan client, car « ajoute » sans mot interdit | rester une création client possible. Le mot Service dans le nom ne suffit pas à poser `kind: "service"`. |
-| Ajoute le service Audit réseau | éligible au plan client aujourd’hui | doit devenir `CREATE_PRODUCT` / `kind: "service"`, et cesser d’être un client. |
-| Ajoute le fournisseur ACME | `create_supplier` déjà | le parseur strict reste devant. Ne pas ouvrir un second mécanisme. |
+- `Ajoute le fournisseur ACME` et `Ajoute le produit Switch X` restent des commandes déterministes.
 
-`bareNameQuestion` ne s’applique pas quand le verbe est `ajoute` ou `crée`. Un homonyme déjà au répertoire ne détourne pas ces phrases vers une consultation.
+## N. Recette future
 
-## S. JSON cible
+1. `Ajoute ACME comme fournisseur` — StructuredPlan, une `CatalogProposal` fournisseur, nom `ACME`.
+2. `Ajoute ACME comme fournisseur, email contact@acme.fr` — même proposition, e-mail affiché. Pas de fiche client.
+3. Client ACME déjà en base, même phrase que 2 — aucune mise à jour du client. Proposition fournisseur. Si le fournisseur ACME existe aussi, avec un autre e-mail : `contact-differs`, aucune proposition.
+4. `Ajoute Switch X200 comme produit` — `CREATE_PRODUCT`, kind produit, pas de famille.
+5. `Ajoute Switch X200 comme produit, famille réseau` — famille `reseau` visible sur la carte.
+6. `Ajoute le service Audit réseau` — kind service, nom `Audit réseau`, famille vide, carte « Service ».
+7. `Ajoute une prestation Audit réseau` — kind service, famille vide. `réseau` reste dans le nom.
+8. `Ajoute Service Premium` — création client possible, pas un service.
+9. `Ajoute une prestation Audit réseau à 150 €` — refus, montant non porté. Aucune proposition.
+10. `Ajoute ACME comme fournisseur` alors que le fournisseur ACME existe, sans contact nouveau — « le fournisseur existe déjà », aucune proposition. `Ajoute Switch X200 comme produit` alors que le produit existe — « le produit existe déjà ». La forme déterministe `Ajoute le fournisseur ACME`, elle, ouvre encore sa proposition actuelle.
 
-Fournisseur :
+Hors recette StructuredPlan, à ne pas attendre comme un succès de plan : `Le fournisseur s’appelle ACME, son téléphone est 06 12 34 56 78`. Pas de verbe de création. `understandIntent` y voit un changement. Refus de plan.
 
-```json
-{
-  "actions": [
-    {
-      "type": "CREATE_SUPPLIER",
-      "args": { "name": "ACME", "email": "contact@acme.fr" }
-    }
-  ],
-  "missing": []
-}
-```
+L’ancrage `Switch X200 Pro` se prouve en test unitaire sur `Ajoute Switch X200 comme produit`, pas par la phrase déterministe `Ajoute le produit Switch X200`.
 
-Produit :
-
-```json
-{
-  "actions": [
-    {
-      "type": "CREATE_PRODUCT",
-      "args": { "name": "Switch X200", "family": "reseau" }
-    }
-  ],
-  "missing": []
-}
-```
-
-Service, même type :
-
-```json
-{
-  "actions": [
-    {
-      "type": "CREATE_PRODUCT",
-      "args": { "name": "Audit réseau", "kind": "service", "family": "prestation" }
-    }
-  ],
-  "missing": []
-}
-```
-
-`family` et `kind` sont absents quand le message ne les porte pas. `email`, `phone`, `address` aussi.
-
-## T. Validation serveur
-
-Clés autorisées en plus de l’existant :
-
-- action `CREATE_SUPPLIER`, args `name`, `email`, `phone`, `address` ;
-- action `CREATE_PRODUCT`, args `name`, `reference`, `unit`, `description`, `family`, `kind`.
-
-Clés interdites : la liste actuelle, plus `costStated`, `statedPrice`, `currency`, `vatNote`, `sourceUrl`, `supplierId`, `supplierName` dans le plan V1.
-
-Limites : nom 2–120, e-mail 120 et forme e-mail, téléphone 40 et au moins 10 chiffres pour l’ancrage, adresse 200, référence 60, unité 20, description 1 000.
-
-Valeurs fermées : `kind` vide ou `service` ; `family` vide ou une valeur de `PRODUCT_FAMILIES` après pli.
-
-Ancrage : chaque valeur non vide est un segment du message. La famille et le kind `service` exigent le mot correspondant.
-
-Omission : e-mail, téléphone, adresse, famille fermée, montant, SIREN/SIRET détectés et absents du plan → refus.
-
-Actions : au plus 2, et le seul couple reste client puis projet. Un plan fournisseur ou produit contient une seule action.
-
-`plainLabel` reste obligatoire sur les noms.
-
-## U. Traduction Proposal
-
-```text
-CREATE_SUPPLIER
-→ CatalogCommand create_supplier (PartyInput, siren et notes vides)
-→ translateStructuredPlan, kind catalog
-→ openCatalogProposal
-→ confirmation
-→ createParty("supplier")
-
-CREATE_PRODUCT
-→ CatalogCommand create_product (supplierName vide, kind produit ou service, family ou "")
-→ openCatalogProposal
-→ confirmation
-→ createProduct
-```
-
-Avant d’ouvrir : `prisma.supplier.findUnique({ where: { nameKey } })` ou `product.findUnique`. Trouvé → même issue que `already` du client, adaptée au libellé fournisseur ou produit.
-
-`resolutionName` et la lecture unique du client dans `answerFromStructuredPlan` doivent connaître ces deux noms. `openCatalogProposal` et `applyCatalogCommand` restent les fonctions d’enregistrement.
-
-La carte produit devrait montrer `kind` et `family` quand ils sont remplis (`commandFields`). Sinon l’utilisateur confirme un produit sans voir qu’il sera un service.
-
-## V. Tests
-
-### Supplier
-
-- « ACME comme fournisseur » → `CREATE_SUPPLIER`, nom ACME ;
-- e-mail `contact@acme.fr` ancré, accepté ;
-- adresse « 12 rue de la Gare, Paris » ancrée, acceptée ;
-- `ACME France` ou un e-mail inventé, refusé ;
-- fournisseur de même `nameKey` déjà connu → `already`, pas d’`update_supplier` ;
-- e-mail présent dans la phrase et absent du plan → `omitted`.
-
-### Product
-
-- « Switch X200 » → nom exact ;
-- famille `reseau` si le message dit réseau ;
-- famille `serveurs professionnels` refusée ;
-- `costStated` ou `100 €` absent du texte, refusé ; un euro écrit dans la phrase et absent du plan, `omitted` ;
-- produit de même `nameKey` → `already`.
-
-### Service
-
-- « Ajoute le service Audit réseau » → `CREATE_PRODUCT`, `kind: "service"`, nom `Audit réseau`, et la phrase n’est plus éligible comme client ;
-- « prestation Audit réseau » → `kind: "service"` et `family: "prestation"` ;
-- « Ajoute Service Premium » sans rôle service/produit/fournisseur → pas de `kind: "service"`.
-
-Garder les tests : `parseCatalogCommand("ajouter un fournisseur Quincaillerie Durand")` reste `create_supplier`, et cette phrase ne passe pas par Ollama.
-
-## W. Recette future
-
-1. `Ajoute le fournisseur ACME` — forme courte déjà déterministe, une proposition, pas d’appel utile à StructuredPlan.
-2. `Ajoute ACME comme fournisseur, email contact@acme.fr` — plan, nom et e-mail ancrés.
-3. `Le fournisseur s’appelle ACME, son téléphone est 06 12 34 56 78` — formulation naturelle.
-4. `Ajoute Orange comme fournisseur` — nom court, homonyme possible.
-5. `Ajoute le produit Switch X200` — déterministe.
-6. `Ajoute Switch X200 comme produit, famille réseau` — plan, famille fermée.
-7. `Ajoute le service Audit réseau` — `kind: "service"`.
-8. `Ajoute une prestation Audit réseau à 150 €` — refus : montant non porté.
-9. `Ajoute le fournisseur ACME` alors qu’ACME existe — refus, fiche inchangée.
-10. `Ajoute le produit Switch X200 Pro` alors que le message dit seulement Switch X200 — ancrage refusé.
-
-## X. Fichiers impactés
+## O. Fichiers
 
 MUST MODIFY
 
 - `src/domain/structured-plan.ts`
 - `src/app/api/assistant/route.ts`
+- `src/domain/client-file.ts`
+- `src/domain/catalog.ts`
 - `tests/structured-plan.test.ts`
+- `tests/client-file.test.ts`
+- `docs/manuel-utilisateur.md`
 
 MAY MODIFY
 
-- `src/domain/catalog.ts` (`commandFields`, pour montrer kind et family)
-- `docs/manuel-utilisateur.md`
+- `src/domain/conversation-turn.ts`
+- `tests/conversation-turn.test.ts`
+- `src/domain/task-path.ts`
+- `tests/task-path.test.ts`
+- `tests/catalog-command.test.ts`
 - `docs/technique/docs/orchestration.md`
-- `tests/catalog-command.test.ts` (frontière parseur / plan)
+
+`conversation-turn.ts` et `task-path.ts` peuvent ne pas changer de code si `structuredPlanEligible` suffit. Les tests de non-régression, eux, sont obligatoires.
 
 NO CHANGE
 
-- `prisma/schema.prisma` et `prisma/migrations`
+- `prisma/schema.prisma`
+- `prisma/migrations`
+- `src/lib/catalog-store.ts`
+- `src/lib/catalog-proposals.ts`
 - `src/domain/pricing.ts`
-- `src/lib/catalog-store.ts` tant que `supplierName` reste vide et que `create_supplier` / `create_product` restent les écritures
-- `src/lib/catalog-proposals.ts` (`openCatalogProposal` accepte déjà ces commandes)
 - `src/lib/business-records.ts`
 
-## Y. Migration
+## P. Périmètre final
 
-`AUCUNE MIGRATION`.
+IN
 
-`Supplier`, `Product`, `Product.kind` et `Product.family` existent. Les statuts de proposition aussi.
+- `CREATE_SUPPLIER`
+- `CREATE_PRODUCT`
+- service par `CREATE_PRODUCT` et `kind` `service` imposé par `structuredShape`
+- nom
+- fournisseur : e-mail, téléphone, adresse
+- produit : référence, unité, description, famille explicite `famille <valeur>`
+- `already` typé avant proposition
+- `contact-differs` fournisseur, sans mise à jour
+- une seule action fournisseur ou produit
+- carte kind et family
+- garde-fou d’enrichissement sur les formes `supplier`, `product`, `service`
+- parseurs déterministes devant StructuredPlan
 
-## Z. MUST / SHOULD / OUT
+OUT
 
-### MUST LOT-V3-007
-
-- Deux ActionTypes : `CREATE_SUPPLIER`, `CREATE_PRODUCT`.
-- Le service est `CREATE_PRODUCT` avec `kind: "service"`.
-- Ancrage des noms et des contacts par les helpers actuels.
-- Refus si un contact, une famille fermée, un montant ou un SIREN écrit est omis.
-- Refus `already` avant proposition. Pas de UPDATE silencieux.
-- Le parseur `ajoute|crée … fournisseur|produit` reste devant StructuredPlan.
-- « le service » et « une prestation » ne sont plus des créations client.
-- Une seule action fournisseur ou produit par plan.
-- `supplierName` vide. Pas de montant.
-
-### SHOULD LOT-V3-007
-
-- Afficher kind et family sur la carte de proposition.
-- Famille `prestation` quand le mot est ancré.
-- Tests de frontière avec `parseCatalogCommand`.
-
-### OUT
-
-- `CREATE_SERVICE` comme type propre.
-- `UPDATE_SUPPLIER`, `UPDATE_PRODUCT`.
-- Couple fournisseur + produit.
-- Lien produit → fournisseur, et toute création de fournisseur par `ensureSupplier` depuis ce plan.
-- Prix, coût, TVA, URL, notes, encours, délai.
-- SIREN porté par le plan.
-- Correction de l’adresse coupée au mot « à ».
-- Réécriture du parseur déterministe.
-
-## AA. Estimation
-
-Complexité moyenne. Le métier et les commandes existent. Le travail est le contrat, l’éligibilité et la traduction.
-
-Risque moyen. Le point sensible est le routage : « ajoute » ouvre déjà StructuredPlan, et `OUTSIDE_V0` bloque toute la phrase qui contient fournisseur ou produit, y compris les formes naturelles à couvrir.
-
-Une itération d’implémentation, puis une revue Claude avant le code : les collisions de la section H changent le classement de phrases déjà éligibles.
-
-Recette Ollama réelle ensuite. L’ancrage se teste sans modèle ; le classement des phrases naturelles non.
-
-## AB. Contrôles techniques
-
-- `npm test` : 371 tests, 0 échec
-- `tsc --noEmit` : PASS
-- `npm run lint` : 0 erreur, 4 avertissements déjà présents
-- `git diff --check` : PASS
+- `CREATE_SERVICE`
+- `UPDATE_SUPPLIER`, `UPDATE_PRODUCT`
+- prix, coût, TVA
+- `supplierName`
+- fournisseur et produit dans le même plan
+- référence entre actions
+- SIREN porté par le plan
+- création cachée de fournisseur
+- famille déduite d’un mot du nom
+- migration Prisma
+- correction de l’adresse coupée au mot `à`
+- noms de moins de trois caractères utiles par StructuredPlan
 
 ## Verdict
 
-GO CONCEPTION LOT-V3-007
+GO IMPLEMENTATION LOT-V3-007
