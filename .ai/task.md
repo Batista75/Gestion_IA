@@ -364,3 +364,190 @@ ou
 CONCEPTION ENCORE INCOMPLÈTE
 
 Ne modifier aucun fichier source.
+
+---
+
+# Complément après revalidation Claude — obligatoire avant implémentation
+
+La revalidation Claude conclut encore :
+
+CORRECTIONS DE CONCEPTION
+
+Les corrections suivantes complètent et remplacent les points correspondants de la conception précédente.
+
+## MAJOR-A — fiche client en attente
+
+Dans `src/domain/conversation-turn.ts`, une forme catalogue reconnue doit devenir une nouvelle intention AVANT toute détection de correction de fiche client.
+
+Règle obligatoire :
+
+structuredShape ∈ { supplier, product, service }
+→ new_intent
+
+Cette règle doit être évaluée avant `isDraftCorrection`.
+
+Cas obligatoires :
+
+Une ClientProposal est en attente.
+
+Message :
+
+`Ajoute ACME comme fournisseur, son email est contact@acme.fr`
+
+Attendu :
+
+- `new_intent`
+- jamais `correction`
+- aucune modification de la ClientProposal en attente
+- passage vers StructuredPlan fournisseur
+
+Même attendu pour :
+
+`Ajoute ACME comme fournisseur, email : contact@acme.fr`
+
+Une vraie correction seule :
+
+`son email est nouveau@dupont.fr`
+
+doit rester :
+
+`correction`
+
+`src/domain/conversation-turn.ts` devient MUST MODIFY.
+
+`tests/conversation-turn.test.ts` devient obligatoire.
+
+## Priorité des rôles explicites
+
+Un rôle explicite avec `comme ...` l'emporte sur la forme service.
+
+Exemples :
+
+`Ajoute le Service Plus comme client`
+→ forme client
+
+`Ajoute la prestation X comme produit`
+→ forme product
+
+La forme `service` ne doit pas gagner si un rôle explicite
+`comme client`, `comme fournisseur` ou `comme produit`
+est présent.
+
+Ajouter ces cas aux tests StructuredPlan.
+
+## OUTSIDE_V0
+
+Les mots hors périmètre suivants restent bloquants pour toutes les formes StructuredPlan :
+
+- contrat
+- intervention
+- équipement
+- réclamation
+- retour
+- catalogue
+- article
+
+Exemples à bloquer :
+
+`Ajoute ACME comme fournisseur pour le contrat Dupont`
+
+`Ajoute Switch X200 comme produit pour le contrat Dupont`
+
+## Détection SIREN / SIRET / montant
+
+Définir explicitement les détecteurs d'omission.
+
+Montant :
+
+- nombre accompagné de `€`
+- `EUR`
+- `euro`
+- `euros`
+- `$`
+- `USD`
+
+SIREN / SIRET :
+
+- mot `siren` ou `siret`
+- ou séquence de 9 chiffres
+- ou séquence de 14 chiffres
+
+Une séquence reconnue comme SIREN/SIRET ne doit pas être reclassée comme téléphone.
+
+Ces champs restent OUT V1 :
+leur présence dans la phrase provoque `omitted`.
+
+## Référence et unité produit
+
+Ne pas utiliser la règle des trois caractères utiles pour :
+
+- `reference`
+- `unit`
+
+Autoriser leur ancrage par égalité exacte de segment dans le message.
+
+Exemples valides :
+
+`référence 123456`
+
+`unité u`
+
+`unité m2`
+
+Le nom du produit reste soumis à `expressionAnchored`.
+
+## Règle Service Premium
+
+Documenter explicitement :
+
+`Ajoute Service Premium`
+→ forme client
+
+`Ajoute le Service Premium`
+→ forme service
+
+Cette distinction doit être couverte par les tests et le manuel utilisateur.
+
+## Fichiers à retenir
+
+MUST MODIFY :
+
+- `src/domain/structured-plan.ts`
+- `src/app/api/assistant/route.ts`
+- `src/domain/client-file.ts`
+- `src/domain/conversation-turn.ts`
+- `src/domain/catalog.ts`
+- `tests/structured-plan.test.ts`
+- `tests/client-file.test.ts`
+- `tests/conversation-turn.test.ts`
+- `docs/manuel-utilisateur.md`
+
+MAY MODIFY / tests obligatoires :
+
+- `src/domain/task-path.ts`
+- `tests/task-path.test.ts`
+- `tests/catalog-command.test.ts`
+- `docs/technique/docs/orchestration.md`
+
+NO CHANGE :
+
+- `prisma/schema.prisma`
+- `prisma/migrations`
+- `src/lib/catalog-store.ts`
+- `src/lib/catalog-proposals.ts`
+- `src/domain/pricing.ts`
+- `src/lib/business-records.ts`
+
+## Rapport attendu
+
+Réécrire `.ai/cursor-report.md`.
+
+Le verdict final doit être exactement :
+
+GO IMPLEMENTATION LOT-V3-007
+
+ou
+
+CONCEPTION ENCORE INCOMPLÈTE
+
+Ne modifier aucun fichier source.
