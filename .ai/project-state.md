@@ -11,9 +11,9 @@ SHA :
 
 ## HEAD technique
 
-ad0b8b908b15290e420005a1cfc6550eff247de1 — chore: cloture LOT-V3-007 BASELINE-9
+HEAD technique : voir origin/main
 
-HEAD = origin/main.
+La baseline fonctionnelle reste indépendante des commits documentaires ultérieurs.
 
 ## Lot clos
 
