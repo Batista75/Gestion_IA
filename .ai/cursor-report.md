@@ -1,12 +1,12 @@
-# LOT-V3-007 — Spécification consolidée
+# LOT-V3-007 — Spécification consolidée finale
 
 Conception seulement. Aucun fichier source. Aucune migration. Aucun commit.
 
 Baseline fonctionnelle : `BASELINE-8 — 4794328 — LOT-V3-006 validé` (`479432872e5148efbb475df2ff1ff57d9042a866`).
 
-Ce document est la spécification complète du lot. Il reprend la conception déjà revue et le complément de revalidation Claude. L’implémentation s’y conforme seule.
+Ce document est la spécification complète du lot. Il reprend la conception déjà revue et les deux compléments Claude. L’implémentation s’y conforme seule.
 
-Le modèle ne choisit pas le kind. Il n’écrit rien. Le serveur reconnaît la forme, valide le plan, ouvre une `CatalogProposal`, et n’écrit qu’après confirmation.
+Le modèle ne choisit pas le kind. Il n’écrit rien. Le serveur reconnaît la forme, valide le plan, ouvre une proposition, et n’écrit qu’après confirmation.
 
 ## A. structuredShape
 
@@ -14,12 +14,14 @@ Nouvelle fonction déterministe dans `src/domain/structured-plan.ts`.
 
 ```text
 structuredShape(text) →
-  client | project | client+project | supplier | product | service | null
+  supplier | product | service | client-or-project | null
 ```
+
+Les formes `supplier`, `product` et `service` sont ajoutées. La famille `client-or-project` reprend la reconnaissance actuelle : `CLIENT_CREATE` ou `PROJECT_CREATE`. Elle ne redécoupe pas le client, le projet, ni le couple.
 
 Premier motif gagnant, dans cet ordre.
 
-1. Mots bloquants, pour toutes les formes. Après pli sans accent, la présence d’un de ces mots rend `null` :
+1. Mots bloquants, pour toutes les formes, y compris `client-or-project`. Après pli sans accent, la présence d’un de ces mots rend `null` :
 
    `contrat`, `intervention`, `équipement`, `réclamation`, `retour`, `catalogue`, `article`.
 
@@ -28,27 +30,34 @@ Premier motif gagnant, dans cet ordre.
    - `Ajoute ACME comme fournisseur pour le contrat Dupont`
    - `Ajoute Switch X200 comme produit pour le contrat Dupont`
 
-2. Rôle explicite, avant la forme service. Un verbe de création (`ajoute`, `crée`, `créer`, `création`, `ouvre`) et un tour exact :
+2. Rôles explicites différents. Trois familles : `client` (`comme client`, `comme clients`, `comme cliente`), `supplier` (`comme fournisseur`, `comme fournisseurs`), `product` (`comme produit`, `comme produits`). Deux familles différentes dans la même phrase rendent `null`. Aucun rôle n’est choisi.
 
-   - `comme fournisseur` ou `comme fournisseurs` → `supplier`
-   - `comme produit` ou `comme produits` → `product`
-   - `comme client`, `comme clients` ou `comme cliente` → `client`
+   `Ajoute ACME comme client et comme fournisseur` → `null`. Aucune création StructuredPlan.
 
-   Ce rôle l’emporte sur le motif service.
+   La même famille répétée compte pour une seule.
 
-   - `Ajoute le Service Plus comme client` → `client`
-   - `Ajoute la prestation X comme produit` → `product`
-   - `Ajoute le Service Plus comme fournisseur` → `supplier`
+3. Un seul rôle catalogue :
 
-3. Forme service, seulement si l’étape 2 n’a pas rendu de rôle. Début de création `ajoute|crée|créer|création`, puis un déterminant `le|la|un|une`, puis le mot `service` ou `prestation`, puis un nom.
+   - `comme fournisseur` → `supplier`
+   - `comme produit` → `product`
 
-4. `client+project` : la forme de dossier actuelle (`PROJECT_CREATE`) et, dans la même phrase, une création de client déjà reconnue.
+   Un verbe de création est requis : `ajoute`, `crée`, `créer`, `création`, `ouvre`.
 
-5. `project` : `PROJECT_CREATE` seul.
+4. Forme service, seulement si aucun rôle explicite `comme client`, `comme fournisseur` ou `comme produit` n’est présent. Début de création `ajoute|crée|créer|création`, puis un déterminant `le|la|un|une`, puis le mot `service` ou `prestation`, puis un nom.
 
-6. `client` : la création client actuelle (`CLIENT_CREATE`). Les mots `fournisseur` et `produit` restent bloquants ici. `Ajoute le fournisseur ACME` et `Ajoute le produit Switch X` rendent donc `null`.
+5. Famille `client-or-project`. Elle est reconnue par la règle actuelle, inchangée :
 
-7. `null`.
+   ```text
+   CLIENT_CREATE ou PROJECT_CREATE
+   ```
+
+   `comme client` ne produit pas une forme qui n’accepterait qu’un `CREATE_CLIENT`. Il sert uniquement à l’étape 4 : la phrase ne devient pas un service. Elle reste dans cette famille, et la traduction de la section B décide du plan.
+
+   Les mots `fournisseur` et `produit` restent bloquants pour cette famille. `Ajoute le fournisseur ACME` et `Ajoute le produit Switch X` rendent `null`.
+
+6. `null`.
+
+`PROJECT_CREATE` exige aujourd’hui un verbe collé à `dossier|projet|affaire`. `Nouveau client Dupont. Dossier Toiture pour Dupont.` ne le satisfait pas. Cette phrase reste pourtant `client-or-project`, parce que `CLIENT_CREATE` reconnaît `Nouveau client`. L’échec de `PROJECT_CREATE` n’interdit pas le couple à la traduction.
 
 `structuredPlanEligible` :
 
@@ -60,23 +69,54 @@ et structuredShape ≠ null
 
 Les questions, négations et verbes de modification restent les refus actuels (`QUESTION`, `NEGATION`, `OPPOSITE`).
 
-`translateStructuredPlan` commence par `structuredShape`. Une forme `null`, ou un `ActionType` hors matrice, donne `clarify`. La route transforme un plan éligible non accepté en blocage. Aucune autre création n’est ouverte.
+`translateStructuredPlan` commence par `structuredShape`. Une forme `null` donne `clarify` si un plan est néanmoins présenté. Une action hors matrice donne `clarify`. La route transforme un plan éligible non accepté en blocage.
 
-`anchored`, `planNamesAreLabels`, `findOmittedStructuredFields` et `resolutionName` ont une branche explicite par type. Un plan qui n’est pas `CREATE_CLIENT` n’est plus lu comme un `CREATE_PROJECT`.
+`anchored`, `planNamesAreLabels`, `findOmittedStructuredFields` et `resolutionName` ont une branche explicite pour `CREATE_SUPPLIER` et `CREATE_PRODUCT`. Les branches actuelles de `CREATE_CLIENT` et `CREATE_PROJECT` restent celles de BASELINE-8.
 
-## B. Matrice forme → ActionType
+## B. Matrice et traduction client / projet
 
-| Forme | Action acceptée | Kind écrit par le serveur |
+| Forme | Plan accepté | Kind écrit par le serveur |
 | --- | --- | --- |
-| `client` | un seul `CREATE_CLIENT` | inchangé |
-| `project` | un seul `CREATE_PROJECT` | inchangé |
-| `client+project` | `CREATE_CLIENT` puis `CREATE_PROJECT`, même nom | inchangé, seul couple conservé |
 | `supplier` | un seul `CREATE_SUPPLIER` | aucun kind |
 | `product` | un seul `CREATE_PRODUCT` | `produit` |
 | `service` | un seul `CREATE_PRODUCT` | `service` |
-| autre combinaison | `clarify`, puis blocage | rien |
+| `client-or-project` | la logique actuelle de `translateStructuredPlan` | inchangé |
+| autre combinaison sur une forme catalogue | `clarify`, puis blocage | rien |
 
-Le champ `kind` du JSON, s’il est présent, doit être égal à la valeur du serveur. S’il est absent, le serveur le pose. S’il diffère, `clarify`. Le guide Ollama demande de ne pas envoyer `kind`.
+Pour `supplier`, `product` et `service`, le champ `kind` du JSON, s’il est présent, doit être égal à la valeur du serveur. S’il est absent, le serveur le pose. S’il diffère, `clarify`. Le guide Ollama demande de ne pas envoyer `kind`.
+
+Pour `client-or-project`, la traduction actuelle est conservée telle quelle. Elle accepte les trois plans :
+
+1. `CREATE_CLIENT` seul.
+   - client inconnu → `catalog` / `create_client` ;
+   - client connu, contact identique → `already` ;
+   - client connu, e-mail, téléphone ou adresse différent → `contact-differs`, `withProject` faux.
+
+2. `CREATE_PROJECT` seul.
+   - `projectRolesMatch` sur le nom du dossier et le nom du client ;
+   - client inconnu → `unknown-client` ;
+   - client connu → `catalog` / `create_project`.
+
+3. `CREATE_CLIENT` puis `CREATE_PROJECT`, avec le même `nameKey` entre le nom du client et `clientName`.
+   - `projectRolesMatch` sur le dossier et le client du projet ;
+   - client inconnu, sans téléphone ni adresse sur le client → `business` ;
+   - client inconnu, avec téléphone ou adresse → `clarify`, comme aujourd’hui ;
+   - client connu, contact identique → `catalog` / `create_project` seulement ;
+   - client connu, contact différent → `contact-differs`, `withProject` vrai.
+
+`comme client` ne retire pas le cas 3. Un plan couple n’est pas refusé parce que la phrase contient ce tour.
+
+`projectRolesMatch` reste le contrôle du couple : le nom du dossier est ancré entre `dossier|projet|affaire` et `pour|chez|client`, et le nom du client est ancré après.
+
+Non-régression obligatoire. Client inconnu. Résultat `business`, pas `clarify`.
+
+| Phrase | Résultat |
+| --- | --- |
+| `Nouveau client Dupont. Dossier Toiture pour Dupont.` | `business`, client et projet. C’est la phrase `folder` des tests actuels. |
+| `Ajoute Dupont comme client et ouvre le dossier Toiture pour Dupont` | `business`. `comme client` ne force pas un `CREATE_CLIENT` seul. |
+| `Crée le client Dupont et ouvre le dossier Toiture pour Dupont` | `business`. |
+
+Client déjà présent, phrase `Nouveau client Dupont. Dossier Toiture pour Dupont.`, contacts inchangés : `create_project` seulement. C’est le test actuel « client existant et projet deviennent seulement create_project ».
 
 `parseCatalogCommand` reste dans `answerDirectly`, avant `decideFree` et StructuredPlan.
 
@@ -86,19 +126,19 @@ Le champ `kind` du JSON, s’il est présent, doit être égal à la valeur du s
 
 ## C. Règles supplier
 
-Forme : verbe de création et `comme fournisseur`.
+Forme : verbe de création et `comme fournisseur`, une seule famille de rôle.
 
 Args autorisés : `name`, `email`, `phone`, `address`. Mêmes limites que le client structuré. `siren` et `notes` restent vides dans le `PartyInput`.
 
 Ancrage : `expressionAnchored` sur le nom, `emailAnchored`, `phoneAnchored`, `addressAnchored`. Le téléphone est cherché après retrait des séquences SIREN et SIRET (section M).
 
-Omission : e-mail, téléphone ou adresse reconnus dans la phrase et absents du plan. SIREN, SIRET ou montant reconnu : `omitted`, ces champs restent hors plan.
+Omission : e-mail, téléphone ou adresse reconnus dans la phrase et absents du plan. SIREN, SIRET ou montant reconnu : `omitted`. Ces champs restent hors plan.
 
 Traduction : `create_supplier`. `supplierName` n’existe pas sur cette commande.
 
 ## D. Règles product
 
-Forme : verbe de création et `comme produit`.
+Forme : verbe de création et `comme produit`, une seule famille de rôle.
 
 Args autorisés : `name`, `reference`, `unit`, `description`, `family`.
 
@@ -113,6 +153,8 @@ Le nom reste soumis à `expressionAnchored`.
 - `unité m2` ancre `unit = m2`.
 
 Une référence ou une unité absente du message et présente dans le plan est refusée. Leur absence du plan, sans valeur écrite, ne bloque pas.
+
+Une référence de 9 ou 14 chiffres qui suit le marqueur `référence` est une référence. Elle n’est pas un SIREN ni un SIRET (section M).
 
 `description` reste ancrée par `expressionAnchored` lorsqu’elle est présente.
 
@@ -134,13 +176,14 @@ Action : un seul `CREATE_PRODUCT`. `kind` forcé à `service`.
 - `Ajoute le service Audit réseau` → nom `Audit réseau`.
 - `Ajoute une prestation Audit réseau` → nom `Audit réseau`, `kind` `service`. Le mot `prestation` ne pose pas `family`.
 - `Ajoute le Service Premium` → forme `service`, nom `Service Premium`.
-- `Ajoute Service Premium` → forme `client`. Pas de déterminant devant `Service`.
+- `Ajoute Service Premium` → famille `client-or-project`. Pas de déterminant devant `Service`.
 
 Cette distinction est écrite dans les tests et dans `docs/manuel-utilisateur.md`.
 
-Mêmes args produit, même ancrage, même omission, même `supplierName` vide.
+Mêmes args produit, même ancrage, même omission, même `supplierName` vide. La référence de 9 ou 14 chiffres suit la même exception SIREN que le produit.
 
-Un rôle `comme client`, `comme fournisseur` ou `comme produit` dans la même phrase empêche la forme `service` (section A, étape 2).
+- `Ajoute le Service Plus comme client` → `client-or-project`, pas `service`.
+- `Ajoute la prestation X comme produit` → `product`, kind `produit`.
 
 ## F. Famille
 
@@ -176,7 +219,7 @@ Garde-fou dans `asksToEnrichRecord` et `enrichmentOwnsTurn` :
 structuredShape ∈ { supplier, product, service } → false
 ```
 
-La forme `client` entière n’est pas exclue. Elle contient le verbe `ajoute`, qui est aussi celui de `Ajoute le téléphone de Martin`.
+La famille `client-or-project` n’est pas exclue. Elle contient le verbe `ajoute`, qui est aussi celui de `Ajoute le téléphone de Martin`.
 
 Cas obligatoire. Client ACME déjà en base. Phrase `Ajoute ACME comme fournisseur, email contact@acme.fr`.
 
@@ -190,14 +233,6 @@ Cas obligatoire. Client ACME déjà en base. Phrase `Ajoute ACME comme fournisse
 ## H. Fiche client en attente
 
 `classifyPendingTurn` teste aujourd’hui `isDraftCorrection` avant `isIndependentIntent`. Une phrase fournisseur qui porte un marqueur de champ est donc une correction, même si elle est éligible.
-
-Résultats actuels, à changer :
-
-| Phrase | Tour actuel |
-| --- | --- |
-| Ajoute ACME comme fournisseur, son email est contact@acme.fr | `correction` |
-| Ajoute ACME comme fournisseur, email : contact@acme.fr | `correction` |
-| son email est nouveau@dupont.fr | `correction` |
 
 Règle obligatoire, dans `classifyPendingTurn`, après les confirmations et les rejets exacts, et avant `isDraftCorrection` :
 
@@ -225,9 +260,11 @@ Attendu :
 
 Une vraie correction seule, `son email est nouveau@dupont.fr`, reste `correction`. Sa forme est `null`.
 
+`Ajoute ACME comme fournisseur` sans champ reste aussi `new_intent`, par l’éligibilité déjà lue dans `isIndependentIntent`.
+
 `src/domain/conversation-turn.ts` est MUST MODIFY. `tests/conversation-turn.test.ts` est obligatoire.
 
-`Ajoute ACME comme fournisseur` sans champ reste aussi `new_intent`, par l’éligibilité déjà lue dans `isIndependentIntent`.
+Hors lot, non modifié : avec une `ClientProposal` en attente, `Ajoute Martin comme client, son email est …` peut encore être une correction de cette fiche. LOT-V3-007 ne change pas ce classement. La famille `client-or-project` ne passe pas devant `isDraftCorrection`.
 
 ## I. Task suspendue
 
@@ -241,7 +278,7 @@ Test obligatoire dans `tests/task-path.test.ts`. Le fichier de domaine peut rest
 
 Helpers repris : `expressionAnchored`, `emailAnchored`, `phoneAnchored`, `addressAnchored`, `plainLabel`.
 
-Le nom de chaque forme ne contient pas le mot `comme`, et ne commence ni ne finit par le mot de rôle de la forme (`fournisseur`, `produit`, `service`, `prestation`, et `client` pour la forme client).
+Le nom de chaque forme catalogue ne contient pas le mot `comme`, et ne commence ni ne finit par le mot de rôle de la forme (`fournisseur`, `produit`, `service`, `prestation`). Le nom client continue d’être validé par les règles actuelles.
 
 | Plan | Résultat |
 | --- | --- |
@@ -265,9 +302,11 @@ L’adresse coupée au mot `à` dans une rue reste la limite déjà connue. Ce l
 { kind: "already", entity: "client" | "supplier" | "product", name }
 ```
 
+Pour le client, le message et le comportement actuels restent. Le type `client` est ajouté au résultat pour les lectures nouvelles. Fournisseur et produit sont les ajouts du lot.
+
 Lecture dans `answerFromStructuredPlan`, par `nameKey` :
 
-- client ou projet : `prisma.client` ;
+- famille `client-or-project` : `prisma.client`, comme aujourd’hui ;
 - fournisseur : `prisma.supplier` ;
 - produit ou service : `prisma.product`.
 
@@ -276,6 +315,8 @@ Lecture dans `answerFromStructuredPlan`, par `nameKey` :
 Messages distincts : le client existe déjà, le fournisseur existe déjà, le produit existe déjà. Un service existant est un produit de `kind` `service` ; la phrase dit « le produit ».
 
 Fournisseur existant dont l’e-mail, le téléphone ou l’adresse du plan diffère : `contact-differs`, mêmes champs que le client, `withProject` faux. Rien n’est écrit. Pas d’`update_supplier`.
+
+Le client existant avec un nouveau projet reste le cas de la section B : `create_project` seulement, ou `contact-differs` si le contact du plan diffère.
 
 La voie déterministe `Ajoute le fournisseur ACME` n’est pas réécrite. Si ACME existe, elle ouvre encore une proposition. La confirmation répond que le fournisseur existe déjà et ne crée pas une deuxième fiche.
 
@@ -311,11 +352,19 @@ Les chiffres d’une séquence peuvent être groupés par espaces ou par points,
 
 Présence → `omitted`. Le plan ne porte pas le SIREN.
 
-Téléphone. `phoneCandidates` ignore les séquences déjà classées SIREN ou SIRET. Une suite de 14 chiffres est un SIRET omis. Elle n’est pas un téléphone omis.
+Exception, formes `product` et `service`. La séquence qui suit le marqueur `référence` est une référence produit. Elle n’est pas classée SIREN ou SIRET à cause de sa longueur.
+
+`Ajoute Switch X comme produit, référence 123456789` → référence acceptée, pas d’`omitted` SIREN.
+
+Le mot `siren` ou `siret` dans la même phrase produit quand même `omitted`. Une séquence de 9 ou 14 chiffres qui ne suit pas `référence` reste un SIREN ou un SIRET.
+
+Téléphone. `phoneCandidates` ignore les séquences déjà classées SIREN ou SIRET, et ignore aussi la référence qui suit `référence`. Une suite de 14 chiffres hors référence est un SIRET omis. Elle n’est pas un téléphone omis.
 
 ## N. Contrat JSON
 
 Clés de plan inchangées : `source`, `actions`, `missing`, `confidence`, `explanation`. Clés d’action : `type`, `args`. Clés en trop : refus.
+
+`CREATE_CLIENT` et `CREATE_PROJECT` gardent leurs args actuels.
 
 `CREATE_SUPPLIER.args` : `name`, et `email`, `phone`, `address` seulement s’ils sont écrits.
 
@@ -327,11 +376,21 @@ Interdits dans le plan, en plus des identifiants déjà interdits (`id`, `client
 
 `structuredPlanGuide` annonce `CREATE_SUPPLIER` et `CREATE_PRODUCT` en plus des types client et projet. Il dit de ne pas envoyer `kind`, de ne pas inventer de contact, de famille, de montant ni d’identifiant, et de ne copier que ce qui est écrit.
 
-`ACTION_MAX` reste 2 pour le seul couple client puis projet. Fournisseur, produit et service : exactement une action.
+`ACTION_MAX` reste 2 pour le couple client puis projet. Fournisseur, produit et service : exactement une action.
 
 ## O. Tests
 
 `tests/structured-plan.test.ts`
+
+Non-régression client / projet, client inconnu, résultat `business` :
+
+- `Nouveau client Dupont. Dossier Toiture pour Dupont.`
+- `Ajoute Dupont comme client et ouvre le dossier Toiture pour Dupont`
+- `Crée le client Dupont et ouvre le dossier Toiture pour Dupont`
+
+Et le cas déjà livré : la première phrase avec un client Dupont connu et des contacts identiques → `create_project` seulement.
+
+Catalogue :
 
 - `comme fournisseur` → `supplier`, un `CREATE_SUPPLIER`, nom `ACME` ;
 - e-mail et adresse ancrés acceptés ; `ACME France`, e-mail inventé, `ACME comme fournisseur` refusés ;
@@ -339,23 +398,27 @@ Interdits dans le plan, en plus des identifiants déjà interdits (`id`, `client
 - `CREATE_CLIENT` sur une forme `supplier` → `clarify` ;
 - `comme produit` → `CREATE_PRODUCT`, kind serveur `produit` ;
 - `référence 123456`, `unité u`, `unité m2` ancrés sans la règle des trois caractères ;
+- `référence 123456789` sur une forme produit → référence acceptée, pas d’`omitted` SIREN ;
 - `famille réseau` → `reseau` ; `famille serveurs` → refus ;
 - `Serveur Dell R750 comme produit` sans marqueur → pas de famille, pas d’omission ;
 - kind modèle `service` sur une forme `product` → `clarify` ;
 - `150 €`, `150 EUR`, `150 euros`, `$150` → `omitted` ; `costStated` dans le JSON → refus ;
-- mot `siret`, 9 chiffres, 14 chiffres → `omitted` ; ces chiffres ne sont pas un téléphone ;
+- mot `siret`, 9 chiffres hors `référence`, 14 chiffres hors `référence` → `omitted` ; ces chiffres ne sont pas un téléphone ;
 - `06 12 34 56 78` reste un téléphone ;
 - fournisseur ou produit de même `nameKey` → `already` du bon type ;
 - fournisseur existant, e-mail différent → `contact-differs`, pas d’update ;
 - `ajoute|crée + déterminant + service|prestation + nom` → kind `service`, nom sans le rôle ;
 - `Audit réseau` ne pose pas la famille `reseau` ;
-- `Ajoute Service Premium` → `client` ;
+- `Ajoute Service Premium` → `client-or-project` ;
 - `Ajoute le Service Premium` → `service` ;
-- `Ajoute le Service Plus comme client` → `client` ;
+- `Ajoute le Service Plus comme client` → `client-or-project`, pas `service` ;
 - `Ajoute la prestation X comme produit` → `product`, kind `produit` ;
+- `Ajoute ACME comme client et comme fournisseur` → `null`, aucune création ;
 - `Ajoute ACME comme fournisseur pour le contrat Dupont` → `null` ;
 - `Ajoute Switch X200 comme produit pour le contrat Dupont` → `null` ;
 - `ajouter un fournisseur Quincaillerie Durand` reste `parseCatalogCommand`, forme StructuredPlan `null`.
+
+Les tests existants « client et projet nouveaux deviennent un plan métier » et « client existant et projet deviennent seulement create_project » restent verts sans être réécrits.
 
 `tests/client-file.test.ts`
 
@@ -385,11 +448,15 @@ Interdits dans le plan, en plus des identifiants déjà interdits (`id`, `client
 5. `Ajoute Switch X200 comme produit, famille réseau` — famille `reseau` visible sur la carte.
 6. `Ajoute le service Audit réseau` — kind service, nom `Audit réseau`, famille vide, carte « Service ».
 7. `Ajoute une prestation Audit réseau` — kind service, famille vide. `réseau` reste dans le nom.
-8. `Ajoute Service Premium` — forme client. `Ajoute le Service Premium` — forme service.
+8. `Ajoute Service Premium` — famille `client-or-project`. `Ajoute le Service Premium` — forme service.
 9. `Ajoute une prestation Audit réseau à 150 €` — refus, montant non porté. Aucune proposition.
 10. `Ajoute ACME comme fournisseur` alors que le fournisseur ACME existe, sans contact nouveau — « le fournisseur existe déjà », aucune proposition. `Ajoute Switch X200 comme produit` alors que le produit existe — « le produit existe déjà ».
 
-En plus, avec une fiche client en attente : `Ajoute ACME comme fournisseur, son email est contact@acme.fr` ouvre un fournisseur et laisse la fiche client inchangée.
+En plus :
+
+- `Nouveau client Dupont. Dossier Toiture pour Dupont.` — plan métier inchangé ;
+- `Ajoute Switch X comme produit, référence 123456789` — référence acceptée ;
+- avec une fiche client en attente, `Ajoute ACME comme fournisseur, son email est contact@acme.fr` ouvre un fournisseur et laisse la fiche client inchangée.
 
 Hors plan : `Le fournisseur s’appelle ACME, son téléphone est 06 12 34 56 78`. Pas de verbe de création.
 
@@ -434,11 +501,15 @@ IN
 - `CREATE_SUPPLIER`
 - `CREATE_PRODUCT`
 - service par `CREATE_PRODUCT` et `kind` `service` imposé par `structuredShape`
-- rôle explicite `comme client|fournisseur|produit` prioritaire sur la forme service
+- famille `client-or-project` inchangée : `CREATE_CLIENT` seul, `CREATE_PROJECT` seul, couple client puis projet, `projectRolesMatch`, client existant et nouveau projet
+- `comme client` utilisé seulement pour écarter la forme service
+- rôle explicite `comme fournisseur|produit` prioritaire sur la forme service
+- deux rôles explicites différents → `null`, aucune création
 - nom
 - fournisseur : e-mail, téléphone, adresse
 - produit : référence, unité, description, famille explicite `famille <valeur>`
 - ancrage de `reference` et `unit` par égalité de segment
+- référence de 9 ou 14 chiffres après `référence`, distincte du SIREN/SIRET
 - `already` typé avant proposition
 - `contact-differs` fournisseur, sans mise à jour
 - une seule action fournisseur ou produit
@@ -464,6 +535,7 @@ OUT
 - migration Prisma
 - correction de l’adresse coupée au mot `à`
 - noms de moins de trois caractères utiles par StructuredPlan
+- fiche client en attente captée par `Ajoute Martin comme client, son email est …` — backlog, hors lot
 
 ## Verdict
 
