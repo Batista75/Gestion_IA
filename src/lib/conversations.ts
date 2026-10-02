@@ -3,6 +3,8 @@ import { readUnderstanding, type UnderstandingCard } from "@/domain/completeness
 import { stampProvenance } from "@/domain/provenance";
 import { uniqueNameMatch } from "@/domain/knowledge";
 import { readStoredProposalCard, type ProposalCard } from "@/domain/proposal-scope";
+import { readStoredSituation, type SituationReading } from "@/domain/situation-reading";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { THREAD_MESSAGE_LIMIT, type ThreadSummary } from "@/domain/thread";
 import { proposedThreadTitle } from "@/domain/thread-title";
@@ -17,6 +19,7 @@ export type StoredTurn = {
   sources: Array<{ label: string; title: string }>;
   understanding: UnderstandingCard | null;
   packet: AnswerPacket | null;
+  situation: SituationReading | null;
   modelVersion: string;
 };
 
@@ -111,6 +114,7 @@ export async function rememberTurn(input: {
   sources?: Array<{ label: string; title: string }>;
   understanding?: UnderstandingCard | null;
   packet?: AnswerPacket | null;
+  situation?: SituationReading | null;
   linkText?: string;
   modelVersion?: string;
 }): Promise<void> {
@@ -143,7 +147,7 @@ export async function rememberTurn(input: {
       content,
       source: input.source ?? "",
       steps: input.steps ?? [],
-      proposal: storedProposal(input.proposal, input.understanding, input.packet),
+      proposal: storedMessage(input.proposal, input.understanding, input.packet, input.situation),
       sources: input.sources ?? [],
       ...stampProvenance(messageVersion(input), input.proposal?.fields ?? []),
     },
@@ -257,6 +261,7 @@ function presentConversation(row: {
       source: message.source,
       steps: stringList(message.steps),
       proposal: proposalOf(message.proposal),
+      situation: readStoredSituation(message.proposal),
       sources: sourceList(message.sources),
       understanding: readUnderstanding(message.proposal),
       packet: readPacket(message.proposal),
@@ -274,6 +279,17 @@ function messageVersion(input: { role: string; source?: string; modelVersion?: s
   if (input.role === "user") return "saisie";
   if (input.source === "ollama") return "ollama";
   return "regle";
+}
+
+function storedMessage(
+  proposal: ProposalCard | null | undefined,
+  understanding: UnderstandingCard | null | undefined,
+  packet: AnswerPacket | null | undefined,
+  situation: SituationReading | null | undefined,
+): Prisma.InputJsonValue | undefined {
+  const body = storedProposal(proposal, understanding, packet);
+  if (!situation) return body;
+  return { ...(body ?? {}), situation: JSON.parse(JSON.stringify(situation)) as Prisma.InputJsonValue };
 }
 
 function storedProposal(

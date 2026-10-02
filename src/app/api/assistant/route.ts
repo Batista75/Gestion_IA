@@ -112,7 +112,15 @@ import { prepareHybridQuote } from "@/lib/hybrid-quote";
 import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
 import { searchKnowledge } from "@/lib/knowledge-store";
 import { listProjectSteps } from "@/lib/trade-steps";
+import {
+  buildSituationReading,
+  parseSituationModelOutput,
+  situationReadingTurn,
+  situationReply,
+  type DirectoryNameRow,
+} from "@/domain/situation-reading";
 import { getOllamaStatus } from "@/lib/ollama";
+import { readSituationMentions } from "@/lib/situation-reading-read";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -292,6 +300,21 @@ export async function POST(request: Request) {
     });
   }
 
+  if (
+    situationReadingTurn({
+      correction: Boolean(correction),
+      answeredDirectly: false,
+      structuredPlanAnswered: false,
+      deterministicSheet: false,
+      text: baseText,
+    })
+  ) {
+    const inboxItemId = readInboxItemId(
+      payload && typeof payload === "object" && "inboxItemId" in payload ? payload.inboxItemId : null,
+    );
+    return answerFromSituation(baseText, conversationId, snapshot.projectId, inboxItemId);
+  }
+
   const interpreted = plainQuestion(baseText) ?? (await modelInterpretation(baseText, snapshot));
   if (interpreted && interpreterEffect(interpreted) === "ecrire") {
     return publishBlocked({
@@ -357,6 +380,52 @@ function stepFor(source: DirectReply["source"]): string {
   if (source === "proposition") return "Proposition à confirmer";
   if (source === "action") return "Enregistrement";
   return "Réponse";
+}
+
+async function answerFromSituation(
+  text: string,
+  conversationId: string,
+  pageProjectId: string,
+  inboxItemId: string | null,
+): Promise<Response> {
+  const [projects, clients, suppliers, products, files] = await Promise.all([
+    prisma.project.findMany({ select: { id: true, name: true } }),
+    prisma.client.findMany({ select: { name: true } }),
+    prisma.supplier.findMany({ select: { name: true } }),
+    prisma.product.findMany({ select: { name: true } }),
+    inboxItemId
+      ? prisma.storedFile.findMany({ where: { inboxItemId }, select: { id: true } })
+      : Promise.resolve([]),
+  ]);
+  const directory: DirectoryNameRow[] = [
+    ...clients.map((row) => ({ kind: "client" as const, name: row.name })),
+    ...suppliers.map((row) => ({ kind: "supplier" as const, name: row.name })),
+    ...products.map((row) => ({ kind: "product" as const, name: row.name })),
+  ];
+  const status = await getOllamaStatus();
+  const raw = status.ok && status.defaultModel
+    ? await readSituationMentions({ model: status.defaultModel, text })
+    : null;
+  const parsed = raw ? parseSituationModelOutput(raw) : null;
+  const reading = buildSituationReading({
+    conversationId,
+    inboxItemId,
+    fileIds: files.map((file) => file.id),
+    userText: text,
+    projects,
+    pageProjectId,
+    modelOutput: parsed,
+    model: parsed && status.defaultModel ? status.defaultModel : null,
+    directory,
+  });
+  return streamDirect({
+    conversationId,
+    reply: situationReply(reading, !parsed),
+    source: "regle-metier",
+    step: "Lecture d'une situation",
+    situation: reading,
+    modelVersion: reading.mentionProvenance.origin === "ollama" ? reading.mentionProvenance.model : undefined,
+  });
 }
 
 async function answerFromStructuredPlan(

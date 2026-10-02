@@ -13,6 +13,7 @@ import type { AnswerPacket } from "@/domain/answer-packet";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { retrievalContext, sourceLabel } from "@/domain/knowledge";
 import type { ProposalCard } from "@/domain/proposal-scope";
+import type { SituationReading } from "@/domain/situation-reading";
 import { rememberTurn } from "@/lib/conversations";
 import { withGpuLane } from "@/lib/gpu-lane";
 import { searchKnowledge } from "@/lib/knowledge-store";
@@ -29,6 +30,7 @@ type Meta = {
   sources: Array<{ label: string; title: string }>;
   understanding: UnderstandingCard | null;
   packet: AnswerPacket | null;
+  situation: SituationReading | null;
 };
 
 type DirectTurn = {
@@ -40,16 +42,19 @@ type DirectTurn = {
   sources?: Array<{ label: string; title: string }>;
   understanding?: UnderstandingCard | null;
   packet?: AnswerPacket | null;
+  situation?: SituationReading | null;
+  modelVersion?: string;
 };
 
 export function streamDirect(input: DirectTurn): Response {
   const metadata: Meta = {
     source: input.source,
-    modelVersion: input.source === "ollama" ? "ollama" : "regle",
+    modelVersion: input.modelVersion?.trim() || (input.source === "ollama" ? "ollama" : "regle"),
     proposal: input.proposal ?? null,
     sources: input.sources ?? [],
     understanding: input.understanding ?? null,
     packet: input.packet ?? null,
+    situation: input.situation ?? null,
   };
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
@@ -84,6 +89,7 @@ export function streamDirect(input: DirectTurn): Response {
         sources: input.sources,
         understanding: input.understanding,
         packet: input.packet,
+        situation: input.situation,
       });
       writer.write({ type: "finish", messageMetadata: metadata });
     },
@@ -113,6 +119,7 @@ export async function streamModel(input: {
     sources: [],
     understanding: null,
     packet: null,
+    situation: null,
   };
 
   const stream = createUIMessageStream({

@@ -32,6 +32,7 @@ import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import type { AnswerPacket } from "@/domain/answer-packet";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { provenanceLabel } from "@/domain/provenance";
+import { describeProjectContext, type SituationReading } from "@/domain/situation-reading";
 import { cardMayAct, proposalFollowUpState, type ProposalAction, type ProposalKind } from "@/domain/proposal-scope";
 import { THREAD_MESSAGE_LIMIT, openThreadLabel, threadIsFull, threadProjectHref, type ThreadSummary } from "@/domain/thread";
 import type { StoredTurn } from "@/lib/conversations";
@@ -46,6 +47,7 @@ type ChatMeta = {
   sources?: SourceRef[];
   understanding?: UnderstandingCard | null;
   packet?: AnswerPacket | null;
+  situation?: SituationReading | null;
 };
 type ChatMessage = UIMessage<ChatMeta>;
 
@@ -777,6 +779,7 @@ function MessageRow({
   const sources = message.metadata?.sources ?? [];
   const understanding = message.metadata?.understanding ?? null;
   const packet = message.metadata?.packet ?? null;
+  const situation = message.metadata?.situation ?? null;
   const source = message.metadata?.source ?? "";
 
   const mine = message.role === "user";
@@ -824,6 +827,7 @@ function MessageRow({
           </ul>
         ) : null}
         {packet ? <PacketCard packet={packet} /> : text ? <p className="text-sm leading-6 whitespace-pre-wrap">{text}</p> : null}
+        {situation ? <SituationCard reading={situation} /> : null}
         {live && !text ? (
           <span className="inline-flex items-center gap-2 py-1 text-xs text-muted-foreground" role="status">
             <span className="inline-flex gap-1" aria-hidden="true">
@@ -920,6 +924,7 @@ function toUi(turns: StoredTurn[]): ChatMessage[] {
       sources: turn.sources,
       understanding: turn.understanding,
       packet: turn.packet,
+      situation: turn.situation,
     },
     parts: [
       ...turn.steps.map((step, index) => ({
@@ -934,6 +939,30 @@ function toUi(turns: StoredTurn[]): ChatMessage[] {
       { type: "text" as const, text: turn.content, state: "done" as const },
     ],
   }));
+}
+
+function SituationCard({ reading }: { reading: SituationReading }) {
+  const mentions = reading.mentionProvenance;
+  return (
+    <div className="grid gap-1 rounded-lg border border-border bg-surface px-3 py-2">
+      <p className="text-sm font-medium leading-6">Lecture de situation</p>
+      <p className="text-sm leading-6">{describeProjectContext(reading.projectContext)}</p>
+      <p className="text-sm leading-6">État : {reading.projectContext.state}</p>
+      {reading.mentions.length > 0 ? (
+        <p className="text-sm leading-6">Mentions : {reading.mentions.map((item) => item.text).join(", ")}</p>
+      ) : null}
+      {reading.knownEntities.length > 0 ? (
+        <p className="text-sm leading-6">
+          Fiches connues : {reading.knownEntities.map((item) => `${item.name} (${item.kind})`).join(", ")}
+        </p>
+      ) : null}
+      <p className="text-xs leading-5 text-muted-foreground">
+        {mentions.origin === "ollama"
+          ? `Mentions lues par le modèle ${mentions.model}. Dossier et fiches : règle du serveur.`
+          : "Mentions non lues par le modèle. Dossier : règle du serveur."}
+      </p>
+    </div>
+  );
 }
 
 function PacketCard({ packet }: { packet: AnswerPacket }) {
