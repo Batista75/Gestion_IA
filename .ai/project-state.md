@@ -2,12 +2,12 @@
 
 ## Baseline fonctionnelle
 
-BASELINE-10 — LOT-V3-008 — c0562d37682236f5d45f4d60bb4254d65becb512
+BASELINE-11 — LOT-V3-009 — e99ec69294d0940a1fdf61ff91d61115ab566802
 
 SHA :
-c0562d37682236f5d45f4d60bb4254d65becb512
+e99ec69294d0940a1fdf61ff91d61115ab566802
 
-411 tests, 0 échec. Typecheck réussi. Lint : 0 erreur, 4 avertissements préexistants. Recette PostgreSQL + Ollama réelle réussie.
+440 tests, 0 échec. Typecheck réussi. Lint : 0 erreur, 4 avertissements préexistants. Recette PostgreSQL + Ollama réelle réussie. Aucune migration.
 
 ## HEAD technique
 
@@ -17,33 +17,23 @@ La baseline fonctionnelle reste indépendante des commits documentaires ultérie
 
 ## Lot clos
 
-LOT-V3-008 validé.
+LOT-V3-009 validé.
 
-Lecture structurée d’une situation métier ajoutée.
-`Project` reste l’objet représentant l’affaire.
-`SituationReading` est séparé de `StructuredPlan`.
-Le gate est déterministe et conservateur avant l’appel Ollama.
-Le modèle extrait uniquement des mentions `{kind,text}`.
-Les positions, le rattachement `Project` et `knownEntities` sont calculés côté serveur.
-États `current`, `matched`, `ambiguous`, `unresolved`.
-`current` provient uniquement du contexte de page, jamais de `Conversation.projectId`.
-Aucune écriture métier n’est issue d’une lecture.
+`BusinessContext` est construit après `SituationReading`.
+Aucune écriture métier.
+Aucun second appel Ollama.
+La résolution `Client`, `Supplier` et `Product` est faite côté serveur.
+Une ambiguïté `cross_family` ne choisit aucun rôle.
+Une seule liste `entities`, et des `relations` séparées.
+Une quantité ou un montant n’est associé que lorsque la relation est déterministe.
+L’événement et les documents sont qualifiés lexicalement côté serveur.
+Persistance sous `{ situation, businessContext }`.
 Aucune carte confirmable.
-Persistance dans le JSON existant du message, sans migration.
-Comportement de panne Ollama validé.
-411 tests réussis. Typecheck réussi.
+Panne Ollama dégradée validée.
+Recette réelle validée.
+440 tests, 0 échec. Typecheck réussi.
 Lint : 0 erreur, 4 avertissements préexistants.
-Recette PostgreSQL + Ollama réelle réussie.
-Aucune migration Prisma.
-
-## Lot en attente de commit
-
-LOT-V3-009 : IMPLEMENTE ET VALIDE EN RECETTE REELLE — PRET POUR COMMIT
-
-Contexte métier construit à partir d’une `SituationReading`, sans second appel Ollama et sans écriture.
-440 tests, 0 échec. Typecheck réussi. Lint : 0 erreur, 4 avertissements préexistants.
-Recette PostgreSQL + Ollama réelle réussie. Aucune migration.
-BASELINE-11 sera créée seulement après le commit de ce lot. La baseline officielle reste BASELINE-10.
+Aucune migration.
 
 ## Backlog résiduel
 

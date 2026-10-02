@@ -82,4 +82,12 @@ Dossier `matched`. Mentions absentes. Événement `devis` disponible. Aucun seco
 - R-1 étendu : si un item omis ne laisse aucun chiffre hors ancre, un montant peut encore être lié à l’item restant. Exemple : `2 pompes Atlantic et 3 unités MSZ-AP35 pour 5 500 € HT` quand `pompes Atlantic` est omis. Piste : ne pas lier un montant dont la région contient une quantité non reliée.
 - Même extrait en quantité et en montant : deux relations peuvent être créées. À durcir plus tard.
 
-LOT-V3-009 VALIDE EN RECETTE REELLE — PRET POUR COMMIT
+## Clôture
+
+Commit fonctionnel : `e99ec69294d0940a1fdf61ff91d61115ab566802`.
+
+Baseline : `BASELINE-11 — LOT-V3-009`.
+
+Ce SHA désigne le commit produit. Il ne désigne pas le futur commit documentaire.
+
+BASELINE-11 — LOT-V3-009 — e99ec69294d0940a1fdf61ff91d61115ab566802
