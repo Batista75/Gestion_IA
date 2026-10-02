@@ -1,4 +1,5 @@
 import { readPacket, type AnswerPacket } from "@/domain/answer-packet";
+import { readStoredBusinessContext, type BusinessContext } from "@/domain/business-context";
 import { readUnderstanding, type UnderstandingCard } from "@/domain/completeness";
 import { stampProvenance } from "@/domain/provenance";
 import { uniqueNameMatch } from "@/domain/knowledge";
@@ -20,6 +21,7 @@ export type StoredTurn = {
   understanding: UnderstandingCard | null;
   packet: AnswerPacket | null;
   situation: SituationReading | null;
+  businessContext: BusinessContext | null;
   modelVersion: string;
 };
 
@@ -115,6 +117,7 @@ export async function rememberTurn(input: {
   understanding?: UnderstandingCard | null;
   packet?: AnswerPacket | null;
   situation?: SituationReading | null;
+  businessContext?: BusinessContext | null;
   linkText?: string;
   modelVersion?: string;
 }): Promise<void> {
@@ -147,7 +150,7 @@ export async function rememberTurn(input: {
       content,
       source: input.source ?? "",
       steps: input.steps ?? [],
-      proposal: storedMessage(input.proposal, input.understanding, input.packet, input.situation),
+      proposal: storedMessage(input.proposal, input.understanding, input.packet, input.situation, input.businessContext),
       sources: input.sources ?? [],
       ...stampProvenance(messageVersion(input), input.proposal?.fields ?? []),
     },
@@ -262,6 +265,7 @@ function presentConversation(row: {
       steps: stringList(message.steps),
       proposal: proposalOf(message.proposal),
       situation: readStoredSituation(message.proposal),
+      businessContext: readStoredBusinessContext(message.proposal),
       sources: sourceList(message.sources),
       understanding: readUnderstanding(message.proposal),
       packet: readPacket(message.proposal),
@@ -286,10 +290,23 @@ function storedMessage(
   understanding: UnderstandingCard | null | undefined,
   packet: AnswerPacket | null | undefined,
   situation: SituationReading | null | undefined,
+  businessContext: BusinessContext | null | undefined,
 ): Prisma.InputJsonValue | undefined {
   const body = storedProposal(proposal, understanding, packet);
-  if (!situation) return body;
-  return { ...(body ?? {}), situation: JSON.parse(JSON.stringify(situation)) as Prisma.InputJsonValue };
+  if (!situation && !businessContext) return body;
+  if (situation && businessContext && !body) {
+    return {
+      situation: JSON.parse(JSON.stringify(situation)) as Prisma.InputJsonValue,
+      businessContext: JSON.parse(JSON.stringify(businessContext)) as Prisma.InputJsonValue,
+    };
+  }
+  return {
+    ...(body ?? {}),
+    ...(situation ? { situation: JSON.parse(JSON.stringify(situation)) as Prisma.InputJsonValue } : {}),
+    ...(businessContext
+      ? { businessContext: JSON.parse(JSON.stringify(businessContext)) as Prisma.InputJsonValue }
+      : {}),
+  };
 }
 
 function storedProposal(

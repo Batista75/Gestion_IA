@@ -112,6 +112,7 @@ import { prepareHybridQuote } from "@/lib/hybrid-quote";
 import { asksTradeWorkflow, projectTradeReply, tradeRuleReply } from "@/domain/trade-workflow";
 import { searchKnowledge } from "@/lib/knowledge-store";
 import { listProjectSteps } from "@/lib/trade-steps";
+import { buildBusinessContext, type BusinessDirectoryRow } from "@/domain/business-context";
 import {
   buildSituationReading,
   parseSituationModelOutput,
@@ -390,9 +391,9 @@ async function answerFromSituation(
 ): Promise<Response> {
   const [projects, clients, suppliers, products, files] = await Promise.all([
     prisma.project.findMany({ select: { id: true, name: true } }),
-    prisma.client.findMany({ select: { name: true } }),
-    prisma.supplier.findMany({ select: { name: true } }),
-    prisma.product.findMany({ select: { name: true } }),
+    prisma.client.findMany({ select: { id: true, name: true } }),
+    prisma.supplier.findMany({ select: { id: true, name: true } }),
+    prisma.product.findMany({ select: { id: true, name: true, kind: true } }),
     inboxItemId
       ? prisma.storedFile.findMany({ where: { inboxItemId }, select: { id: true } })
       : Promise.resolve([]),
@@ -401,6 +402,11 @@ async function answerFromSituation(
     ...clients.map((row) => ({ kind: "client" as const, name: row.name })),
     ...suppliers.map((row) => ({ kind: "supplier" as const, name: row.name })),
     ...products.map((row) => ({ kind: "product" as const, name: row.name })),
+  ];
+  const rows: BusinessDirectoryRow[] = [
+    ...clients.map((row) => ({ id: row.id, name: row.name, table: "client" as const })),
+    ...suppliers.map((row) => ({ id: row.id, name: row.name, table: "supplier" as const })),
+    ...products.map((row) => ({ id: row.id, name: row.name, table: "product" as const, productKind: row.kind })),
   ];
   const status = await getOllamaStatus();
   const raw = status.ok && status.defaultModel
@@ -418,12 +424,14 @@ async function answerFromSituation(
     model: parsed && status.defaultModel ? status.defaultModel : null,
     directory,
   });
+  const businessContext = buildBusinessContext({ reading, rows });
   return streamDirect({
     conversationId,
     reply: situationReply(reading, !parsed),
     source: "regle-metier",
     step: "Lecture d'une situation",
     situation: reading,
+    businessContext,
     modelVersion: reading.mentionProvenance.origin === "ollama" ? reading.mentionProvenance.model : undefined,
   });
 }

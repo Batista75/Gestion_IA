@@ -32,6 +32,7 @@ import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import type { AnswerPacket } from "@/domain/answer-packet";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { provenanceLabel } from "@/domain/provenance";
+import type { BusinessContext, BusinessEntityMention, EntityType, ModelHint } from "@/domain/business-context";
 import { describeProjectContext, type SituationReading } from "@/domain/situation-reading";
 import { cardMayAct, proposalFollowUpState, type ProposalAction, type ProposalKind } from "@/domain/proposal-scope";
 import { THREAD_MESSAGE_LIMIT, openThreadLabel, threadIsFull, threadProjectHref, type ThreadSummary } from "@/domain/thread";
@@ -48,6 +49,7 @@ type ChatMeta = {
   understanding?: UnderstandingCard | null;
   packet?: AnswerPacket | null;
   situation?: SituationReading | null;
+  businessContext?: BusinessContext | null;
 };
 type ChatMessage = UIMessage<ChatMeta>;
 
@@ -780,6 +782,7 @@ function MessageRow({
   const understanding = message.metadata?.understanding ?? null;
   const packet = message.metadata?.packet ?? null;
   const situation = message.metadata?.situation ?? null;
+  const businessContext = message.metadata?.businessContext ?? null;
   const source = message.metadata?.source ?? "";
 
   const mine = message.role === "user";
@@ -828,6 +831,7 @@ function MessageRow({
         ) : null}
         {packet ? <PacketCard packet={packet} /> : text ? <p className="text-sm leading-6 whitespace-pre-wrap">{text}</p> : null}
         {situation ? <SituationCard reading={situation} /> : null}
+        {businessContext ? <BusinessContextCard context={businessContext} /> : null}
         {live && !text ? (
           <span className="inline-flex items-center gap-2 py-1 text-xs text-muted-foreground" role="status">
             <span className="inline-flex gap-1" aria-hidden="true">
@@ -925,6 +929,7 @@ function toUi(turns: StoredTurn[]): ChatMessage[] {
       understanding: turn.understanding,
       packet: turn.packet,
       situation: turn.situation,
+      businessContext: turn.businessContext,
     },
     parts: [
       ...turn.steps.map((step, index) => ({
@@ -963,6 +968,132 @@ function SituationCard({ reading }: { reading: SituationReading }) {
       </p>
     </div>
   );
+}
+
+function BusinessContextCard({ context }: { context: BusinessContext }) {
+  const actors = context.entities.filter((entity) => entity.view === "actor");
+  const items = context.entities.filter((entity) => entity.view === "item");
+  const others = context.entities.filter((entity) => entity.view === null);
+  const mentions = context.provenance.mentions;
+  return (
+    <div className="grid gap-1 rounded-lg border border-border bg-surface px-3 py-2">
+      <p className="text-sm font-medium leading-6">Contexte métier</p>
+      <p className="text-sm leading-6">{describeProjectContext(context.projectContext)}</p>
+      <p className="text-sm leading-6">Nature détectée d’après les mots du message : {eventLabel(context.event.kind)}.</p>
+      {actors.length > 0 ? <EntityLines title="Acteurs" entities={actors} context={context} /> : null}
+      {items.length > 0 ? <EntityLines title="Items" entities={items} context={context} /> : null}
+      {others.length > 0 ? <EntityLines title="Mentions sans famille" entities={others} context={context} /> : null}
+      <LooseValues context={context} />
+      {context.issues.length > 0 ? (
+        <p className="text-sm leading-6">
+          Points ouverts : {context.issues.map((issue) => issueLabel(issue.reason, issue.mentionText)).join(" · ")}
+        </p>
+      ) : null}
+      {context.attachments.fileIds.length > 0 ? (
+        <p className="text-sm leading-6">Contenu du fichier non utilisé pour ce contexte.</p>
+      ) : null}
+      <p className="text-xs leading-5 text-muted-foreground">
+        {mentions.origin === "ollama"
+          ? `Mentions lues par le modèle ${mentions.model}. Le reste vient d’une règle du serveur.`
+          : "Mentions non lues par le modèle. Le reste vient d’une règle du serveur."}
+      </p>
+    </div>
+  );
+}
+
+function EntityLines({
+  title,
+  entities,
+  context,
+}: {
+  title: string;
+  entities: BusinessEntityMention[];
+  context: BusinessContext;
+}) {
+  return (
+    <div className="grid gap-0.5">
+      <p className="text-sm leading-6">{title}</p>
+      {entities.map((entity) => (
+        <p key={`${entity.start}-${entity.end}`} className="text-sm leading-6">
+          {entityLine(entity)}
+          {relationLines(entity, context)}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function entityLine(entity: BusinessEntityMention): string {
+  if (entity.resolution.state === "unresolved") {
+    if (entity.modelHints.length !== 1) return `${entity.mentionText} — indices du modèle contradictoires sur la même mention`;
+    return `${entity.mentionText} — lu comme ${hintLabel(entity.modelHints[0] ?? "product")} par le modèle — aucune fiche de ce nom`;
+  }
+  if (entity.resolution.state === "ambiguous" && entity.resolution.scope === "same_family") {
+    return `${entity.mentionText} — Plusieurs fiches portent ce nom. Aucune n’est choisie.`;
+  }
+  if (entity.resolution.state === "ambiguous") {
+    return `${entity.mentionText} — Ce nom existe dans plusieurs familles. Aucun rôle n’est choisi.`;
+  }
+  if (entity.resolution.conflict && entity.modelHints.length === 1) {
+    return `${entity.mentionText} — indice du modèle : ${hintLabel(entity.modelHints[0] ?? "client")} ; fiche : ${typeLabel(entity.resolution.entityType)} ${entity.resolution.entityName}`;
+  }
+  return `${entity.mentionText} — ${entity.resolution.entityName}`;
+}
+
+function relationLines(entity: BusinessEntityMention, context: BusinessContext): string {
+  const linked = context.relations.filter(
+    (relation) => relation.entityAnchor.start === entity.start && relation.entityAnchor.end === entity.end,
+  );
+  if (linked.length === 0) return "";
+  const texts = linked.map((relation) => {
+    const pool = relation.kind === "quantity_for_item" ? context.quantities : context.amounts;
+    const value = pool.find((item) => item.start === relation.valueAnchor.start && item.end === relation.valueAnchor.end);
+    const excerpt = value?.text ?? "";
+    return entity.resolution.state === "unresolved" ? `${excerpt} — mention du modèle` : excerpt;
+  });
+  return ` — ${texts.filter(Boolean).join(", ")}`;
+}
+
+function LooseValues({ context }: { context: BusinessContext }) {
+  const linked = new Set(context.relations.map((relation) => `${relation.valueAnchor.start}:${relation.valueAnchor.end}`));
+  const loose = [...context.quantities, ...context.amounts].filter((item) => !linked.has(`${item.start}:${item.end}`));
+  if (loose.length === 0) return null;
+  return <p className="text-sm leading-6">Quantités et montants non reliés : {loose.map((item) => item.text).join(", ")}.</p>;
+}
+
+function eventLabel(kind: BusinessContext["event"]["kind"]): string {
+  if (kind === "quote_received") return "devis";
+  if (kind === "offer_received") return "offre";
+  if (kind === "price_received") return "tarif";
+  if (kind === "commercial_proposal") return "proposition commerciale";
+  return "nature non déterminée";
+}
+
+function hintLabel(hint: ModelHint): string {
+  if (hint === "supplier") return "fournisseur";
+  if (hint === "product") return "produit";
+  return "client";
+}
+
+function typeLabel(type: EntityType): string {
+  if (type === "supplier") return "fournisseur";
+  if (type === "product") return "produit";
+  if (type === "service") return "service";
+  return "client";
+}
+
+function issueLabel(reason: BusinessContext["issues"][number]["reason"], mentionText?: string): string {
+  const name = mentionText ? ` (${mentionText})` : "";
+  if (reason === "unknown_entity") return `aucune fiche de ce nom${name}`;
+  if (reason === "duplicate_name") return `plusieurs fiches du même nom${name}`;
+  if (reason === "cross_family_ambiguity") return `nom présent dans plusieurs familles${name}`;
+  if (reason === "role_conflict") return `l’indice du modèle ne correspond pas à la fiche${name}`;
+  if (reason === "unlinked_quantity") return `quantité non reliée${name}`;
+  if (reason === "unlinked_amount") return `montant non relié${name}`;
+  if (reason === "relation_not_deterministic") return `relation non déterministe${name}`;
+  if (reason === "repeated_anchor") return `texte répété, ancre non utilisable pour une relation${name}`;
+  if (reason === "overlapping_anchor") return `ancres qui se chevauchent${name}`;
+  return `indices du modèle contradictoires sur la même mention${name}`;
 }
 
 function PacketCard({ packet }: { packet: AnswerPacket }) {

@@ -1,71 +1,85 @@
-# LOT-V3-007 — Correctif MAJOR-1
+# LOT-V3-009 — Validation réelle
 
-La forme `service` était reconnue au milieu d’une phrase. `Ouvre le dossier Toiture pour Dupont et ajoute le service pose` et `Nouveau client Dupont, ajoute une prestation Audit` devenaient `service` au lieu de rester dans la famille client / projet.
+Baseline officielle, inchangée tant que ce lot n’est pas commité :
 
-## Correctif
+`BASELINE-10 — LOT-V3-008 — c0562d37682236f5d45f4d60bb4254d65becb512`
 
-Dans `src/domain/structured-plan.ts`, `SERVICE_SHAPE` est ancré au début de la phrase, après le `trim` déjà fait par `structuredShape`.
+LOT-V3-009 est implémenté et validé en recette réelle. BASELINE-11 n’est pas créée.
 
-La forme reste :
+Aucun commit. Aucun push. Aucune migration.
 
-`ajoute|crée|créer|création` + `le|la|un|une` + `service|prestation` + nom.
+## Validation technique
 
-`Ajoute le service Audit réseau` et `Ajoute une prestation Audit réseau` restent des services. Une création de client ou de dossier qui cite un service plus loin reste `client-or-project`.
+- `npm test` : 440 tests, 440 réussites, 0 échec ;
+- `./node_modules/.bin/tsc --noEmit` : succès ;
+- `npm run lint` : 0 erreur, 4 avertissements préexistants :
+  - `toState` dans `src/app/catalog-actions.ts` ;
+  - `<img>` dans `commercial-sheet.tsx` ;
+  - `<img>` dans `company-form.tsx` ;
+  - `dayKey` dans `src/lib/commercial-board.ts`.
 
-Les MINOR de la revue n’ont pas été traités.
+## Recette PostgreSQL + Ollama
 
-## Tests ajoutés
+### S1 nominal
 
-`tests/structured-plan.test.ts`
+Données présentes : `Project` `Climatisation Dupont`, `Supplier` `ClimPro`, `Product` `MSZ-AP25`.
 
-1. `Ouvre le dossier Toiture pour Dupont et ajoute le service pose` → `client-or-project`, jamais `service`.
-2. `Nouveau client Dupont, ajoute une prestation Audit` → `client-or-project`, jamais `service`.
+Phrase : `J'ai reçu le devis de ClimPro pour le chantier Climatisation Dupont : 4 unités MSZ-AP25 pour 3 600 € HT`.
 
-## Résultats
+Résultat : dossier `matched`. ClimPro connu comme supplier. MSZ-AP25 connu comme product. `4 unités` et `3 600 € HT` liés à l’item. Événement devis. Aucun bouton Confirmer, Rejeter ou Préciser.
 
-Suite StructuredPlan : 91 tests, 0 échec.
+### Persistance
 
-`npm test` : 393 tests, 0 échec.
+Après F5 et réouverture du fil : la lecture de situation et le contexte métier restent. Dossier, fournisseur, produit, quantité et montant sont identiques.
 
-`./node_modules/.bin/tsc --noEmit` : succès.
+### Confirmation
 
-`npm run lint` : 0 erreur, 4 avertissements déjà présents (`toState`, `dayKey`, deux balises `img`).
+Dans le même fil, `Je confirme.` répond `Il n’y a pas de fiche en attente.` Le contexte métier ne devient pas une proposition confirmable.
 
-Aucun commit. Aucun push.
+### Entités inconnues
 
-## Verdict
+Phrase : `J'ai reçu le devis de Thermix pour 4 unités XZ-999 à 4 200 € HT`.
 
-CORRECTION MAJOR-1 LOT-V3-007 TERMINE
+Thermix est inconnu. Le produit est inconnu. Aucun identifiant n’est inventé. Aucun `Supplier` Thermix, aucun `Product` XZ-999, aucun `Product` `4 unités XZ-999`. Contrôle SQL : 0 ligne pour les trois.
 
-## Validation réelle PostgreSQL / Ollama
+### Cross-family
 
-Recette exécutée sur l’application locale (`127.0.0.1:3847`), PostgreSQL réel et Ollama réel (`http://192.168.1.5:11434`, modèle `richardyoung/qwen2.5-14b-instruct-abliterated:Q4_K_M`). Aucun mock. Les confirmations et les rejets passent par `proposalAction` avec l’identifiant de la proposition. Le préfixe des fiches de recette est `RecetteSept`. Le nettoyage a rendu les comptes de tables identiques à l’instant d’avant la recette. Aucune ligne de recette ne reste.
+Données : `Supplier` `Atlas` et `Product` `Atlas`.
 
-Le premier passage a été bloqué : le modèle renvoyait la clé `action` et omettait `missing`, donc le parseur refusait le plan et aucune fiche n’était proposée. Le guide de `structuredPlanGuide` a été précisé, sans élargir le parseur : clés `type` et `args`, `missing` toujours présent, nom complet sans le mot de rôle, exemple de service, montant jamais recopié. Après ce seul ajustement, la recette ci-dessous a réussi.
+Phrase : `Atlas m'a envoyé un devis pour le chantier Climatisation Dupont.`
 
-| Scénario | Résultat |
-| --- | --- |
-| Création fournisseur par StructuredPlan | OK. Fiche Fournisseur `RecetteSept Fournix`, aucune ligne avant confirmation, `modelVersion` `ollama`, statut `en_attente`, puis `confirmee` sur le même identifiant et fournisseur écrit. |
-| Fournisseur avec e-mail | OK. E-mail affiché sur la fiche. Rejet `rejetee`. Aucun fournisseur écrit. |
-| Non-confusion avec un client existant | OK. Le client `RecetteSept Partage` est confirmé, puis la même phrase « comme fournisseur » ouvre une fiche Fournisseur avec son e-mail. L’e-mail du client ne change pas. Le fournisseur est une ligne distincte. |
-| Création produit | OK. Nature Produit, sans famille et sans fournisseur. Confirmation : `kind` `produit`, `supplierId` vide, nombre de fournisseurs inchangé, provenance `ollama`. |
-| Produit avec famille explicite | OK. Famille Réseau affichée. Rejet : aucune ligne produit. |
-| Création service | OK. Nature Service, sans famille. Confirmation : `kind` `service`, aucun fournisseur caché. |
-| Prestation | OK. Nature Service, sans famille. Rejet : aucune ligne produit. |
-| `Ajoute Service Premium` / `Ajoute le Service Premium` | OK. Sans déterminant : message de clarification client ou dossier, pas de fiche Service, aucune écriture. Avec déterminant : fiche Produit, nature Service, puis rejet, aucune écriture. |
-| Montant écrit | OK. Aucune proposition. Réponse : le montant n’est pas pris en compte. Aucun produit créé. |
-| Fournisseur ou produit déjà existant | OK. « existe déjà » pour les deux, sans nouvelle proposition, les comptes restent à une ligne. |
-| Référence numérique | OK. Référence `123456789` sur la fiche, non lue comme un SIREN. Confirmation : référence enregistrée, aucun fournisseur caché. |
-| Non-régression client + projet | OK. Plan d’affaire, provenance `ollama`, aucune écriture avant confirmation. Confirmation : client `RecetteSept Nestor` et dossier `RecetteSept Toiture`. Le couple Odile / Hangar est rejeté sans écriture. |
-| Fiche client en attente + intention fournisseur | OK. La fiche client déterministe reste `en_attente` avec son e-mail. La phrase fournisseur ouvre une fiche Fournisseur distincte avec l’autre e-mail. Rejet des deux : aucune ligne client ni fournisseur. |
-| Nettoyage | OK. Comptes de tables identiques à l’instant d’avant la recette. |
+Atlas apparaît dans `Mentions sans famille`, avec `Ce nom existe dans plusieurs familles. Aucun rôle n’est choisi.` Aucun rôle n’est pris.
 
-Écart relevé, sans échec de la recette : `Ajoute Service Premium` n’ouvre pas une fiche client. Le modèle émet `CREATE_PRODUCT`, la forme reste client ou projet, et le serveur clarifie sans écrire. La phrase avec déterminant ouvre bien la fiche service.
+### S4
 
-`npm test` : 393 tests, 0 échec.
+Phrase : `ClimPro propose 2 unités MSZ-AP25 et 3 unités MSZ-AP35 pour 5 500 € HT`.
 
-`./node_modules/.bin/tsc --noEmit` : succès.
+Le montant `5 500 € HT` n’est pas relié. La raison affichée est `relation non déterministe`. Aucun rattachement au dernier item.
 
-Aucun commit. Aucun push.
+### S5
 
-VALIDATION REELLE LOT-V3-007 OK
+Phrase : `ClimPro propose 2 unités MSZ-AP25 à 900 € et 1 unité MSZ-AP35 à 1 200 €`.
+
+`900 €` est relié au premier item. `1 200 €` est relié au second. Aucun total n’est calculé.
+
+### Situation riche
+
+Avec quatre items et quatre montants : 8 mentions, quatre relations item/montant cohérentes, dossier `Climatisation Dupont` reconnu.
+
+Avec cinq items : Ollama a retourné les 8 premières mentions. Le cinquième item a été omis. Le contexte reste partiel. La recette ne prouve pas un rejet total au-delà de 8 mentions : elle montre une troncature pratique du modèle à 8 mentions.
+
+### Panne Ollama
+
+Phrase : `J'ai reçu le devis de ClimPro pour le chantier Climatisation Dupont`, Ollama arrêté.
+
+Dossier `matched`. Mentions absentes. Événement `devis` disponible. Aucun second modèle. Fonctionnement dégradé correct. La latence n’a pas été mesurée.
+
+## Backlog issu de la recette
+
+- Découpage des mentions : le modèle rend souvent `4 unités XZ-999`, `2 unités MSZ-AP25` ou `fournisseur Atlas` au lieu de séparer quantité, produit et tiers. Une fiche existante peut apparaître inconnue, la quantité peut être absorbée dans le nom, et une ambiguïté cross-family peut être masquée. À traiter par une normalisation ultérieure, sans rendre le modèle autoritaire.
+- Rattachement de dossier par sous-chaîne : un `Project` `Test` est reconnu dans `PAC-TEST` alors que `Climatisation Dupont` est aussi cité, et `projectContext` devient `ambiguous` avec `Test` et `Climatisation Dupont`. Même défaut que `Dupont` dans `Dupont-Martin`. À corriger avant toute écriture à partir d’un `projectId`.
+- Huit mentions : une phrase riche peut perdre les mentions suivantes. Le futur `ActionProposal` ne doit pas supposer que le contexte représente toute la phrase.
+- R-1 étendu : si un item omis ne laisse aucun chiffre hors ancre, un montant peut encore être lié à l’item restant. Exemple : `2 pompes Atlantic et 3 unités MSZ-AP35 pour 5 500 € HT` quand `pompes Atlantic` est omis. Piste : ne pas lier un montant dont la région contient une quantité non reliée.
+- Même extrait en quantité et en montant : deux relations peuvent être créées. À durcir plus tard.
+
+LOT-V3-009 VALIDE EN RECETTE REELLE — PRET POUR COMMIT

@@ -36,6 +36,15 @@ Lint : 0 erreur, 4 avertissements préexistants.
 Recette PostgreSQL + Ollama réelle réussie.
 Aucune migration Prisma.
 
+## Lot en attente de commit
+
+LOT-V3-009 : IMPLEMENTE ET VALIDE EN RECETTE REELLE — PRET POUR COMMIT
+
+Contexte métier construit à partir d’une `SituationReading`, sans second appel Ollama et sans écriture.
+440 tests, 0 échec. Typecheck réussi. Lint : 0 erreur, 4 avertissements préexistants.
+Recette PostgreSQL + Ollama réelle réussie. Aucune migration.
+BASELINE-11 sera créée seulement après le commit de ce lot. La baseline officielle reste BASELINE-10.
+
 ## Backlog résiduel
 
 - reprise des propositions `en_cours` ;
@@ -65,7 +74,12 @@ Aucune migration Prisma.
 - faux négatifs tels que `J'ai bien reçu le devis`, `Proposition reçue de...`, `ClimPro a envoyé son devis...` ;
 - `Ajoute Nom comme client` ne capture pas le tour suivant comme `Ajoute client Nom` ;
 - drapeaux `answeredDirectly`, `structuredPlanAnswered`, `deterministicSheet` devenus sans effet réel dans `situationReadingTurn` ;
-- hydration warning observé sur `src/app/page.tsx`, non causé par ce lot.
+- hydration warning observé sur `src/app/page.tsx`, non causé par ce lot ;
+- découpage des mentions Ollama : le modèle rend souvent `4 unités XZ-999`, `2 unités MSZ-AP25` ou `fournisseur Atlas` au lieu de séparer la quantité, le nom du produit et le nom du tiers. Une fiche existante peut alors apparaître inconnue, la quantité être absorbée dans le nom, et une ambiguïté cross-family être masquée. Lot ultérieur de normalisation, sans rendre le modèle autoritaire ;
+- rattachement de dossier par sous-chaîne : un `Project` `Test` est reconnu dans le produit `PAC-TEST` alors que `Climatisation Dupont` est aussi cité, et `projectContext` devient `ambiguous`. Même défaut que `Dupont` dans `Dupont-Martin`. À corriger avant tout lot qui écrirait à partir d’un `projectId` ;
+- limite pratique de 8 mentions : une phrase riche peut être ramenée aux 8 premières mentions et perdre les suivantes. Le futur `ActionProposal` ne doit pas supposer que `BusinessContext` représente toute la phrase ;
+- R-1 étendu : si un item omis ne laisse aucun chiffre hors ancre, un montant peut encore être lié à l’item restant, par exemple `2 pompes Atlantic et 3 unités MSZ-AP35 pour 5 500 € HT` quand `pompes Atlantic` est omis. Piste : ne pas lier un montant dont la région contient une quantité non reliée ;
+- même extrait rendu à la fois comme quantité et comme montant : deux relations peuvent être créées. À durcir plus tard.
 
 ## Règle de travail
 

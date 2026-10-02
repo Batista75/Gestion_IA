@@ -10,6 +10,7 @@ import {
   type UIMessageChunk,
 } from "ai";
 import type { AnswerPacket } from "@/domain/answer-packet";
+import type { BusinessContext } from "@/domain/business-context";
 import type { UnderstandingCard } from "@/domain/completeness";
 import { retrievalContext, sourceLabel } from "@/domain/knowledge";
 import type { ProposalCard } from "@/domain/proposal-scope";
@@ -31,6 +32,7 @@ type Meta = {
   understanding: UnderstandingCard | null;
   packet: AnswerPacket | null;
   situation: SituationReading | null;
+  businessContext: BusinessContext | null;
 };
 
 type DirectTurn = {
@@ -43,6 +45,7 @@ type DirectTurn = {
   understanding?: UnderstandingCard | null;
   packet?: AnswerPacket | null;
   situation?: SituationReading | null;
+  businessContext?: BusinessContext | null;
   modelVersion?: string;
 };
 
@@ -55,6 +58,7 @@ export function streamDirect(input: DirectTurn): Response {
     understanding: input.understanding ?? null,
     packet: input.packet ?? null,
     situation: input.situation ?? null,
+    businessContext: input.businessContext ?? null,
   };
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
@@ -90,6 +94,7 @@ export function streamDirect(input: DirectTurn): Response {
         understanding: input.understanding,
         packet: input.packet,
         situation: input.situation,
+        businessContext: input.businessContext,
       });
       writer.write({ type: "finish", messageMetadata: metadata });
     },
@@ -120,6 +125,7 @@ export async function streamModel(input: {
     understanding: null,
     packet: null,
     situation: null,
+    businessContext: null,
   };
 
   const stream = createUIMessageStream({
